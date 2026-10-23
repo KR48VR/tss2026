@@ -1,34 +1,40 @@
 """Disruption-timing model. Transparent, parameterised, and reported as ranges.
 
-For each O*NET task we answer two questions and add an explicit adoption lag.
+For each O*NET task: when could AI do it (capability), when do organisations let it (adoption), and
+what else holds it back (barriers). Each piece is anchored on published data and has a fast and a
+slow case.
 
-1. WHEN CAN AI DO IT?  (capability)
-   Non-physical tasks. Today's AI is already used to *do* (not just help with) tasks of an hour or
-   two; its "delegation horizon" moves with the capability frontier. We calibrate the horizon on the
-   Anthropic data: among observed tasks, the share of use that is automation-style falls with the task's
-   human-only length, and the length at which that share crosses 50% is today's effective delegation
-   horizon (a few hours). We then grow that horizon at METR's measured doubling rate (about 3.5 months
-   since 2024, fast/slow variants) and call a task "capable" when the horizon reaches its length.
-   A task already observed being automated is capable now, whatever the length model says.
-   Physical tasks. Anthropic's robot-exposure tier (E1 purpose-built cell ... E3 unstructured setting)
-   is turned into a years-from-now offset with wide ranges. E0 = no cited system can do it: beyond
-   horizon.
+1. CAPABILITY
+   Non-physical tasks. AI is already used to *do* (not just help with) tasks of a few hours. We
+   calibrate today's "delegation horizon" on the Anthropic data (the task length at which the
+   automation share crosses 50%, about 4 hours) and grow it at METR's measured frontier doubling
+   time (about 3.5 months since 2024; fast 85 days, slow 212 days). A task is capable when the horizon
+   reaches its length; a task already observed being automated is capable now.
+   Physical tasks. Anthropic's robot-exposure tier sets years-from-now to capability.
 
-2. HOW LONG UNTIL ORGANISATIONS LET IT?  (adoption lag)
-   Firm-level AI adoption has been climbing from single digits since 2023; a central lag of 3 years
-   from "capable" to "widely adopted" with a 1.5-6 year range is our assumption. The lag is shortened
-   where the task is already observed being delegated, lengthened where usage data say people can
-   rarely hand the task over (human_only_ability >= 95%) and for tasks in high-contact occupations
-   (O*NET work context: physical proximity and face-to-face discussion) that are not yet observed.
+2. ADOPTION
+   The US Census BTOS series (share of firms using AI in production, biweekly since Sept 2023) is fitted
+   with a logistic curve. Its crossing of 50% of firms (central: 2030, fitted) is the anchor date at
+   which a typical, barrier-free task that is capable today would be in majority use. Faster or slower
+   growth (x1.5 / x0.6) give the fast and slow cases. Singapore runs ahead of the US on individual AI
+   use (Microsoft: 64% vs 33% of working-age people; Anthropic per-capita index about 1.5x), which we
+   convert into a lead of about a year on the same curve; set `geo` to "USA" to switch it off.
 
-Outputs per task: disrupt_year_p10 / p50 / p90 (fast / central / slow) plus the components. Roll-ups
-report, for each occupation / SSOC code / Skills Framework role / activity / skill, the share of task
-weight whose central year is at or before each calendar year, and the first year at which that share
-passes 50% ("half-way year").
+3. BARRIERS
+   The per-task barrier index (frontier.task_barriers: interpersonal work, in-person work,
+   accountability, how often people keep the task themselves) delays adoption by up to
+   `max_barrier_years` (central 4). Tasks already observed being automated get a one-year credit.
 
-"Disruptable" means: the task can be done by AI at workplace reliability and typical organisations
-have had time to adopt it. It is not a forecast of job loss: tasks change, roles re-bundle, demand can
-rise. Every number is a planning signal with a range.
+disrupt_year = adoption anchor + max(0, capability year - now) + barrier delay - observed credit - geo lead
+
+Outputs per task: capable_year_{fast,central,slow}, disrupt_year_{p10,p50,p90}, timing_bucket and the
+components. Roll-ups report, per occupation / SSOC / role / activity / skill, the share of task weight
+whose central year is at or before each calendar year and the first year at which that share passes
+50% ("half-way year").
+
+"Disruptable" means: AI can do the task at workplace reliability and typical organisations have had
+time to adopt it. It is not a forecast of job loss: tasks change, roles re-bundle, demand can rise.
+Every number is a planning signal with a range.
 """
 from __future__ import annotations
 
@@ -42,53 +48,85 @@ from . import onet
 
 @dataclass
 class ForecastParams:
+    # capability
     anchor_date: str = "2024-01-01"
-    log2_h50_at_anchor: float = 1.91          # METR fit: 50% horizon ~ 3.8 min at 2024-01-01 (benchmark tasks)
-    doubling_days_central: float = 106.0      # METR frontier doubling since 2024 (our fit)
+    log2_h50_at_anchor: float = 1.91
+    doubling_days_central: float = 106.0
     doubling_days_fast: float = 85.0
-    doubling_days_slow: float = 212.0         # METR's long-run 2019-2025 figure (~7 months)
-    # effective real-world delegation horizon today (minutes) and the logistic slope of
-    # automation-share against log2(minutes); both overwritten by calibrate() from the data
-    delegation_horizon_now_min: float = 120.0
-    delegation_slope: float = -0.25
-    adoption_lag_years: tuple = (1.5, 3.0, 6.0)   # fast / central / slow
-    observed_lag_bonus_years: float = 1.0     # subtract where usage already observed with automation
-    hard_to_delegate_penalty_years: float = 1.0   # add where human_only_ability_pct >= threshold
-    hard_to_delegate_threshold: float = 95.0
-    in_person_penalty_years: float = 2.0      # add (scaled by in_person_index) for not-yet-observed tasks
+    doubling_days_slow: float = 212.0
+    delegation_horizon_now_min: float = 260.0   # overwritten by calibrate()
+    delegation_slope: float = -0.29             # overwritten by calibrate()
     robot_tier_years: dict = field(default_factory=lambda: {1: (2, 4, 8), 2: (4, 7, 12), 3: (8, 12, 20), 0: (np.nan, np.nan, np.nan)})
+    # adoption (BTOS logistic; overwritten by calibrate_adoption())
+    adoption_saturation: float = 0.9
+    adoption_growth_per_year: float = 0.505
+    adoption_intercept: float = -2.99
+    adoption_growth_mult: tuple = (1.5, 1.0, 0.6)   # fast / central / slow
+    geo: str = "SGP"
+    geo_usage_ratio_vs_us: float = 1.7              # Singapore individual AI use relative to the US (Microsoft x Anthropic, geometric mean)
+    # barriers
+    max_barrier_years: tuple = (2.0, 4.0, 6.0)      # fast / central / slow
+    observed_credit_years: float = 1.0
     horizon_cap_year: float = 2045.0
 
 
 def calibrate(p: ForecastParams, tf: pd.DataFrame) -> ForecastParams:
-    """Fit automation_share ~ sigmoid(a + b log2 minutes) on observed non-physical tasks; the 50% point
-    is today's delegation horizon."""
+    """Delegation horizon: fit automation_share ~ sigmoid(a + b log2 minutes) on observed non-physical tasks."""
     d = tf[(~tf.physical) & (tf.usage_latest > 0) & tf.human_only_hours.notna() & tf.automation_share.notna()].copy()
     x = np.log2(d.human_only_hours.values * 60.0)
     y = d.automation_share.clip(1e-3, 1 - 1e-3).values
-    logit = np.log(y / (1 - y))
-    b, a = np.polyfit(x, logit, 1)
-    p = ForecastParams(**{**asdict(p)})
+    b, a = np.polyfit(x, np.log(y / (1 - y)), 1)
+    p = ForecastParams(**asdict(p))
     if b < 0:
         p.delegation_slope = float(b)
         p.delegation_horizon_now_min = float(2 ** (-a / b))
     return p
 
 
-def in_person_index(version: str = "30.1") -> pd.Series:
-    """0-1 index per occupation from O*NET work context: percentile rank of the mean of Physical
-    Proximity, Face-to-Face Discussions and Contact With Others (context scale CX, 1-5). Nearly every
-    job scores high on these in absolute terms, so the rank is what discriminates."""
+def calibrate_adoption(p: ForecastParams, btos_fit: dict | None = None, geo_ratio: float | None = None) -> ForecastParams:
+    p = ForecastParams(**asdict(p))
+    if btos_fit:
+        p.adoption_saturation = float(btos_fit["saturation"])
+        p.adoption_growth_per_year = float(btos_fit["growth_per_year"])
+        p.adoption_intercept = float(btos_fit["intercept"])
+    if geo_ratio:
+        p.geo_usage_ratio_vs_us = float(geo_ratio)
+    return p
+
+
+def singapore_usage_ratio() -> dict:
+    """Singapore vs US individual AI use: Microsoft diffusion (share of 15-64 using gen-AI) and the
+    Anthropic per-capita usage index (Apr-May 2026). Returns both and their geometric mean."""
+    from . import ai_signals as ai
+
+    out = {}
     try:
-        wc = onet._read(version, "Work Context")
-    except FileNotFoundError:
-        return pd.Series(dtype=float)
-    wc.columns = [onet._snake(c) for c in wc.columns]
-    wc = wc[(wc.scale_id == "CX") & wc.element_name.str.contains("Physical Proximity|Face-to-Face Discussions|Contact With Others", regex=True)]
-    wc["data_value"] = pd.to_numeric(wc.data_value, errors="coerce")
-    s = wc.groupby("onet_soc_code").data_value.mean()
-    # percentile rank across occupations: 1 = the most in-person job, 0 = the least
-    return s.rank(pct=True)
+        ms = ai.load_microsoft_diffusion_countries().set_index("economy").ai_user_share_2026q2_pct
+        out["microsoft_ratio"] = float(ms["Singapore"] / ms["United States"])
+    except Exception:
+        pass
+    try:
+        df = pd.read_csv(ai.AEI / "release_2026_06_26" / "data" / "aei_claude_ai_2026-06-26.csv", dtype=str, usecols=["geo_id", "category_name", "metric_id", "value"])
+        df = df[(df.category_name == "overall") & (df.metric_id == "usage_per_capita_index")]
+        df["value"] = pd.to_numeric(df.value)
+        g = df.groupby("geo_id").value.mean()
+        out["anthropic_ratio"] = float(g["SGP"] / g["USA"])
+    except Exception:
+        pass
+    vals = [v for v in out.values() if v and v > 0]
+    out["geometric_mean"] = float(np.exp(np.mean(np.log(vals)))) if vals else None
+    return out
+
+
+def adoption_cross_year(p: ForecastParams, level: float = 0.5, mult: float = 1.0) -> float:
+    K = p.adoption_saturation
+    return 2024.0 + (np.log(level / (K - level)) - p.adoption_intercept) / (p.adoption_growth_per_year * mult)
+
+
+def geo_lead_years(p: ForecastParams, mult: float = 1.0) -> float:
+    if p.geo.upper() in ("US", "USA") or not p.geo_usage_ratio_vs_us:
+        return 0.0
+    return float(np.log(p.geo_usage_ratio_vs_us) / (p.adoption_growth_per_year * mult))
 
 
 def impute_task_minutes(tf: pd.DataFrame) -> pd.DataFrame:
@@ -120,15 +158,14 @@ def _frac_year(ts: pd.Timestamp) -> float:
     return ts.year + (ts.dayofyear - 1) / 365.25
 
 
-def forecast_tasks(tf: pd.DataFrame, params: ForecastParams | None = None, now: str = "2026-10-01") -> pd.DataFrame:
+def forecast_tasks(tf: pd.DataFrame, barriers: pd.DataFrame, params: ForecastParams | None = None, now: str = "2026-10-01") -> pd.DataFrame:
     p = params or ForecastParams()
     now_y = _frac_year(pd.Timestamp(now))
     mins = impute_task_minutes(tf)
-    d = tf[["task_id", "onet_soc_code", "task_weight", "physical", "robot_tier", "status", "usage_latest", "automation_share", "observed_automation", "human_only_ability_pct", "usage_index", "usage_trend"]].merge(mins, on="task_id")
-    ipi = in_person_index()
-    d["in_person_index"] = d.onet_soc_code.map(ipi).fillna(float(ipi.median()) if len(ipi) else 0.5)
+    d = tf[["task_id", "onet_soc_code", "task_weight", "physical", "robot_tier", "status", "usage_latest", "automation_share", "observed_automation", "human_only_ability_pct", "usage_index", "usage_trend"]].merge(mins, on="task_id").merge(barriers[["task_id", "barrier_index", "barrier_type", "b_interpersonal", "b_in_person", "b_accountability", "b_handover"]], on="task_id", how="left")
+    d["barrier_index"] = d.barrier_index.fillna(float(d.barrier_index.median()))
 
-    # doublings needed for the delegation horizon to reach the task's length (negative = already there)
+    # 1. capability
     doublings = np.log2(d.minutes.values / p.delegation_horizon_now_min)
     cap = {}
     for name, dd in [("fast", p.doubling_days_fast), ("central", p.doubling_days_central), ("slow", p.doubling_days_slow)]:
@@ -140,17 +177,22 @@ def forecast_tasks(tf: pd.DataFrame, params: ForecastParams | None = None, now: 
     for name in cap:
         cap[name] = np.where(observed & ~d.physical.values, now_y, cap[name])
 
-    lag_fast, lag_central, lag_slow = p.adoption_lag_years
-    bonus = np.where(observed, p.observed_lag_bonus_years, 0.0)
-    hard = (d.human_only_ability_pct.fillna(0) >= p.hard_to_delegate_threshold).values
-    not_obs = (d.status == "not_observed").values
-    penalty = np.where(hard, p.hard_to_delegate_penalty_years, 0.0) + np.where(not_obs, p.in_person_penalty_years * d.in_person_index.values, 0.0)
+    # 2. adoption anchor and geo lead, 3. barriers
     out = d.copy()
-    out["capable_year_fast"], out["capable_year_central"], out["capable_year_slow"] = cap["fast"], cap["central"], cap["slow"]
-    out["adoption_lag_central"] = np.maximum(lag_central - bonus, 0.5) + penalty
-    out["disrupt_year_p10"] = out.capable_year_fast + np.maximum(lag_fast - bonus, 0.25) + 0.5 * penalty
-    out["disrupt_year_p50"] = out.capable_year_central + out.adoption_lag_central
-    out["disrupt_year_p90"] = out.capable_year_slow + np.maximum(lag_slow - bonus, 1.0) + 1.5 * penalty
+    anchors, leads = {}, {}
+    for name, mult in zip(["fast", "central", "slow"], p.adoption_growth_mult):
+        anchors[name] = adoption_cross_year(p, 0.5, mult)
+        leads[name] = geo_lead_years(p, mult)
+    credit = np.where(observed, p.observed_credit_years, 0.0)
+    for name, q, mb in [("fast", "p10", p.max_barrier_years[0]), ("central", "p50", p.max_barrier_years[1]), ("slow", "p90", p.max_barrier_years[2])]:
+        barrier_years = d.barrier_index.values * mb
+        y = anchors[name] - leads[name] + np.maximum(cap[name] - now_y, 0.0) + barrier_years - credit
+        y = np.maximum(y, now_y + 0.5)
+        out[f"capable_year_{name}"] = cap[name]
+        out[f"barrier_years_{name}"] = barrier_years
+        out[f"disrupt_year_{q}"] = y
+    out["adoption_anchor_year_central"] = anchors["central"]
+    out["geo_lead_years_central"] = leads["central"]
     for c in ["capable_year_fast", "capable_year_central", "capable_year_slow", "disrupt_year_p10", "disrupt_year_p50", "disrupt_year_p90"]:
         out[c] = out[c].where(out[c] <= p.horizon_cap_year, np.nan)
     out["beyond_horizon"] = out.disrupt_year_p50.isna()
@@ -175,6 +217,8 @@ def disruption_curve(fc: pd.DataFrame, by: str, weight: str = "task_weight", col
         out[f"share_by_{y}"] = d.assign(_x=d.w * (d[col] <= y)).groupby(by)._x.sum() / tot
     out["share_beyond_horizon"] = d.assign(_x=d.w * d[col].isna()).groupby(by)._x.sum() / tot
     out["share_already_observed"] = d.assign(_x=d.w * d["already_observed"]).groupby(by)._x.sum() / tot if "already_observed" in d else np.nan
+    if "barrier_index" in d:
+        out["barrier_index"] = d.assign(_x=d.w * d.barrier_index).groupby(by)._x.sum() / tot
 
     def half(colname):
         res = {}

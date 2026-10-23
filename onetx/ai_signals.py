@@ -280,3 +280,78 @@ def metr_frontier_trend(h: pd.DataFrame, since: str = "2024-01-01") -> dict:
     y = np.log2(d.horizon50_min.values)
     b, a = np.polyfit(x, y, 1)
     return {"since": since, "n_models": int(len(d)), "doubling_days": float(1 / b), "log2_horizon_at_2024_01_01": float(a), "models": d.alias.tolist()}
+
+
+# ----------------------------------------------------------------------------- OpenAI (GPTs are GPTs, 2023) occupation exposure
+def load_openai_gpts_exposure() -> pd.DataFrame:
+    """Eloundou et al. (2023) occupation-level exposure. beta = E1 + 0.5*E2 ("exposure with some tooling");
+    dv = GPT-4 ratings, human = annotators."""
+    df = pd.read_csv(RAW / "openai" / "gpts_are_gpts_occ_level.csv")
+    df = df.rename(columns={"O*NET-SOC Code": "onet_soc_code", "Title": "title"})
+    return df[["onet_soc_code", "dv_rating_alpha", "dv_rating_beta", "dv_rating_gamma", "human_rating_alpha", "human_rating_beta", "human_rating_gamma"]]
+
+
+# ----------------------------------------------------------------------------- hand-transcribed reference tables
+REFERENCE = RAW.parent / "reference"
+
+
+def load_openai_gwa_shares() -> pd.DataFrame:
+    df = pd.read_csv(REFERENCE / "openai_chatgpt_gwa_shares_2025.csv")
+    cm = onet.load_content_model()
+    gwa = cm[cm.element_id.str.match(r"^4\.A\.\d\.[a-z]\.\d$")][["element_id", "element_name"]]
+    return df.merge(gwa, left_on="gwa_name", right_on="element_name", how="left").drop(columns="element_name").rename(columns={"element_id": "gwa_id"})
+
+
+def load_google_atlas_occupations() -> pd.DataFrame:
+    df = pd.read_csv(REFERENCE / "google_atlas_v1_occupations.csv")
+    occ = onet.load_occupations()
+    key = lambda s: s.str.casefold().str.replace(r"[^a-z0-9 ]", "", regex=True).str.replace(r"\s+", " ", regex=True).str.strip()
+    occ["k"] = key(occ.title)
+    df["k"] = key(df.occupation_title)
+    m = df.merge(occ[["k", "onet_soc_code"]], on="k", how="left").drop(columns="k")
+    return m
+
+
+# ----------------------------------------------------------------------------- adoption series (for the timing model)
+def load_microsoft_diffusion_countries() -> pd.DataFrame:
+    """Share of people aged 15-64 who used a generative-AI product, by economy (Microsoft AI Economy
+    Institute, Global AI Diffusion Q2 2026)."""
+    return pd.read_csv(RAW / "microsoft" / "ai_diffusion_2026_q2_countries.csv")
+
+
+def load_btos_ai_adoption() -> pd.DataFrame:
+    """US Census Business Trends and Outlook Survey: share of firms using AI in producing goods or
+    services in the last two weeks (biweekly, Sept 2023 onwards), as shipped in AEI release 2025-09-15."""
+    import openpyxl
+
+    wb = openpyxl.load_workbook(AEI / "release_2025_09_15" / "data" / "input" / "BTOS_National.xlsx", read_only=True)
+    dates = {}
+    for r in wb["Collection and Reference Dates"].iter_rows(values_only=True):
+        if r[0] and str(r[0]).strip().isdigit():
+            dates[str(r[0]).strip()] = pd.to_datetime(str(r[4]), errors="coerce")
+    ws = wb["Response Estimates"]
+    rows = list(ws.iter_rows(values_only=True))
+    hdr = [str(h) for h in rows[0]]
+    out = []
+    for r in rows[1:]:
+        if str(r[0]) in ("7", "24") and r[3] == "Yes":
+            q = "current_use" if str(r[0]) == "7" else "expected_use_6m"
+            for i in range(4, len(r)):
+                if r[i] in (None, ""):
+                    continue
+                out.append({"question": q, "sample_period": hdr[i], "ref_end": dates.get(hdr[i]), "pct": float(str(r[i]).rstrip("%"))})
+    df = pd.DataFrame(out).dropna(subset=["ref_end"]).sort_values(["question", "ref_end"]).reset_index(drop=True)
+    return df
+
+
+def fit_adoption_logistic(series: pd.DataFrame, saturation: float = 0.9) -> dict:
+    """Fit log(p/(K-p)) = a + b*t on the BTOS 'current use' series (K = saturation share) and return the
+    growth rate and the dates at which the fitted curve crosses 25%, 50% and 75% of firms."""
+    d = series[series.question == "current_use"].copy()
+    d["t"] = (d.ref_end - pd.Timestamp("2024-01-01")).dt.days / 365.25
+    p = d.pct.values / 100.0
+    y = np.log(p / (saturation - p))
+    b, a = np.polyfit(d.t.values, y, 1)
+    def cross(level):
+        return 2024.0 + (np.log(level / (saturation - level)) - a) / b
+    return {"saturation": saturation, "growth_per_year": float(b), "intercept": float(a), "n_points": int(len(d)), "last_ref_end": str(d.ref_end.max().date()), "last_pct": float(d.pct.iloc[-1]), "year_cross_25pct": float(cross(0.25)), "year_cross_50pct": float(cross(0.50)), "year_cross_75pct": float(cross(0.75))}

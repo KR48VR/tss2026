@@ -1,0 +1,65 @@
+"""Singapore economy-level views: employment- and wage-weighted exposure and timing.
+
+Takes the SSOC-level frontier scores and timing curves, weights them by MOM employment and wages
+(see singapore_labour), and reports the share of Singapore's resident employment and wage bill that
+is exposed / disruptable, overall and by major occupational group and Skills Framework sector.
+"""
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+
+from . import singapore as sg
+from . import singapore_labour as sl
+from .forecast import YEARS
+
+MAJOR_GROUP_NAMES = {"1": "Managers & administrators", "2": "Professionals", "3": "Associate professionals & technicians", "4": "Clerical support workers", "5": "Service & sales workers", "6": "Agricultural & fishery workers", "7": "Craftsmen & related trades", "8": "Plant & machine operators", "9": "Cleaners, labourers & related"}
+
+
+def ssoc_weighted_table(frontier_ssoc: pd.DataFrame, forecast_ssoc: pd.DataFrame, weights: pd.DataFrame | None = None) -> pd.DataFrame:
+    w = sl.build_ssoc_weights() if weights is None else weights
+    share_cols = [f"share_by_{y}" for y in YEARS] + ["share_beyond_horizon", "share_already_observed", "half_year_p10", "half_year_p50", "half_year_p90"]
+    t = w.merge(frontier_ssoc[["ssoc_code", "observed_automation", "usage_index", "automation_share", "share_weight_observed", "share_weight_physical", "ai_applicability_score"]], on="ssoc_code", how="left")
+    t = t.merge(forecast_ssoc[["ssoc_code", *share_cols]], on="ssoc_code", how="left")
+    t["major_group_name"] = t.major_group.map(MAJOR_GROUP_NAMES)
+    t["has_scores"] = t.observed_automation.notna()
+    return t
+
+
+def _wavg(d: pd.DataFrame, col: str, w: str) -> float:
+    x = d[[col, w]].dropna()
+    return float(np.average(x[col], weights=x[w])) if len(x) and x[w].sum() > 0 else np.nan
+
+
+def economy_exposure(t: pd.DataFrame) -> pd.DataFrame:
+    """One row per (scope, weighting). Scopes: whole economy and each major group."""
+    rows = []
+    scopes = [("economy", t)] + [(f"major_{mg}", g) for mg, g in t.groupby("major_group") if g.employment_thousands.sum() > 0]
+    for scope, d in scopes:
+        for wname in ["employment_thousands", "wage_value"]:
+            row = {"scope": scope, "scope_name": "Whole economy (residents)" if scope == "economy" else MAJOR_GROUP_NAMES.get(scope[-1], scope), "weighting": "employment" if wname.startswith("emp") else "wage_value", "n_ssoc": int(len(d)), "n_ssoc_scored": int(d.has_scores.sum()), "weight_total": float(d[wname].sum()), "weight_scored_share": float(d.loc[d.has_scores, wname].sum() / d[wname].sum()) if d[wname].sum() else np.nan}
+            for c in ["observed_automation", "usage_index", "automation_share", "share_weight_observed", "share_weight_physical", "ai_applicability_score"]:
+                row[c] = _wavg(d, c, wname)
+            for y in YEARS:
+                row[f"share_by_{y}"] = _wavg(d, f"share_by_{y}", wname)
+            row["share_beyond_horizon"] = _wavg(d, "share_beyond_horizon", wname)
+            for q in ["p10", "p50", "p90"]:
+                row[f"half_year_{q}"] = _wavg(d, f"half_year_{q}", wname)
+            rows.append(row)
+    out = pd.DataFrame(rows)
+    # exact half-way year from the weighted share-by-year curve (central case)
+    def first_year(r):
+        for y in YEARS:
+            if pd.notna(r[f"share_by_{y}"]) and r[f"share_by_{y}"] >= 0.5:
+                return y
+        return np.nan
+    out["half_year_central_from_curve"] = out.apply(first_year, axis=1)
+    return out
+
+
+def sector_view(role_scores: pd.DataFrame, role_curves: pd.DataFrame) -> pd.DataFrame:
+    """Skills Framework sectors: unweighted mean over roles (no employment by SFw sector is published)."""
+    r = role_scores.merge(role_curves[["role_id", "share_by_2028", "share_by_2030", "share_by_2035", "half_year_p10", "half_year_p50", "half_year_p90"]], on="role_id", how="left")
+    g = r.groupby("sector")
+    out = pd.DataFrame({"n_roles": g.role_id.nunique(), "observed_automation_via_tasks": g.observed_automation_via_tasks.mean(), "observed_automation_via_ssoc": g.observed_automation_via_ssoc.mean(), "share_key_tasks_observed": g.share_key_tasks_observed.mean(), "share_key_tasks_physical": g.share_key_tasks_physical.mean(), "share_by_2028": g.share_by_2028.mean(), "share_by_2030": g.share_by_2030.mean(), "share_by_2035": g.share_by_2035.mean(), "half_year_p50_median_role": g.half_year_p50.median(), "half_year_p90_median_role": g.half_year_p90.median()})
+    return out.reset_index().sort_values("half_year_p50_median_role")

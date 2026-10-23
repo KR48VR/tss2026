@@ -43,3 +43,31 @@ def test_singapore_links_cover_most_roles():
     x = load("xw_sfw_role_ssoc2024")
     assert x.role_id.nunique() >= 0.95 * r.role_id.nunique()
     assert (x[x.source == "singstat_index"].role_id.nunique()) >= 1500
+
+
+def test_singapore_weights_match_lfs_totals():
+    w = load("sg_ssoc2024_weights")
+    lfs = load("sg_lfs_employment_major")
+    tot = lfs.employed_thousands.sum()
+    assert abs(w.employment_thousands.sum() - tot) < 1e-6
+    assert (w.wage_median > 0).all()
+    assert w.in_ows.sum() >= 500
+
+
+def test_barriers_and_forecast_components():
+    b = load("frontier_task_barriers")
+    for c in ["b_interpersonal", "b_in_person", "b_accountability", "b_handover", "barrier_index"]:
+        assert b[c].between(0, 1).all(), c
+    fc = load("forecast_tasks")
+    assert (fc.barrier_years_central >= 0).all()
+    assert fc.adoption_anchor_year_central.iloc[0] > 2026
+    occ = load("frontier_occupations")
+    assert "n_providers_positive" in occ.columns and occ.n_providers_positive.max() >= 3
+
+
+def test_economy_exposure_shape():
+    e = load("sg_economy_exposure")
+    econ = e[e.scope == "economy"]
+    assert set(econ.weighting) == {"employment", "wage_value"}
+    assert econ.weight_scored_share.min() > 0.95
+    assert econ.share_by_2035.between(0, 1).all()

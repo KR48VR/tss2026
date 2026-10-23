@@ -219,3 +219,90 @@ def push_to_sfw(role_ssoc: pd.DataFrame, ssoc_scores: pd.DataFrame, keytask_link
     via_kt = pd.DataFrame({"n_key_tasks": g.key_task_id.nunique(), "observed_automation_via_tasks": g.observed_automation.mean(), "usage_index_via_tasks": g.usage_index.mean(), "automation_share_via_tasks": g.automation_share.mean(), "share_key_tasks_observed": g.any_observed.mean(), "share_key_tasks_physical": g.share_physical.mean(), "mean_match_score": g.top_score.mean()})
     out = roles.merge(via_ssoc, left_on="role_id", right_index=True, how="left").merge(via_kt, left_on="role_id", right_index=True, how="left")
     return out, per_kt
+
+
+# ----------------------------------------------------------------------------- barriers: why a task may stay human even when AI could do it
+INTERPERSONAL_GWAS = {
+    "4.A.4.a.4": "Establishing and Maintaining Interpersonal Relationships",
+    "4.A.4.a.5": "Assisting and Caring for Others",
+    "4.A.4.a.6": "Selling or Influencing Others",
+    "4.A.4.a.7": "Resolving Conflicts and Negotiating with Others",
+    "4.A.4.a.8": "Performing for or Working Directly with the Public",
+    "4.A.4.b.1": "Coordinating the Work and Activities of Others",
+    "4.A.4.b.2": "Developing and Building Teams",
+    "4.A.4.b.3": "Training and Teaching Others",
+    "4.A.4.b.4": "Guiding, Directing, and Motivating Subordinates",
+    "4.A.4.b.5": "Coaching and Developing Others",
+    "4.A.4.c.2": "Staffing Organizational Units",
+}
+BARRIER_WEIGHTS = {"interpersonal": 0.35, "in_person": 0.25, "accountability": 0.25, "handover": 0.15}
+
+
+def _work_context_rank(names: list[str], version: str = "30.1") -> pd.Series:
+    """Percentile rank (0-1) per occupation of the mean of the named work-context elements (CX scale)."""
+    wc = onet._read(version, "Work Context")
+    wc.columns = [onet._snake(c) for c in wc.columns]
+    wc = wc[(wc.scale_id == "CX") & wc.element_name.isin(names)].copy()
+    wc["data_value"] = pd.to_numeric(wc.data_value, errors="coerce")
+    return wc.groupby("onet_soc_code").data_value.mean().rank(pct=True)
+
+
+def task_barriers(tf: pd.DataFrame) -> pd.DataFrame:
+    """Per-task barrier components (0-1) and a combined index.
+
+    b_interpersonal   share of the task's detailed-work-activity links that fall in interpersonal GWAs
+                      (caring, selling, negotiating, teaching, supervising, working with the public)
+    b_in_person       occupation percentile of physical proximity, face-to-face discussion, contact with
+                      others, dealing with external customers (O*NET work context)
+    b_accountability  occupation percentile of consequence of error, impact and frequency of decisions
+    b_handover        from usage data: how often people kept the task even with AI in the loop
+                      (human_only_ability_pct), rescaled 50..100 -> 0..1; occupation mean where missing
+    barrier_index     weighted sum (weights in BARRIER_WEIGHTS); physical tasks are handled separately
+    barrier_type      the dominant component, or "none" when the index is below 0.3
+    """
+    td = onet.load_task_dwa()[["task_id", "dwa_id"]]
+    h = onet.load_dwa_hierarchy()[["dwa_id", "gwa_id"]]
+    m = td.merge(h, on="dwa_id")
+    m["inter"] = m.gwa_id.isin(INTERPERSONAL_GWAS)
+    b = tf[["task_id", "onet_soc_code", "physical", "human_only_ability_pct"]].copy()
+    b["b_interpersonal"] = b.task_id.map(m.groupby("task_id").inter.mean()).fillna(0.0)
+    inp = _work_context_rank(["Physical Proximity", "Face-to-Face Discussions with Individuals and Within Teams", "Contact With Others", "Deal With External Customers or the Public in General"])
+    acc = _work_context_rank(["Consequence of Error", "Impact of Decisions on Co-workers or Company Results", "Frequency of Decision Making"])
+    b["b_in_person"] = b.onet_soc_code.map(inp).fillna(float(inp.median()))
+    b["b_accountability"] = b.onet_soc_code.map(acc).fillna(float(acc.median()))
+    ho = ((b.human_only_ability_pct - 50.0) / 50.0).clip(0, 1)
+    occ_mean = ho.groupby(b.onet_soc_code).transform("mean")
+    b["b_handover"] = ho.fillna(occ_mean).fillna(float(ho.mean()))
+    b["b_handover_imputed"] = b.human_only_ability_pct.isna()
+    comps = ["b_interpersonal", "b_in_person", "b_accountability", "b_handover"]
+    b["barrier_index"] = sum(BARRIER_WEIGHTS[c[2:]] * b[c] for c in comps)
+    dom = b[comps].idxmax(axis=1).str[2:]
+    b["barrier_type"] = np.where(b.physical, "physical", np.where(b.barrier_index < 0.3, "none", dom))
+    return b.drop(columns=["onet_soc_code", "physical", "human_only_ability_pct"])
+
+
+# ----------------------------------------------------------------------------- provider consensus at occupation level
+def occupation_consensus(occ: pd.DataFrame) -> pd.DataFrame:
+    """Add other providers' occupation-level signals and a simple consensus count.
+
+    anthropic_flag   share_weight_observed >= 0.25 (a quarter of task weight shows up in Claude usage)
+    microsoft_flag   ai_applicability_score in the top third of occupations
+    openai_flag      Eloundou et al. (2023) beta exposure (GPT-4 rating) >= 0.5
+    google_flag      listed by Google ATLAS as over-represented or most task-saturated (True), or
+                     under-represented / least saturated / not observed (False); NaN if not listed
+    n_providers_positive  count of the first three flags (Google only where listed)
+    """
+    o = occ.copy()
+    g = ai.load_openai_gpts_exposure()
+    o = o.merge(g[["onet_soc_code", "dv_rating_beta", "human_rating_beta"]].rename(columns={"dv_rating_beta": "openai_exposure_beta_gpt4", "human_rating_beta": "openai_exposure_beta_human"}), on="onet_soc_code", how="left")
+    atlas = ai.load_google_atlas_occupations().dropna(subset=["onet_soc_code"])
+    pos = set(atlas[atlas.atlas_flag.isin(["over_represented", "most_task_saturated"])].onet_soc_code)
+    neg = set(atlas[atlas.atlas_flag.isin(["under_represented", "least_task_saturated", "not_observed"])].onet_soc_code)
+    o["google_atlas_flag"] = np.where(o.onet_soc_code.isin(pos), "positive", np.where(o.onet_soc_code.isin(neg), "negative", None))
+    o["anthropic_flag"] = o.share_weight_observed.fillna(0) >= 0.25
+    thr = o.ai_applicability_score.quantile(2 / 3)
+    o["microsoft_flag"] = o.ai_applicability_score >= thr
+    o["openai_flag"] = o.openai_exposure_beta_gpt4 >= 0.5
+    o["n_providers_positive"] = o[["anthropic_flag", "microsoft_flag", "openai_flag"]].fillna(False).sum(axis=1) + (o.google_atlas_flag == "positive").astype(int)
+    o["n_providers_with_data"] = 3 - o[["ai_applicability_score", "openai_exposure_beta_gpt4"]].isna().sum(axis=1).clip(upper=2) + o.google_atlas_flag.notna().astype(int)
+    return o

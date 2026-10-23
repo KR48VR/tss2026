@@ -48,7 +48,8 @@ Signals attach at the level they are published and are pushed along the graph as
 
 * task-level (Anthropic usage, penetration, robots) → DWA/IWA/GWA (task weight) → occupation (task importance share) → SOC/ISCO/SSOC (crosswalk weights) → Skills Framework roles (via SSOC) and directly via key-task matches;
 * IWA-level (Microsoft) → tasks that map to the IWA → everything above;
-* occupation-level (Microsoft applicability, Anthropic job exposure, GDPval coverage, robot index) → SSOC → roles;
+* occupation-level (Microsoft applicability, Anthropic job exposure, OpenAI 2023 exposure, Google ATLAS lists, GDPval coverage, robot index) → SSOC → roles, with a provider-consensus count;
+* Singapore weights (MOM wages and employment by SSOC) turn SSOC-level scores into employment- and wage-weighted economy views;
 * skills get two views: through the occupations that need them (importance-weighted), and through the GWAs O*NET links them to.
 
 ## Why two O*NET versions
@@ -62,6 +63,8 @@ onetx/config.py      paths, versions, AEI vintages
 onetx/fetch.py       download + manifest
 onetx/onet.py        O*NET loaders
 onetx/singapore.py   SSOC + Skills Framework loaders
+onetx/singapore_labour.py   MOM wages and employment matched to SSOC codes
+onetx/singapore_economy.py  employment- and wage-weighted economy views
 onetx/crosswalks.py  official occupation crosswalks
 onetx/embed.py       embeddings + hybrid matcher
 onetx/match.py       meaning-based crosswalks + evaluation

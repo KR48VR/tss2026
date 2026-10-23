@@ -8,6 +8,8 @@ Built with 'today' = 2026-10-01. Every number below is a planning signal with a 
 - O*NET -> ISCO-08 pairs: 4,755; O*NET -> SSOC 2024 pairs: 16,720 covering 997 of 1,006 SSOC occupations.
 - Skills Framework roles linked to SSOC: 2030 (of which 1556 carry SingStat's own code; the rest use the text matcher, whose hold-out accuracy is top-1 37%, top-5 64%).
 - Task status: 464 observed with AI mostly doing the task, 670 observed with AI mostly helping, 7,579 physical (robotics signal), 10,083 not observed in Claude usage data.
+- Provider agreement at occupation level (Anthropic usage, Microsoft applicability, OpenAI exposure, Google ATLAS where listed): {"0": 634, "1": 193, "2": 139, "3": 47, "4": 3} occupations by number of providers flagging them.
+- Dominant barrier per task: {"physical": 7579, "handover": 3950, "none": 2967, "interpersonal": 2056, "accountability": 1133, "in_person": 1111}.
 
 ## 2. The capability frontier (METR time horizons, re-fitted here)
 
@@ -22,7 +24,7 @@ Built with 'today' = 2026-10-01. Every number below is a planning signal with a 
 | GPT-5 (Inspect)             | 2025-08-07     |             215 |            1147 |
 | Claude 4.1 Opus (Inspect)   | 2025-08-05     |             101 |             467 |
 
-Frontier doubling time since 2024 (our fit): about 106 days. Forecast parameters: {"anchor_date": "2024-01-01", "log2_h50_at_anchor": 1.914, "doubling_days_central": 106, "doubling_days_fast": 85.0, "doubling_days_slow": 212.0, "delegation_horizon_now_min": 259.27244291853253, "delegation_slope": -0.28637943906498253, "adoption_lag_years": [1.5, 3.0, 6.0], "observed_lag_bonus_years": 1.0, "hard_to_delegate_penalty_years": 1.0, "hard_to_delegate_threshold": 95.0, "in_person_penalty_years": 2.0, "robot_tier_years": {"1": [2, 4, 8], "2": [4, 7, 12], "3": [8, 12, 20], "0": [NaN, NaN, NaN]}, "horizon_cap_year": 2045.0}
+Frontier doubling time since 2024 (our fit): about 106 days. Forecast parameters: {"anchor_date": "2024-01-01", "log2_h50_at_anchor": 1.914, "doubling_days_central": 106, "doubling_days_fast": 85.0, "doubling_days_slow": 212.0, "delegation_horizon_now_min": 259.27244291853253, "delegation_slope": -0.28637943906498253, "robot_tier_years": {"1": [2, 4, 8], "2": [4, 7, 12], "3": [8, 12, 20], "0": [NaN, NaN, NaN]}, "adoption_saturation": 0.9, "adoption_growth_per_year": 0.5053148803882318, "adoption_intercept": -2.988186282451522, "adoption_growth_mult": [1.5, 1.0, 0.6], "geo": "SGP", "geo_usage_ratio_vs_us": 1.714504172028714, "max_barrier_years": [2.0, 4.0, 6.0], "observed_credit_years": 1.0, "horizon_cap_year": 2045.0}
 
 ## 3. Where AI usage is concentrated today
 
@@ -87,6 +89,26 @@ Frontier doubling time since 2024 (our fit): about 106 days. Forecast parameters
 | 43-9031.00      | Desktop Publishers                                                                               |                    0.4  |                  0.2  |               0.46 |                     0.31 |                   0    |
 | 13-1111.00      | Management Analysts                                                                              |                    0.38 |                  0.2  |               0.24 |                     0.35 |                   0    |
 | 43-9061.00      | Office Clerks, General                                                                           |                    0.25 |                  0.2  |               0.45 |                     0.24 |                   0.52 |
+
+### Occupations flagged by the most providers
+
+| onet_soc_code   | title                                              |   share_weight_observed |   ai_applicability_score |   openai_exposure_beta_gpt4 | google_atlas_flag   |   n_providers_positive |
+|:----------------|:---------------------------------------------------|------------------------:|-------------------------:|----------------------------:|:--------------------|-----------------------:|
+| 13-1161.00      | Market Research Analysts and Marketing Specialists |                    0.38 |                     0.35 |                        0.5  | positive            |                      4 |
+| 15-1252.00      | Software Developers                                |                    0.36 |                     0.28 |                        0.87 | positive            |                      4 |
+| 15-1253.00      | Software Quality Assurance Analysts and Testers    |                    0.27 |                     0.33 |                        0.88 | positive            |                      4 |
+| 15-2051.00      | Data Scientists                                    |                    0.62 |                     0.36 |                        0.75 | nan                 |                      3 |
+| 15-2041.00      | Statisticians                                      |                    0.61 |                     0.32 |                        0.79 | nan                 |                      3 |
+| 15-2051.01      | Business Intelligence Analysts                     |                    0.6  |                     0.36 |                        0.7  | nan                 |                      3 |
+| 15-1251.00      | Computer Programmers                               |                    0.57 |                     0.31 |                        0.95 | nan                 |                      3 |
+| 27-3043.05      | Poets, Lyricists and Creative Writers              |                    0.54 |                     0.45 |                        0.89 | nan                 |                      3 |
+| 15-1211.00      | Computer Systems Analysts                          |                    0.51 |                     0.31 |                        0.75 | nan                 |                      3 |
+| 15-2021.00      | Mathematicians                                     |                    0.5  |                     0.39 |                        1    | nan                 |                      3 |
+| 15-1299.08      | Computer Systems Engineers/Architects              |                    0.49 |                     0.3  |                        0.77 | nan                 |                      3 |
+| 27-3042.00      | Technical Writers                                  |                    0.49 |                     0.37 |                        0.7  | nan                 |                      3 |
+| 15-2031.00      | Operations Research Analysts                       |                    0.49 |                     0.31 |                        0.63 | nan                 |                      3 |
+| 43-9022.00      | Word Processors and Typists                        |                    0.47 |                     0.26 |                        0.74 | nan                 |                      3 |
+| 43-9021.00      | Data Entry Keyers                                  |                    0.47 |                     0.32 |                        0.89 | nan                 |                      3 |
 
 ### Singapore SSOC 2024 occupations ranked by observed automation (pulled through the crosswalk)
 
@@ -158,133 +180,205 @@ Frontier doubling time since 2024 (our fit): about 106 days. Forecast parameters
 | Learning Strategies               |             356 |                                  0.04 |                                 0.02 |
 | Management of Material Resources  |              29 |                                  0.04 |                                 0.01 |
 
-## 4. Timing (central estimate = year by which half of a job's task weight is 'disruptable')
+## 4. Singapore, weighted by employment and wages
 
-Task timing buckets (central): {"2031_2033": 9635, "2034_2037": 5041, "beyond_2045_or_unknown": 2414, "2029_2030": 1582, "2038_2045": 124}
+Resident employment by major occupational group (MOM Labour Force Survey 2025) and median wages by occupation (MOM Occupational Wage Survey 2024) matched to SSOC codes. Within a major group, employment is split evenly across the surveyed occupations because no finer official count is published.
+
+| scope_name                            | weighting   |   weight_scored_share |   observed_automation |   share_weight_observed |   share_weight_physical |   share_by_2030 |   share_by_2035 |   half_year_central_from_curve |
+|:--------------------------------------|:------------|----------------------:|----------------------:|------------------------:|------------------------:|----------------:|----------------:|-------------------------------:|
+| Whole economy (residents)             | employment  |                  1    |                  0.04 |                    0.09 |                    0.32 |            0.05 |            0.79 |                           2032 |
+| Whole economy (residents)             | wage_value  |                  1    |                  0.05 |                    0.1  |                    0.23 |            0.06 |            0.84 |                           2032 |
+| Managers & administrators             | employment  |                  1    |                  0.05 |                    0.11 |                    0.09 |            0.04 |            0.92 |                           2032 |
+| Managers & administrators             | wage_value  |                  1    |                  0.06 |                    0.12 |                    0.08 |            0.05 |            0.94 |                           2032 |
+| Professionals                         | employment  |                  1    |                  0.06 |                    0.13 |                    0.16 |            0.09 |            0.87 |                           2032 |
+| Professionals                         | wage_value  |                  1    |                  0.06 |                    0.13 |                    0.16 |            0.09 |            0.88 |                           2032 |
+| Associate professionals & technicians | employment  |                  0.98 |                  0.04 |                    0.07 |                    0.36 |            0.03 |            0.75 |                           2032 |
+| Associate professionals & technicians | wage_value  |                  0.98 |                  0.04 |                    0.07 |                    0.35 |            0.03 |            0.76 |                           2032 |
+| Clerical support workers              | employment  |                  1    |                  0.07 |                    0.11 |                    0.25 |            0.05 |            0.87 |                           2032 |
+| Clerical support workers              | wage_value  |                  1    |                  0.06 |                    0.11 |                    0.23 |            0.05 |            0.87 |                           2032 |
+| Service & sales workers               | employment  |                  1    |                  0.03 |                    0.05 |                    0.5  |            0.02 |            0.62 |                           2034 |
+| Service & sales workers               | wage_value  |                  1    |                  0.03 |                    0.06 |                    0.48 |            0.02 |            0.62 |                           2033 |
+| Craftsmen & related trades            | employment  |                  1    |                  0.01 |                    0.02 |                    0.76 |            0.01 |            0.6  |                           2035 |
+| Craftsmen & related trades            | wage_value  |                  1    |                  0.01 |                    0.02 |                    0.71 |            0.01 |            0.62 |                           2035 |
+| Plant & machine operators             | employment  |                  1    |                  0    |                    0.01 |                    0.74 |            0.01 |            0.58 |                           2035 |
+| Plant & machine operators             | wage_value  |                  1    |                  0    |                    0.01 |                    0.73 |            0.01 |            0.58 |                           2035 |
+| Cleaners, labourers & related         | employment  |                  1    |                  0.01 |                    0.02 |                    0.77 |            0.01 |            0.59 |                           2035 |
+| Cleaners, labourers & related         | wage_value  |                  1    |                  0.01 |                    0.02 |                    0.75 |            0.01 |            0.59 |                           2035 |
+
+### Skills Framework sectors (unweighted mean over roles)
+
+| sector                           |   n_roles |   share_key_tasks_observed |   observed_automation_via_tasks |   share_key_tasks_physical |   share_by_2030 |   share_by_2035 |   half_year_p50_median_role |
+|:---------------------------------|----------:|---------------------------:|--------------------------------:|---------------------------:|----------------:|----------------:|----------------------------:|
+| Infocomm Technology              |       138 |                       0.52 |                            0.12 |                       0.05 |            0.15 |            0.97 |                     2030.63 |
+| Carbon Services and Trading      |         8 |                       0.24 |                            0.05 |                       0.08 |            0.08 |            0.95 |                     2030.63 |
+| Design                           |        28 |                       0.51 |                            0.11 |                       0.06 |            0.15 |            0.96 |                     2030.72 |
+| Accountancy                      |        46 |                       0.43 |                            0.09 |                       0.04 |            0.1  |            0.98 |                     2030.81 |
+| Wholesale Trade                  |        42 |                       0.39 |                            0.07 |                       0.04 |            0.05 |            0.98 |                     2030.83 |
+| Financial Services               |       293 |                       0.43 |                            0.09 |                       0.03 |            0.07 |            0.98 |                     2030.86 |
+| Marine and Offshore              |        29 |                       0.33 |                            0.06 |                       0.15 |            0.05 |            0.91 |                     2030.87 |
+| Engineering Services             |        35 |                       0.33 |                            0.07 |                       0.12 |            0.05 |            0.91 |                     2030.9  |
+| Precision Engineering            |        15 |                       0.2  |                            0.04 |                       0.18 |            0.02 |            0.9  |                     2030.92 |
+| Built Environment                |        49 |                       0.32 |                            0.06 |                       0.12 |            0.05 |            0.91 |                     2030.92 |
+| Training and Adult Education     |        13 |                       0.47 |                            0.1  |                       0.03 |            0.11 |            0.98 |                     2030.96 |
+| Energy and Chemicals             |        53 |                       0.3  |                            0.06 |                       0.19 |            0.04 |            0.89 |                     2030.96 |
+| Retail                           |        24 |                       0.48 |                            0.1  |                       0.1  |            0.09 |            0.91 |                     2030.98 |
+| Logistics                        |        57 |                       0.42 |                            0.09 |                       0.09 |            0.06 |            0.94 |                     2031    |
+| Aerospace                        |       102 |                       0.24 |                            0.05 |                       0.22 |            0.05 |            0.87 |                     2031    |
+| Workplace Safety and Health      |        11 |                       0.33 |                            0.07 |                       0.12 |            0.05 |            0.89 |                     2031    |
+| Human Resource                   |        21 |                       0.43 |                            0.07 |                       0.03 |            0.03 |            0.98 |                     2031    |
+| Media                            |       112 |                       0.41 |                            0.09 |                       0.12 |            0.11 |            0.94 |                     2031    |
+| Early Childhood                  |        27 |                       0.31 |                            0.06 |                       0.13 |            0.07 |            0.89 |                     2031.03 |
+| Tourism                          |        69 |                       0.4  |                            0.09 |                       0.09 |            0.06 |            0.92 |                     2031.04 |
+| Electronics                      |        29 |                       0.29 |                            0.06 |                       0.2  |            0.05 |            0.84 |                     2031.05 |
+| Intellectual Property            |        11 |                       0.31 |                            0.06 |                       0.02 |            0.04 |            0.98 |                     2031.05 |
+| Social Service                   |        73 |                       0.35 |                            0.06 |                       0.05 |            0.09 |            0.97 |                     2031.07 |
+| Food Manufacturing               |        26 |                       0.33 |                            0.07 |                       0.25 |            0.04 |            0.87 |                     2031.08 |
+| Legal Services                   |         9 |                       0.36 |                            0.06 |                       0.05 |            0.02 |            0.95 |                     2031.1  |
+| Energy and Power                 |       138 |                       0.32 |                            0.07 |                       0.19 |            0.05 |            0.85 |                     2031.11 |
+| Sea Transport                    |        85 |                       0.31 |                            0.07 |                       0.17 |            0.04 |            0.85 |                     2031.15 |
+| Public Transport                 |        87 |                       0.18 |                            0.03 |                       0.25 |            0.05 |            0.79 |                     2031.16 |
+| BioPharmaceuticals Manufacturing |        27 |                       0.23 |                            0.05 |                       0.21 |            0.03 |            0.92 |                     2031.17 |
+| Trade Associations and Chambers  |        22 |                       0.43 |                            0.08 |                       0.02 |            0.07 |            0.99 |                     2031.19 |
+| Landscape                        |        17 |                       0.25 |                            0.05 |                       0.26 |            0.06 |            0.78 |                     2031.21 |
+| Hotel and Accommodation Services |        38 |                       0.36 |                            0.08 |                       0.17 |            0.08 |            0.89 |                     2031.35 |
+| Air Transport                    |        93 |                       0.27 |                            0.06 |                       0.19 |            0.05 |            0.8  |                     2031.37 |
+| Environmental Services           |        30 |                       0.26 |                            0.06 |                       0.32 |            0.04 |            0.73 |                     2031.39 |
+| Healthcare                       |        77 |                       0.26 |                            0.05 |                       0.18 |            0.04 |            0.84 |                     2031.49 |
+| Arts                             |        48 |                       0.19 |                            0.04 |                       0.34 |            0.07 |            0.76 |                     2031.57 |
+| Food Services                    |        31 |                       0.33 |                            0.06 |                       0.26 |            0.06 |            0.85 |                     2031.85 |
+| Security                         |        11 |                       0.24 |                            0.05 |                       0.21 |            0.01 |            0.78 |                     2032.06 |
+| Agrifood                         |         6 |                       0.14 |                            0.02 |                       0.46 |            0.03 |            0.78 |                     2032.9  |
+
+## 5. Timing (central estimate = year by which half of a job's task weight is 'disruptable')
+
+Adoption anchor (US firms' AI use, BTOS logistic fit, crossing 50%): fast 2028.2, central 2030.4, slow 2034.6. Singapore lead on that curve: 1.1 years (usage ratio vs US: {"microsoft_ratio": 1.9484848484848485, "anthropic_ratio": 1.5086206896551722, "geometric_mean": 1.714504172028714}).
+
+Task timing buckets (central): {"2031_2033": 10293, "2034_2037": 4128, "beyond_2045_or_unknown": 2414, "2038_2045": 1155, "2029_2030": 806}
 
 ### O*NET occupations: earliest half-way years
 
-| onet_soc_code   | title                                            |   share_by_2028 |   share_by_2030 |   share_by_2035 |   half_year_p10 |   half_year_p50 |   half_year_p90 |
-|:----------------|:-------------------------------------------------|----------------:|----------------:|----------------:|----------------:|----------------:|----------------:|
-| 15-1251.00      | Computer Programmers                             |               0 |             0.6 |             1   |          2027.2 |          2028.7 |          2031.7 |
-| 15-1242.00      | Database Administrators                          |               0 |             0.9 |             1   |          2028.3 |          2029.8 |          2032.8 |
-| 19-3011.01      | Environmental Economists                         |               0 |             0.8 |             1   |          2028.3 |          2029.8 |          2032.8 |
-| 13-1161.01      | Search Marketing Strategists                     |               0 |             0.7 |             1   |          2028.3 |          2029.8 |          2032.8 |
-| 15-2021.00      | Mathematicians                                   |               0 |             0.9 |             1   |          2028.3 |          2029.8 |          2032.8 |
-| 15-2031.00      | Operations Research Analysts                     |               0 |             0.7 |             1   |          2028.3 |          2029.8 |          2032.8 |
-| 15-2051.01      | Business Intelligence Analysts                   |               0 |             0.7 |             1   |          2028.3 |          2029.8 |          2032.8 |
-| 15-1252.00      | Software Developers                              |               0 |             0.6 |             1   |          2028.3 |          2029.8 |          2032.9 |
-| 19-2011.00      | Astronomers                                      |               0 |             0.9 |             0.9 |          2028.3 |          2029.8 |          2032.9 |
-| 15-1299.05      | Information Security Engineers                   |               0 |             0.7 |             1   |          2028.3 |          2029.8 |          2032.9 |
-| 13-2052.00      | Personal Financial Advisors                      |               0 |             0.9 |             1   |          2028.3 |          2029.8 |          2032.9 |
-| 27-3043.05      | Poets, Lyricists and Creative Writers            |               0 |             0.7 |             1   |          2028.3 |          2029.8 |          2033   |
-| 23-1022.00      | Arbitrators, Mediators, and Conciliators         |               0 |             0.8 |             1   |          2028.3 |          2029.9 |          2032.9 |
-| 17-2199.10      | Wind Energy Engineers                            |               0 |             0.8 |             1   |          2028.3 |          2029.9 |          2033   |
-| 13-2082.00      | Tax Preparers                                    |               0 |             0.6 |             1   |          2028.3 |          2029.9 |          2032.9 |
-| 15-1299.01      | Web Administrators                               |               0 |             0.7 |             1   |          2028.3 |          2029.9 |          2032.9 |
-| 19-3094.00      | Political Scientists                             |               0 |             0.7 |             1   |          2028.3 |          2029.9 |          2033   |
-| 19-2041.03      | Industrial Ecologists                            |               0 |             0.8 |             1   |          2028.3 |          2029.9 |          2033   |
-| 51-9162.00      | Computer Numerically Controlled Tool Programmers |               0 |             0.9 |             1   |          2028.3 |          2029.9 |          2033   |
-| 17-2161.00      | Nuclear Engineers                                |               0 |             0.7 |             1   |          2028.3 |          2029.9 |          2033   |
+| onet_soc_code   | title                                                   |   share_by_2028 |   share_by_2030 |   share_by_2035 |   half_year_p10 |   half_year_p50 |   half_year_p90 |
+|:----------------|:--------------------------------------------------------|----------------:|----------------:|----------------:|----------------:|----------------:|----------------:|
+| 15-1251.00      | Computer Programmers                                    |               0 |             0.7 |             1   |          2027.2 |          2028.9 |          2032.7 |
+| 25-1124.00      | Foreign Language and Literature Teachers, Postsecondary |               0 |             0.7 |             1   |          2027.7 |          2029.7 |          2033.4 |
+| 19-1029.01      | Bioinformatics Scientists                               |               0 |             0.6 |             1   |          2027.7 |          2029.7 |          2033.4 |
+| 19-2011.00      | Astronomers                                             |               0 |             0.5 |             0.9 |          2027.8 |          2029.7 |          2033.5 |
+| 15-2021.00      | Mathematicians                                          |               0 |             1   |             1   |          2027.8 |          2029.7 |          2033.5 |
+| 15-2099.01      | Bioinformatics Technicians                              |               0 |             0.8 |             1   |          2027.8 |          2029.8 |          2033.5 |
+| 15-1243.01      | Data Warehousing Specialists                            |               0 |             0.9 |             1   |          2027.8 |          2029.8 |          2033.6 |
+| 19-3011.01      | Environmental Economists                                |               0 |             0.7 |             1   |          2027.8 |          2029.8 |          2033.6 |
+| 25-1064.00      | Geography Teachers, Postsecondary                       |               0 |             0.6 |             1   |          2027.8 |          2029.8 |          2033.7 |
+| 13-1161.01      | Search Marketing Strategists                            |               0 |             0.7 |             1   |          2027.8 |          2029.8 |          2033.6 |
+| 19-1029.03      | Geneticists                                             |               0 |             0.6 |             1   |          2027.8 |          2029.8 |          2033.7 |
+| 27-3043.05      | Poets, Lyricists and Creative Writers                   |               0 |             0.8 |             1   |          2027.9 |          2029.9 |          2033.8 |
+| 17-2031.00      | Bioengineers and Biomedical Engineers                   |               0 |             0.7 |             1   |          2027.9 |          2029.9 |          2033.8 |
+| 17-2141.01      | Fuel Cell Engineers                                     |               0 |             0.6 |             1   |          2027.9 |          2029.9 |          2033.8 |
+| 19-2041.01      | Climate Change Policy Analysts                          |               0 |             0.5 |             1   |          2027.8 |          2029.9 |          2033.8 |
+| 15-1252.00      | Software Developers                                     |               0 |             0.7 |             1   |          2028   |          2029.9 |          2034   |
+| 15-2031.00      | Operations Research Analysts                            |               0 |             0.5 |             1   |          2027.9 |          2029.9 |          2033.8 |
+| 19-2012.00      | Physicists                                              |               0 |             0.6 |             1   |          2027.9 |          2029.9 |          2033.9 |
+| 19-2041.03      | Industrial Ecologists                                   |               0 |             0.7 |             1   |          2027.9 |          2029.9 |          2033.8 |
+| 19-2099.01      | Remote Sensing Scientists and Technologists             |               0 |             0.7 |             0.9 |          2027.9 |          2029.9 |          2033.9 |
 
 ### O*NET occupations: latest half-way years (most insulated)
 
-| onet_soc_code   | title                                  |   share_by_2030 |   share_by_2035 |   share_beyond_horizon |   half_year_p50 |   half_year_p90 |
-|:----------------|:---------------------------------------|----------------:|----------------:|-----------------------:|----------------:|----------------:|
-| 33-3012.00      | Correctional Officers and Jailers      |             0   |             0.5 |                    0.5 |          2041.7 |           nan   |
-| 33-3031.00      | Fish and Game Wardens                  |             0   |             0.4 |                    0.5 |          2041.7 |           nan   |
-| 47-2082.00      | Tapers                                 |             0.1 |             0.4 |                    0.3 |          2041.7 |           nan   |
-| 19-1012.00      | Food Scientists and Technologists      |             0   |             0.5 |                    0.4 |          2036.7 |          2044.7 |
-| 19-4071.00      | Forest and Conservation Technicians    |             0   |             0.5 |                    0.5 |          2036.7 |          2044.7 |
-| 19-4092.00      | Forensic Science Technicians           |             0   |             0.5 |                    0.4 |          2036.7 |          2044.7 |
-| 27-2042.00      | Musicians and Singers                  |             0   |             0.5 |                    0.5 |          2036.7 |          2044.7 |
-| 29-1299.02      | Orthoptists                            |             0.1 |             0.5 |                    0.5 |          2036.7 |          2044.7 |
-| 29-2057.00      | Ophthalmic Medical Technicians         |             0   |             0.4 |                    0.3 |          2036.7 |          2044.7 |
-| 29-2099.05      | Ophthalmic Medical Technologists       |             0   |             0.4 |                    0.3 |          2036.7 |          2044.7 |
-| 29-9091.00      | Athletic Trainers                      |             0   |             0.5 |                    0.4 |          2036.7 |          2044.7 |
-| 31-1121.00      | Home Health Aides                      |             0   |             0.5 |                    0.5 |          2036.7 |          2044.7 |
-| 33-3011.00      | Bailiffs                               |             0   |             0.4 |                    0.5 |          2036.7 |          2044.7 |
-| 37-2021.00      | Pest Control Workers                   |             0.2 |             0.4 |                    0.4 |          2036.7 |          2044.7 |
-| 37-3011.00      | Landscaping and Groundskeeping Workers |             0   |             0.4 |                    0.3 |          2036.7 |          2044.7 |
+| onet_soc_code   | title                                                          |   share_by_2030 |   share_by_2035 |   share_beyond_horizon |   half_year_p50 |   half_year_p90 |
+|:----------------|:---------------------------------------------------------------|----------------:|----------------:|-----------------------:|----------------:|----------------:|
+| 33-3012.00      | Correctional Officers and Jailers                              |             0   |             0.3 |                    0.5 |          2043.6 |             nan |
+| 33-3031.00      | Fish and Game Wardens                                          |             0   |             0.3 |                    0.5 |          2043.6 |             nan |
+| 47-2082.00      | Tapers                                                         |             0   |             0.4 |                    0.3 |          2042.1 |             nan |
+| 53-5022.00      | Motorboat Operators                                            |             0   |             0.3 |                    0.3 |          2039.8 |             nan |
+| 39-5012.00      | Hairdressers, Hairstylists, and Cosmetologists                 |             0   |             0.3 |                    0.5 |          2039.5 |             nan |
+| 29-1299.02      | Orthoptists                                                    |             0.1 |             0.5 |                    0.5 |          2039.4 |             nan |
+| 31-1121.00      | Home Health Aides                                              |             0   |             0.2 |                    0.5 |          2039.4 |             nan |
+| 45-2093.00      | Farmworkers, Farm, Ranch, and Aquacultural Animals             |             0   |             0.2 |                    0.4 |          2038.8 |             nan |
+| 27-2042.00      | Musicians and Singers                                          |             0   |             0.5 |                    0.5 |          2038.7 |             nan |
+| 19-4092.00      | Forensic Science Technicians                                   |             0   |             0.3 |                    0.4 |          2038.6 |             nan |
+| 29-9091.00      | Athletic Trainers                                              |             0   |             0.4 |                    0.4 |          2038.6 |             nan |
+| 29-2099.05      | Ophthalmic Medical Technologists                               |             0   |             0.2 |                    0.3 |          2038.5 |             nan |
+| 47-5013.00      | Service Unit Operators, Oil and Gas                            |             0   |             0.3 |                    0.4 |          2038.4 |             nan |
+| 47-2073.00      | Operating Engineers and Other Construction Equipment Operators |             0   |             0.2 |                    0.1 |          2038.4 |             nan |
+| 29-2057.00      | Ophthalmic Medical Technicians                                 |             0   |             0.2 |                    0.3 |          2038.4 |             nan |
 
 ### Singapore SSOC 2024: earliest half-way years
 
-|   ssoc_code | ssoc_title                                                                   |   share_by_2028 |   share_by_2030 |   share_by_2035 |   half_year_p10 |   half_year_p50 |   half_year_p90 |
-|------------:|:-----------------------------------------------------------------------------|----------------:|----------------:|----------------:|----------------:|----------------:|----------------:|
-|       21110 | Physicist/Astronomer                                                         |               0 |             0.6 |             1   |          2028.3 |          2029.8 |          2032.9 |
-|       25211 | Data/Database administrator                                                  |               0 |             0.8 |             1   |          2028.3 |          2029.9 |          2032.9 |
-|       25212 | Data/Database architect                                                      |               0 |             0.8 |             1   |          2028.3 |          2029.9 |          2032.9 |
-|       25213 | Data engineer                                                                |               0 |             0.8 |             1   |          2028.3 |          2029.9 |          2032.9 |
-|       21211 | Mathematician                                                                |               0 |             0.6 |             1   |          2028.4 |          2030   |          2033.1 |
-|       21212 | Operations research analyst                                                  |               0 |             0.6 |             1   |          2028.4 |          2030   |          2033.1 |
-|       21213 | Actuary                                                                      |               0 |             0.6 |             1   |          2028.4 |          2030   |          2033.1 |
-|       21221 | Statistician                                                                 |               0 |             0.6 |             1   |          2028.4 |          2030   |          2033.1 |
-|       21222 | Data scientist                                                               |               0 |             0.6 |             1   |          2028.4 |          2030   |          2033.1 |
-|       26310 | Economist                                                                    |               0 |             0.5 |             1   |          2028.4 |          2030   |          2033.2 |
-|       21120 | Meteorologist                                                                |               0 |             0.1 |             0.9 |          2028.4 |          2030   |          2033.2 |
-|       25122 | Web/Mobile applications developer                                            |               0 |             0.5 |             1   |          2028.4 |          2030   |          2033.2 |
-|       21231 | Statistical officer/Data analyst                                             |               0 |             0.5 |             1   |          2028.5 |          2030   |          2033.3 |
-|       21239 | Other statistical/mathematical/actuarial professional n.e.c.                 |               0 |             0.5 |             1   |          2028.5 |          2030   |          2033.3 |
-|       25141 | Applications/Systems programmer                                              |               0 |             0.5 |             1   |          2028.4 |          2030.1 |          2033.3 |
-|       25143 | Artificial intelligence/Machine learning engineer                            |               0 |             0.5 |             1   |          2028.4 |          2030.1 |          2033.3 |
-|       26331 | Political scientist                                                          |               0 |             0.4 |             1   |          2028.4 |          2030.1 |          2033.3 |
-|       26339 | Historian/Political scientist and related social science professional n.e.c. |               0 |             0.4 |             1   |          2028.4 |          2030.1 |          2033.3 |
-|       25125 | DevOps engineer                                                              |               0 |             0.4 |             1   |          2028.5 |          2030.1 |          2033.3 |
-|       26411 | Author                                                                       |               0 |             0.3 |             1   |          2028.5 |          2030.1 |          2033.3 |
+|   ssoc_code | ssoc_title                                                   |   share_by_2028 |   share_by_2030 |   share_by_2035 |   half_year_p10 |   half_year_p50 |   half_year_p90 |
+|------------:|:-------------------------------------------------------------|----------------:|----------------:|----------------:|----------------:|----------------:|----------------:|
+|       21110 | Physicist/Astronomer                                         |               0 |             0.5 |             1   |          2028   |          2030   |          2034.1 |
+|       21211 | Mathematician                                                |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
+|       21212 | Operations research analyst                                  |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
+|       21213 | Actuary                                                      |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
+|       21221 | Statistician                                                 |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
+|       21222 | Data scientist                                               |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
+|       21120 | Meteorologist                                                |               0 |             0.1 |             0.9 |          2028   |          2030.1 |          2034.1 |
+|       21231 | Statistical officer/Data analyst                             |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
+|       21239 | Other statistical/mathematical/actuarial professional n.e.c. |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
+|       26310 | Economist                                                    |               0 |             0.3 |             1   |          2028   |          2030.1 |          2034.1 |
+|       25122 | Web/Mobile applications developer                            |               0 |             0.3 |             1   |          2028   |          2030.2 |          2034.2 |
+|       25220 | Network/Server/Applications/Computer systems administrator   |               0 |             0.2 |             1   |          2028   |          2030.2 |          2034.2 |
+|       35140 | Website administrator/Webmaster                              |               0 |             0.1 |             1   |          2028   |          2030.2 |          2034.3 |
+|       35110 | Computer systems operator                                    |               0 |             0.1 |             0.9 |          2028   |          2030.2 |          2034.3 |
+|       26321 | Sociologist/Anthropologist                                   |               0 |             0.3 |             0.9 |          2028.1 |          2030.2 |          2034.3 |
+|       26322 | Social science researcher                                    |               0 |             0.3 |             0.9 |          2028.1 |          2030.2 |          2034.3 |
+|       41320 | Data entry clerk                                             |               0 |             0.4 |             1   |          2028   |          2030.2 |          2034.2 |
+|       25125 | DevOps engineer                                              |               0 |             0.3 |             1   |          2028   |          2030.2 |          2034.2 |
+|       25142 | Artificial intelligence applied researcher                   |               0 |             0.3 |             1   |          2028   |          2030.2 |          2034.3 |
+|       25151 | ICT quality assurance specialist                             |               0 |             0.3 |             1   |          2028   |          2030.2 |          2034.3 |
 
 ### Skills Framework roles: earliest half-way years (via key tasks)
 
-| sector              | job_role                                                                           |   n_tasks |   share_by_2028 |   share_by_2030 |   half_year_p10 |   half_year_p50 |   half_year_p90 |
-|:--------------------|:-----------------------------------------------------------------------------------|----------:|----------------:|----------------:|----------------:|----------------:|----------------:|
-| Energy and Power    | Customer Service Executive                                                         |        10 |               0 |             0.5 |          2028.2 |          2029.7 |          2033.2 |
-| Infocomm Technology | Associate Embedded Systems Engineer                                                |        15 |               0 |             0.5 |          2028.3 |          2029.8 |          2032.9 |
-| Infocomm Technology | Artificial Intelligence Applied Researcher                                         |        17 |               0 |             0.6 |          2028.3 |          2029.8 |          2032.9 |
-| Financial Services  | Compliance Analyst                                                                 |         4 |               0 |             0.7 |          2028.3 |          2029.8 |          2032.9 |
-| Infocomm Technology | Database Support Engineer                                                          |        25 |               0 |             0.6 |          2028.3 |          2029.9 |          2033   |
-| Infocomm Technology | Senior Security Engineer / Security Engineer                                       |        12 |               0 |             0.6 |          2028.4 |          2029.9 |          2033   |
-| Infocomm Technology | Senior Data Engineer                                                               |        14 |               0 |             0.7 |          2028.3 |          2029.9 |          2032.9 |
-| Financial Services  | Trust Administrator                                                                |         5 |               0 |             0.5 |          2028.3 |          2029.9 |          2033   |
-| Infocomm Technology | Data Architect                                                                     |        19 |               0 |             0.7 |          2028.4 |          2029.9 |          2033.1 |
-| Media               | Animator                                                                           |         9 |               0 |             0.6 |          2028.4 |          2029.9 |          2033.1 |
-| Accountancy         | Management Accountant / Financial Planning and Analysis Analyst / Business Analyst |         7 |               0 |             0.6 |          2028.4 |          2029.9 |          2033.1 |
-| Financial Services  | Segment Executive                                                                  |         8 |               0 |             0.5 |          2028.4 |          2030   |          2033.2 |
-| Financial Services  | Segment Manager                                                                    |         8 |               0 |             0.5 |          2028.4 |          2030   |          2033.2 |
-| Tourism             | Assistant Product and Experience Development Executive                             |        15 |               0 |             0.5 |          2028.4 |          2030   |          2033.2 |
-| Infocomm Technology | Head of Product                                                                    |        19 |               0 |             0.6 |          2028.4 |          2030   |          2033.1 |
-| Infocomm Technology | Data Analyst / Associate Data Engineer                                             |        13 |               0 |             0.6 |          2028.4 |          2030   |          2033.2 |
-| Financial Services  | Head of Underwriting                                                               |         6 |               0 |             0.7 |          2028.4 |          2030   |          2033.1 |
-| Media               | Executive - Content Acquisition                                                    |        16 |               0 |             0.6 |          2028.4 |          2030   |          2033.1 |
-| Financial Services  | Head of Client Service / Client Support Services Director                          |         7 |               0 |             0.6 |          2028.4 |          2030   |          2033.2 |
-| Financial Services  | Head of Data Analytics                                                             |        12 |               0 |             0.5 |          2028.4 |          2030   |          2033.1 |
+| sector              | job_role                                           |   n_tasks |   share_by_2028 |   share_by_2030 |   half_year_p10 |   half_year_p50 |   half_year_p90 |
+|:--------------------|:---------------------------------------------------|----------:|----------------:|----------------:|----------------:|----------------:|----------------:|
+| Infocomm Technology | Data Analyst / Associate Data Engineer             |        13 |               0 |             0.7 |          2027.7 |          2029.8 |          2033.9 |
+| Infocomm Technology | Associate Embedded Systems Engineer                |        15 |               0 |             0.5 |          2027.9 |          2029.9 |          2033.8 |
+| Social Service      | Chief Research Psychologist                        |        16 |               0 |             0.5 |          2027.9 |          2030   |          2033.9 |
+| Social Service      | Senior Principal Researcher / Principal Researcher |        19 |               0 |             0.5 |          2027.9 |          2030   |          2033.9 |
+| Financial Services  | Economist                                          |         4 |               0 |             0.4 |          2027.9 |          2030   |          2034   |
+| Financial Services  | Senior Economist                                   |         4 |               0 |             0.4 |          2027.9 |          2030   |          2034   |
+| Media               | Quality Assurance Tester                           |        12 |               0 |             0.3 |          2028   |          2030.1 |          2034.1 |
+| Media               | Senior Level Designer                              |        15 |               0 |             0.2 |          2027.9 |          2030.1 |          2034   |
+| Media               | Junior Designer                                    |        10 |               0 |             0.2 |          2028   |          2030.1 |          2034.1 |
+| Energy and Power    | Product and Pricing Senior Executive               |         5 |               0 |             0.2 |          2028   |          2030.1 |          2034.2 |
+| Design              | Lead Design Researcher                             |        11 |               0 |             0.4 |          2028.1 |          2030.1 |          2034.3 |
+| Media               | Senior Game Sound Designer                         |        15 |               0 |             0   |          2028   |          2030.1 |          2034.2 |
+| Social Service      | Principal Research Counsellor                      |        18 |               0 |             0.5 |          2028   |          2030.1 |          2034.2 |
+| Media               | Senior Game Programmer                             |        14 |               0 |             0.3 |          2028   |          2030.1 |          2034.2 |
+| Media               | Senior Game Designer                               |        20 |               0 |             0.2 |          2028   |          2030.1 |          2034.2 |
+| Media               | Game Technical Director                            |        20 |               0 |             0.3 |          2028   |          2030.1 |          2034.2 |
+| Media               | Lead Game Programmer                               |        26 |               0 |             0.3 |          2028   |          2030.1 |          2034.2 |
+| Infocomm Technology | Lead Product Analyst                               |        21 |               0 |             0.2 |          2028   |          2030.1 |          2034.2 |
+| Design              | Principal Design Researcher                        |        16 |               0 |             0.3 |          2028.1 |          2030.1 |          2034.3 |
+| Media               | Digital Asset Librarian                            |        13 |               0 |             0.2 |          2028   |          2030.1 |          2034.1 |
 
 ### O*NET skills: half-way years
 
 | element_name                      |   n_occupations |   share_by_2028 |   share_by_2030 |   share_by_2035 |   half_year_p50 |   half_year_p90 |
 |:----------------------------------|----------------:|----------------:|----------------:|----------------:|----------------:|----------------:|
-| Programming                       |              26 |               0 |             0.4 |             1   |          2030.1 |          2033.3 |
-| Technology Design                 |              19 |               0 |             0.2 |             1   |          2030.5 |          2033.9 |
-| Operations Analysis               |              90 |               0 |             0.2 |             0.9 |          2030.8 |          2034.3 |
-| Mathematics                       |             237 |               0 |             0.2 |             0.9 |          2031   |          2034.8 |
-| Management of Financial Resources |              41 |               0 |             0.1 |             0.9 |          2031.1 |          2034.6 |
-| Systems Evaluation                |             326 |               0 |             0.1 |             0.9 |          2031.2 |          2034.9 |
-| Negotiation                       |             257 |               0 |             0.1 |             0.9 |          2031.2 |          2034.9 |
-| Systems Analysis                  |             369 |               0 |             0.1 |             0.9 |          2031.3 |          2035.1 |
-| Management of Personnel Resources |             192 |               0 |             0.1 |             0.9 |          2031.4 |          2035.1 |
-| Management of Material Resources  |              29 |               0 |             0.1 |             0.9 |          2031.5 |          2035   |
-| Persuasion                        |             329 |               0 |             0.1 |             0.9 |          2031.5 |          2035.3 |
-| Learning Strategies               |             356 |               0 |             0.1 |             0.9 |          2031.6 |          2035.4 |
-| Writing                           |             588 |               0 |             0.1 |             0.9 |          2031.7 |          2035.7 |
-| Instructing                       |             397 |               0 |             0.1 |             0.8 |          2031.9 |          2035.8 |
-| Science                           |             150 |               0 |             0.1 |             0.8 |          2031.9 |          2035.8 |
-| Active Learning                   |             581 |               0 |             0.1 |             0.8 |          2032   |          2036.1 |
-| Social Perceptiveness             |             576 |               0 |             0.1 |             0.8 |          2032.2 |          2036.3 |
-| Reading Comprehension             |             729 |               0 |             0.1 |             0.8 |          2032.2 |          2036.5 |
-| Complex Problem Solving           |             644 |               0 |             0.1 |             0.8 |          2032.2 |          2036.4 |
-| Judgment and Decision Making      |             682 |               0 |             0.1 |             0.8 |          2032.3 |          2036.6 |
+| Programming                       |              26 |               0 |             0.3 |             1   |          2030.1 |          2034.2 |
+| Technology Design                 |              19 |               0 |             0.2 |             1   |          2030.5 |          2034.7 |
+| Operations Analysis               |              90 |               0 |             0.1 |             0.9 |          2030.9 |          2035.3 |
+| Mathematics                       |             237 |               0 |             0.1 |             0.9 |          2031.3 |          2036.1 |
+| Systems Evaluation                |             326 |               0 |             0.1 |             0.9 |          2031.5 |          2036.1 |
+| Negotiation                       |             257 |               0 |             0   |             0.9 |          2031.6 |          2036.2 |
+| Systems Analysis                  |             369 |               0 |             0.1 |             0.9 |          2031.7 |          2036.4 |
+| Management of Financial Resources |              41 |               0 |             0   |             0.9 |          2031.7 |          2036.2 |
+| Management of Personnel Resources |             192 |               0 |             0   |             0.9 |          2031.9 |          2036.6 |
+| Persuasion                        |             329 |               0 |             0   |             0.8 |          2031.9 |          2036.6 |
+| Learning Strategies               |             356 |               0 |             0.1 |             0.8 |          2032   |          2036.6 |
+| Writing                           |             588 |               0 |             0.1 |             0.8 |          2032.1 |          2037   |
+| Management of Material Resources  |              29 |               0 |             0   |             0.9 |          2032.1 |          2036.8 |
+| Science                           |             150 |               0 |             0.1 |             0.8 |          2032.2 |          2037   |
+| Instructing                       |             397 |               0 |             0.1 |             0.8 |          2032.3 |          2037.1 |
+| Active Learning                   |             581 |               0 |             0.1 |             0.8 |          2032.5 |          2037.4 |
+| Reading Comprehension             |             729 |               0 |             0.1 |             0.8 |          2032.7 |          2037.9 |
+| Social Perceptiveness             |             576 |               0 |             0   |             0.8 |          2032.7 |          2037.7 |
+| Complex Problem Solving           |             644 |               0 |             0.1 |             0.8 |          2032.7 |          2037.8 |
+| Judgment and Decision Making      |             682 |               0 |             0.1 |             0.8 |          2032.8 |          2038   |
 
-## 5. Read this before using the numbers
+## 6. Read this before using the numbers
 
 - Usage data come from one provider (Anthropic) and reflect who uses Claude, not the whole economy. Microsoft's Copilot figures are a second opinion at the activity level.
 - 'Observed automation' means that when the task shows up in AI usage, the AI is mostly doing it rather than helping. It says nothing about how many of the task's real-world instances involve AI.
-- Timing combines a capability trend (METR) with an explicit adoption lag. Change the parameters in `onetx.forecast.ForecastParams` and rebuild; the ranges (p10/p90) are the honest output.
+- Timing = adoption anchor (US firm adoption curve, Singapore lead applied) + capability delay (METR trend, robot tiers) + barrier delay (interpersonal, in-person, accountability, hand-over). Every parameter is in `onetx.forecast.ForecastParams`; `python -m onetx forecast` re-runs timing in under a minute. The ranges (p10/p90) are the honest output.
+- Employment within a major group is allocated evenly across surveyed occupations; the economy-wide figures are robust to that, the per-occupation wage-value figures are not.
 - Singapore links are official where SingStat coded them (SSOC-ISCO tables, SFw role tags) and text-matched elsewhere; every text match carries a score you can filter on.

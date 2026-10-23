@@ -1,0 +1,13 @@
+{
+  "source": "Google AI & Economy ATLAS v1.0 (arXiv 2608.00038, July 2026)",
+  "sample": "14.65 million de-identified Gemini App, AI Mode and API interactions, 6-19 April 2026",
+  "share_of_detailed_occupations_with_usage": 0.68,
+  "us_employment_covered_by_occupations_with_usage": 0.884,
+  "share_of_onet_tasks_with_at_least_25_users": 0.20,
+  "share_of_occupations_with_no_task_reaching_25_users": 0.29,
+  "median_share_of_tasks_with_usage_among_occupations_with_any": 0.21,
+  "share_of_occupations_with_three_quarters_of_tasks_covered": 0.03,
+  "automation_share_non_routine_cognitive": "<0.10",
+  "automation_share_routine_cognitive": ">0.25",
+  "gdp_elasticity_of_per_capita_usage": 0.9
+}

@@ -14,6 +14,8 @@ from . import frontier as fr
 from . import match
 from . import onet
 from . import singapore as sg
+from . import singapore_economy as se
+from . import singapore_labour as sl
 from .config import PROCESSED, ensure_dirs
 from .io import register_duckdb, save, write_json
 
@@ -94,17 +96,33 @@ def build(forecast_params: fcm.ForecastParams | None = None, now: str = "2026-10
     save(ai.load_gdpval(), "ai_gdpval_tasks")
     metr = ai.compute_metr_horizons(); save(metr, "ai_metr_horizons")
     trend = ai.metr_frontier_trend(metr); stats["metr_trend"] = trend
+    save(ai.load_openai_gpts_exposure(), "ai_openai_gpts_exposure")
+    save(ai.load_openai_gwa_shares(), "ai_openai_chatgpt_gwa_shares")
+    save(ai.load_google_atlas_occupations(), "ai_google_atlas_occupations")
+    save(ai.load_microsoft_diffusion_countries(), "ai_microsoft_diffusion_countries")
+    btos = ai.load_btos_ai_adoption(); save(btos, "ai_btos_firm_adoption")
+    stats["btos_adoption_fit"] = ai.fit_adoption_logistic(btos)
     _log("AI signals", t0)
+
+    # ---- Singapore wages and employment
+    save(sl.match_ows_to_ssoc(2024), "sg_ows_wages_ssoc2024")
+    save(sl.load_lfs_employment_major(), "sg_lfs_employment_major")
+    ssoc_w = sl.build_ssoc_weights(2024); save(ssoc_w, "sg_ssoc2024_weights")
+    stats["sg_weights"] = {"ssoc_with_ows_wage": int(ssoc_w.in_ows.sum()), "employment_thousands_total": float(ssoc_w.employment_thousands.sum()), "employment_method": str(ssoc_w.employment_method.iloc[0])}
+    _log("Singapore labour tables", t0)
 
     # ---- frontier + roll-ups
     tf = fr.build_task_frontier(); save(tf, "frontier_tasks")
+    barriers = fr.task_barriers(tf); save(barriers, "frontier_task_barriers")
     act = fr.rollup_activities(tf); save(act, "frontier_activities")
-    occf = fr.rollup_occupations(tf); save(occf, "frontier_occupations")
+    occf = fr.occupation_consensus(fr.rollup_occupations(tf)); save(occf, "frontier_occupations")
+    stats["provider_consensus_counts"] = occf.n_providers_positive.value_counts().sort_index().to_dict()
     save(fr.rollup_skills(occf, act, "30.1"), "frontier_skills")
     save(fr.rollup_skills(occf, act, "31.0"), "frontier_skills_v31")
     ssoc_scores = fr.push_to_ssoc(occf, o2s, 2024); save(ssoc_scores, "frontier_ssoc2024")
     roles_scored, kt_scored = fr.push_to_sfw(role_ssoc, ssoc_scores, kt_links, tf); save(roles_scored, "frontier_sfw_roles"); save(kt_scored, "frontier_sfw_key_tasks")
     stats["task_status_counts"] = tf.status.value_counts().to_dict()
+    stats["barrier_type_counts"] = barriers.barrier_type.value_counts().to_dict()
     _log("frontier scores", t0)
 
     # ---- forecast
@@ -123,12 +141,16 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
 
     tf = load("frontier_tasks"); occ = load("onet_occupations"); o2s = load("xw_onetsoc_ssoc2024"); kt_links = load("xw_sfw_keytask_onet_task")
     kt = load("sfw_key_tasks"); act = load("frontier_activities"); occf = load("frontier_occupations")
+    barriers = load("frontier_task_barriers") if (PROCESSED / "frontier_task_barriers.parquet").exists() else fr.task_barriers(tf)
     if metr_trend is None:
         metr_trend = ai.metr_frontier_trend(load("ai_metr_horizons"))
     params = forecast_params or fcm.ForecastParams(doubling_days_central=round(metr_trend["doubling_days"]), log2_h50_at_anchor=round(metr_trend["log2_horizon_at_2024_01_01"], 3))
     params = fcm.calibrate(params, tf)
-    fc = fcm.forecast_tasks(tf, params, now=now); save(fc, "forecast_tasks")
-    stats = {"forecast_params": {k: (v if not isinstance(v, dict) else {str(a): b for a, b in v.items()}) for k, v in fcm.asdict(params).items()}}
+    btos_fit = ai.fit_adoption_logistic(ai.load_btos_ai_adoption())
+    ratio = fcm.singapore_usage_ratio()
+    params = fcm.calibrate_adoption(params, btos_fit, ratio.get("geometric_mean"))
+    fc = fcm.forecast_tasks(tf, barriers, params, now=now); save(fc, "forecast_tasks")
+    stats = {"forecast_params": {k: (v if not isinstance(v, dict) else {str(a): b for a, b in v.items()}) for k, v in fcm.asdict(params).items()}, "adoption_anchor_years": {"fast": fcm.adoption_cross_year(params, 0.5, params.adoption_growth_mult[0]), "central": fcm.adoption_cross_year(params, 0.5, 1.0), "slow": fcm.adoption_cross_year(params, 0.5, params.adoption_growth_mult[2])}, "geo_lead_years_central": fcm.geo_lead_years(params), "singapore_usage_ratio": ratio}
     occ_curve = fcm.disruption_curve(fc, "onet_soc_code").merge(occ[["onet_soc_code", "title"]], on="onet_soc_code", how="left"); save(occ_curve, "forecast_occupations")
     f2s = fc.merge(o2s[["onet_soc_code", "ssoc_code", "ssoc_title", "weight_rev"]], on="onet_soc_code")
     f2s["w"] = f2s.task_weight * f2s.weight_rev
@@ -144,5 +166,12 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
     act_curve = pd.concat(frames, ignore_index=True).merge(act[["activity_id", "name"]].drop_duplicates("activity_id"), on="activity_id", how="left"); save(act_curve, "forecast_activities")
     save(fcm.skill_curves(fc, occf), "forecast_skills")
     stats["forecast_buckets"] = fc.timing_bucket.value_counts().to_dict()
+    # Singapore economy: employment- and wage-weighted views
+    ssoc_w = load("sg_ssoc2024_weights") if (PROCESSED / "sg_ssoc2024_weights.parquet").exists() else sl.build_ssoc_weights(2024)
+    swt = se.ssoc_weighted_table(load("frontier_ssoc2024"), ssoc_curve, ssoc_w); save(swt, "sg_ssoc2024_weighted")
+    econ = se.economy_exposure(swt); save(econ, "sg_economy_exposure")
+    save(se.sector_view(load("frontier_sfw_roles"), role_curve), "sg_sfw_sectors")
+    e = econ[(econ.scope == "economy")].set_index("weighting")
+    stats["singapore_economy"] = {w: {"observed_automation": float(e.loc[w, "observed_automation"]), "share_weight_observed": float(e.loc[w, "share_weight_observed"]), "share_by_2030": float(e.loc[w, "share_by_2030"]), "share_by_2035": float(e.loc[w, "share_by_2035"]), "half_year_central": float(e.loc[w, "half_year_central_from_curve"])} for w in ["employment", "wage_value"]}
     register_duckdb()
     return stats

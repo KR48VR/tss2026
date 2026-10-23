@@ -18,6 +18,9 @@ O*NET occupations ──► SOC 2018 ──► ISCO-08 ──► SSOC 2024 (Sing
 | Where AI is being used, and whether it does or helps | Anthropic Economic Index, 7 monthly points Dec 2024 – May 2026, Claude.ai and API | O*NET task | observed usage share, automation vs augmentation, AI autonomy, time a human would need |
 | Second opinion on usage | Microsoft "Working with AI" (Bing Copilot) | O*NET intermediate work activity | activity share, completion rate, scope of impact; AI applicability per occupation |
 | Labour-market exposure | Anthropic "Labor market impacts" | task and SOC | task penetration, observed job exposure |
+| Other providers' views | OpenAI "GPTs are GPTs" (2023) and "How People Use ChatGPT" (2025); Google AI & Economy ATLAS (2026) | occupation / GWA | exposure ratings, message shares by work activity, over- and under-represented occupations; combined into a provider-consensus count |
+| How fast adoption moves | US Census BTOS firm survey; Microsoft Global AI Diffusion (147 economies) | firms / people | the adoption curve the timing model rides, and Singapore's lead on it |
+| Singapore people and pay | MOM Occupational Wage Survey 2024; MOM Labour Force Survey 2025 | SSOC occupation / major group | employment- and wage-weighted exposure for the resident workforce |
 | Physical work | Anthropic "What work can robots do?" | O*NET task | physical flag and robot-exposure tier E0–E3 |
 | What the labs benchmark | OpenAI GDPval | occupation | 220 expert tasks across 44 occupations |
 | How fast capability moves | METR time horizons (re-fitted here) | model / date | task length an agent completes at 50% / 80% reliability; doubling time |
@@ -45,11 +48,12 @@ Or open `data/processed/onetx.duckdb` in any DuckDB client; every processed tabl
 | Group | Tables |
 |---|---|
 | O*NET core | `onet_occupations`, `onet_tasks`, `onet_task_dwa`, `onet_activities` (DWA→IWA→GWA, classic ids with 31.0 ids alongside), `onet_descriptor_ratings` (+`_v31` with the new Essential/Transferable skills), `onet_descriptor_to_gwa`, `onet_technology_skills`, `onet_job_zones`, `onet_alternate_titles`, `onet_related_occupations`, `onet_emerging_tasks_v31` |
-| Singapore | `ssoc2024_*` / `ssoc2020_*` (structure, definitions, unit-group task bullets, alphabetical index), `sfw_roles`, `sfw_key_tasks`, `sfw_role_tscs`, `sfw_tsc_key`, `sfw_tsc_knowledge_abilities`, `sfw_unique_skills`, `sfw_tsc_to_unique_skill` |
+| Singapore | `ssoc2024_*` / `ssoc2020_*` (structure, definitions, unit-group task bullets, alphabetical index), `sfw_roles`, `sfw_key_tasks`, `sfw_role_tscs`, `sfw_tsc_key`, `sfw_tsc_knowledge_abilities`, `sfw_unique_skills`, `sfw_tsc_to_unique_skill`, `sg_ows_wages_ssoc2024`, `sg_lfs_employment_major`, `sg_ssoc2024_weights` |
 | Crosswalks | `xw_onetsoc_soc2018`, `xw_onetsoc_isco08`, `xw_isco08_ssoc2024/2020`, `xw_onetsoc_ssoc2024/2020`, `xw_ssoc2024_ssoc2020`, `xw_sfw_role_ssoc2024`, `xw_sfw_keytask_onet_task`, `xw_sfw_keytask_onet_dwa`, `xw_sfw_skill_onet_iwa`, `xw_sfw_skill_onet_descriptor`, `xw_ssoc2024_task_onet_task` |
-| AI signals | `ai_aei_task_metrics` (one row per vintage × source × task), `ai_aei_task_penetration`, `ai_aei_job_exposure`, `ai_robot_exposure_*`, `ai_microsoft_iwa`, `ai_microsoft_soc`, `ai_gdpval_tasks`, `ai_metr_horizons` |
-| Frontier | `frontier_tasks`, `frontier_activities`, `frontier_occupations`, `frontier_skills` (+`_v31`), `frontier_ssoc2024`, `frontier_sfw_roles`, `frontier_sfw_key_tasks` |
+| AI signals | `ai_aei_task_metrics` (one row per vintage × source × task), `ai_aei_task_penetration`, `ai_aei_job_exposure`, `ai_robot_exposure_*`, `ai_microsoft_iwa`, `ai_microsoft_soc`, `ai_gdpval_tasks`, `ai_metr_horizons`, `ai_openai_gpts_exposure`, `ai_openai_chatgpt_gwa_shares`, `ai_google_atlas_occupations`, `ai_microsoft_diffusion_countries`, `ai_btos_firm_adoption` |
+| Frontier | `frontier_tasks`, `frontier_task_barriers`, `frontier_activities`, `frontier_occupations` (with provider consensus), `frontier_skills` (+`_v31`), `frontier_ssoc2024`, `frontier_sfw_roles`, `frontier_sfw_key_tasks` |
 | Timing | `forecast_tasks`, `forecast_activities`, `forecast_occupations`, `forecast_ssoc2024`, `forecast_sfw_roles`, `forecast_skills` |
+| Singapore economy | `sg_ssoc2024_weighted`, `sg_economy_exposure` (employment- and wage-weighted, by major group), `sg_sfw_sectors` |
 
 `docs/REPORT.md` is regenerated on every build with the headline tables; `data/processed/build_stats.json` records the parameters and checks.
 
@@ -62,4 +66,4 @@ Or open `data/processed/onetx.duckdb` in any DuckDB client; every processed tabl
 
 ## Status
 
-First working version. Known gaps are listed at the end of `docs/METHOD.md`. The biggest ones: usage data come from one provider; Singapore links are official where SingStat coded them and text-matched elsewhere (scores are kept so you can filter); the adoption lag is an assumption you should set to your own view.
+Second version. Compared with the first: four providers instead of one at occupation level (Anthropic, Microsoft, OpenAI, Google) with a consensus count; a per-task barrier index (interpersonal, in-person, accountability, hand-over) in place of a flat lag; an adoption anchor fitted to the US Census firm-adoption series with Singapore's lead applied; and MOM wages and employment so Singapore results can be read as shares of people and pay. Known gaps are listed at the end of `docs/METHOD.md`.

@@ -1,0 +1,23 @@
+occupation_title,atlas_flag
+Financial and Investment Analysts,over_represented
+Market Research Analysts and Marketing Specialists,over_represented
+Software Developers,over_represented
+Network and Computer Systems Administrators,over_represented
+Home Health and Personal Care Aides,under_represented
+Fast Food and Counter Workers,under_represented
+Cashiers,under_represented
+Retail Salespersons,under_represented
+Food Preparation Workers,not_observed
+Cooks Fast Food,not_observed
+Dining Room and Cafeteria Attendants and Bartender Helpers,not_observed
+Substitute Teachers Short-Term,not_observed
+Market Research Analysts and Marketing Specialists,most_task_saturated
+Human Resources Specialists,most_task_saturated
+Software Quality Assurance Analysts and Testers,most_task_saturated
+Document Management Specialists,most_task_saturated
+Network and Computer Systems Administrators,most_task_saturated
+Special Education Teachers Middle School,least_task_saturated
+Kindergarten Teachers Except Special Education,least_task_saturated
+Special Education Teachers Preschool,least_task_saturated
+Midwives,least_task_saturated
+English Language and Literature Teachers Postsecondary,least_task_saturated

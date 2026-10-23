@@ -51,8 +51,15 @@ SOURCES: dict[str, str] = {
     # METR
     "metr/release_dates.yaml": "https://raw.githubusercontent.com/METR/eval-analysis-public/main/data/external/release_dates.yaml",
     "metr/runs_th11.jsonl": "https://raw.githubusercontent.com/METR/eval-analysis-public/main/reports/time-horizon-1-1/data/raw/runs.jsonl",
+    # OpenAI "GPTs are GPTs" occupation-level exposure (Eloundou et al. 2023)
+    "openai/gpts_are_gpts_occ_level.csv": "https://raw.githubusercontent.com/openai/GPTs-are-GPTs/main/data/occ_level.csv",
+    # reports kept for reference (numbers are hand-transcribed into data/reference/)
+    "openai/how_people_use_chatgpt_2025.pdf": "https://cdn.openai.com/pdf/a253471f-8260-40c6-a2cc-aa93fe9f142e/economic-research-chatgpt-usage-paper.pdf",
+    "google/GoogleATLASv1.pdf": "https://ai.google/static/documents/GoogleATLASv1.pdf",
+    "microsoft/ai_diffusion_2026_q2.pdf": "https://www.microsoft.com/en-us/research/wp-content/uploads/2026/09/Microsoft-AI-Diffusion-Report-2026-Q2.pdf",
     # Anthropic Economic Index
     **{f"aei/{p}": f"{HF}/{p}" for p in [
+        "release_2025_09_15/data/input/BTOS_National.xlsx",
         "release_2025_02_10/onet_task_mappings.csv", "release_2025_02_10/onet_task_statements.csv", "release_2025_02_10/SOC_Structure.csv",
         "release_2025_03_27/README.md", "release_2025_03_27/task_pct_v1.csv", "release_2025_03_27/task_pct_v2.csv", "release_2025_03_27/automation_vs_augmentation_by_task.csv", "release_2025_03_27/task_thinking_fractions.csv", "release_2025_03_27/cluster_level_data/cluster_level_dataset.tsv",
         "release_2025_09_15/data_documentation.md", "release_2025_09_15/data/intermediate/aei_raw_claude_ai_2025-08-04_to_2025-08-11.csv", "release_2025_09_15/data/intermediate/aei_raw_1p_api_2025-08-04_to_2025-08-11.csv", "release_2025_09_15/data/intermediate/onet_task_statements.csv",
@@ -98,5 +105,92 @@ def fetch_all(force: bool = False) -> dict:
         except Exception as e:  # keep going; report at the end
             manifest[rel] = {"url": url, "error": str(e)}
             print(f"FAIL  {rel}: {e}")
+    manifest["singapore_labour_apis"] = fetch_singapore_labour(force)
+    try:
+        parse_microsoft_diffusion_pdf()
+        manifest["microsoft_diffusion_countries_csv"] = "parsed"
+    except Exception as e:
+        manifest["microsoft_diffusion_countries_csv"] = f"not parsed: {e}"
     (RAW / "manifest.json").write_text(json.dumps(manifest, indent=2))
     return manifest
+
+
+# ----------------------------------------------------------------------------- Singapore labour statistics (APIs, saved as CSV/JSON)
+DATAGOV_RESOURCES = {
+    "ows_2024_wages_by_occupation": "d_9917e751f7498502f70052a940a3f312",
+    "ows_2024_wages_by_occupation_industry": "d_523d376ff1d501a338add925f3313fd1",
+    "ows_2024_wages_by_occupation_estab_size": "d_7d528712f1fd454ac6ca32fe06fe8f12",
+    "lfs_employed_by_occupation_status_sex": "d_3ba99a6cc9f643bacb63bdab296d7bff",
+    "lfs_employed_by_occupation_age": "d_1d7ab908d16d7b9ddf6f2c2985894119",
+}
+SINGSTAT_TABLES = ["M182081", "M920131", "M182171"]
+MOM_LFS_FILES = {
+    "LFR2025_SectionC.xlsx": "https://stats.mom.gov.sg/iMAS_Tables1/LabourForce/LabourForce_2025/LFR2025_SectionC.xlsx",
+    "LFR2025_SectionD.xlsx": "https://stats.mom.gov.sg/iMAS_Tables1/LabourForce/LabourForce_2025/LFR2025_SectionD.xlsx",
+}
+
+
+def fetch_singapore_labour(force: bool = False) -> dict:
+    """data.gov.sg datastore resources (MOM wages and LFS employment) and SingStat Table Builder tables."""
+    import csv
+
+    out = {}
+    dest_dir = RAW / "singapore" / "mom"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    for name, rid in DATAGOV_RESOURCES.items():
+        dest = dest_dir / f"{name}.csv"
+        if dest.exists() and not force:
+            out[name] = "exists"; continue
+        url = f"https://data.gov.sg/api/action/datastore_search?resource_id={rid}&limit=5000"
+        with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=120) as r:
+            d = json.load(r)["result"]
+        fields = [f["id"] for f in d["fields"]]
+        with open(dest, "w", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=fields); w.writeheader(); [w.writerow({k: rec.get(k) for k in fields}) for rec in d["records"]]
+        out[name] = f"{len(d['records'])} rows"
+    for t in SINGSTAT_TABLES:
+        dest = dest_dir / f"singstat_{t}.json"
+        if dest.exists() and not force:
+            out[t] = "exists"; continue
+        url = f"https://tablebuilder.singstat.gov.sg/api/table/tabledata/{t}?limit=2000"
+        with urllib.request.urlopen(urllib.request.Request(url, headers={**UA, "Accept": "application/json"}), timeout=120) as r:
+            dest.write_bytes(r.read())
+        out[t] = "ok"
+    for name, url in MOM_LFS_FILES.items():
+        dest = dest_dir / name
+        if dest.exists() and dest.stat().st_size > 20000 and not force:
+            out[name] = "exists"; continue
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=120) as r:
+                data = r.read()
+            if data[:2] == b"PK":
+                dest.write_bytes(data); out[name] = "ok"
+            else:
+                out[name] = "blocked (HTML returned); download by hand from stats.mom.gov.sg"
+        except Exception as e:
+            out[name] = f"blocked: {e}"
+    return out
+
+
+def parse_microsoft_diffusion_pdf() -> Path:
+    """Turn the Q2 2026 Global AI Diffusion PDF's appendix table into a CSV (needs `pdftotext`)."""
+    import csv
+    import re
+    import subprocess
+
+    pdf = RAW / "microsoft" / "ai_diffusion_2026_q2.pdf"
+    txt = subprocess.run(["pdftotext", "-layout", str(pdf), "-"], capture_output=True, text=True, check=True).stdout
+    rows = []
+    started = False
+    for ln in txt.split("\n"):
+        if "AI Diffusion Data Source" in ln:
+            started = True
+        if not started:
+            continue
+        m = re.match(r"^\s*([A-Za-z][A-Za-z .,'()&-]+?)\s{2,}(\d+\.\d)%\s+(\d+\.\d)%\s+(-?\d+\.\d)\s*$", ln)
+        if m:
+            rows.append((m.group(1).strip(), float(m.group(2)), float(m.group(3)), float(m.group(4))))
+    dest = RAW / "microsoft" / "ai_diffusion_2026_q2_countries.csv"
+    with open(dest, "w", newline="") as fh:
+        w = csv.writer(fh); w.writerow(["economy", "ai_user_share_2026q1_pct", "ai_user_share_2026q2_pct", "change_pp"]); w.writerows(rows)
+    return dest
