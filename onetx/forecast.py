@@ -215,6 +215,12 @@ def disruption_curve(fc: pd.DataFrame, by: str, weight: str = "task_weight", col
     out = pd.DataFrame({"n_tasks": g.task_id.nunique(), "weight_total": tot})
     for y in YEARS:
         out[f"share_by_{y}"] = d.assign(_x=d.w * (d[col] <= y)).groupby(by)._x.sum() / tot
+    # the same curves under the fast (p10) and slow (p90) cases, for honest ranges on aggregates
+    for q in ["p10", "p90"]:
+        qc = col.replace("p50", q)
+        if qc in d.columns and qc != col:
+            for y in YEARS:
+                out[f"share_by_{y}_{q}"] = d.assign(_x=d.w * (d[qc] <= y)).groupby(by)._x.sum() / tot
     out["share_beyond_horizon"] = d.assign(_x=d.w * d[col].isna()).groupby(by)._x.sum() / tot
     out["share_already_observed"] = d.assign(_x=d.w * d["already_observed"]).groupby(by)._x.sum() / tot if "already_observed" in d else np.nan
     if "barrier_index" in d:

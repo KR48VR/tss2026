@@ -34,7 +34,7 @@ Everything is a planning signal with a range. Nothing here forecasts job loss.
 
 ## Two ways in
 
-**No code.** The web page built from this pipeline lets anyone search a Singapore job title or Skills Framework role and see which of its tasks AI already does, which stay human, and the range of years by which half the job could be disruptable, with sector, skill and whole-economy views. Rebuild it with `python -m onetx site` (writes `site/index.html` plus `site/kt.json`) and publish or open it anywhere.
+**No code.** The web page built from this pipeline lets anyone search a Singapore job title or Skills Framework role and see which of its tasks AI already does, which stay human, and the range of years by which half the job could be disruptable, with sector, skill and whole-economy views. Published copies: [the map](https://claude.ai/artifact/FC2mCKb7exU2u9jmVbFNPS) and its [companion page](https://claude.ai/artifact/Pxd31ubFiwTQjdTSBsu7qZ) (how it was built, the QA log, and how King and Claude worked together; source in `site/companion.html`). Rebuild the map with `python -m onetx site` (writes `site/index.html` plus `site/kt.json`) and publish or open it anywhere.
 
 **Code.** Run the pipeline to rebuild every table, change the assumptions, or query the DuckDB file.
 

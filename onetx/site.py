@@ -37,7 +37,7 @@ def _half(row):
     return [_r(row.get(f"half_year_{q}"), 1) for q in ("p10", "p50", "p90")]
 
 
-def build_data() -> dict:
+def build_data(companion_url: str | None = None) -> dict:
     stats = json.loads((PROCESSED / "build_stats.json").read_text())
     econ = load("sg_economy_exposure")
     ssocw = load("sg_ssoc2024_weighted")
@@ -59,7 +59,7 @@ def build_data() -> dict:
     # ---- economy
     economy = []
     for _, r in econ.iterrows():
-        economy.append({"scope": r.scope, "level": r.level, "name": r.scope_name, "w": "emp" if r.weighting == "employment" else "wage", "total": _r(r.weight_total / (1 if r.weighting == "employment" else 1000), 1), "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "sb": _sb(r), "half": [_r(r.half_year_p10, 1), _r(r.half_year_central_from_curve, 1), _r(r.half_year_p90, 1)]})
+        economy.append({"scope": r.scope, "level": r.level, "name": r.scope_name, "w": "emp" if r.weighting == "employment" else "wage", "total": _r(r.weight_total / (1 if r.weighting == "employment" else 1000), 1), "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "sb": _sb(r), "sb10": [_pct(r.get(f"share_by_{y}_p10")) for y in YEARS], "sb90": [_pct(r.get(f"share_by_{y}_p90")) for y in YEARS], "half": [_r(r.get("half_year_fast_from_curve", r.half_year_p10), 1), _r(r.half_year_central_from_curve, 1), _r(r.get("half_year_slow_from_curve", r.half_year_p90), 1)]})
 
     # ---- SSOC occupations
     occ_title = occ.set_index("onet_soc_code").title
@@ -113,16 +113,17 @@ def build_data() -> dict:
         "crosswalk": stats.get("crosswalk_counts", {}), "sg_weights": stats.get("sg_weights", {}),
         "singapore_economy": stats.get("singapore_economy", {}),
         "usage_ratio": stats.get("singapore_usage_ratio", {}),
+        "companion_url": companion_url,
     }
     return {"meta": meta, "economy": economy, "ssoc": ssoc_list, "roles": role_list, "onet": onet_list, "skills": skills_list, "gwa": gwa_list, "sectors": sector_list, "_key_tasks": key_tasks}
 
 
-def build_site() -> Path:
+def build_site(companion_url: str | None = None) -> Path:
     """Write site/index.html (page + core data) and site/kt.json (key tasks per role, loaded on demand)."""
     SITE.mkdir(parents=True, exist_ok=True)
-    data = build_data()
+    data = build_data(companion_url)
     key_tasks = data.pop("_key_tasks")
-    js = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    js = json.dumps(data, ensure_ascii=True, separators=(",", ":")).replace("</", "<\\/")
     html = TEMPLATE.read_text().replace("__DATA__", js)
     out = SITE / "index.html"
     out.write_text(html)
