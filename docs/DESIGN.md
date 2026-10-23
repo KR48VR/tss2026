@@ -70,7 +70,9 @@ onetx/embed.py       embeddings + hybrid matcher
 onetx/match.py       meaning-based crosswalks + evaluation
 onetx/ai_signals.py  AEI / Microsoft / OpenAI / METR loaders
 onetx/frontier.py    per-task frontier scores and roll-ups
-onetx/forecast.py    timing model
+onetx/forecast.py    timing model, evidence tiers and the measured evidence lag
+onetx/sector_adoption.py industry adoption shifts (Census sector series -> MOM industries -> SSOC codes, O*NET occupations and roles)
+onetx/rate.py        the 2026 task rating run (Claude through the Claude Code CLI; cached, resumable); onetx/rubric_2026.md is the versioned rubric
 onetx/build.py       the pipeline; onetx/report.py the summary
 onetx/site.py        the self-contained web page (template in onetx/site_template.html)
 onetx/site_search.py search assets: alternative titles, task index, in-browser embedding model and item vectors

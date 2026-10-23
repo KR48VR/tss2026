@@ -53,6 +53,12 @@ SOURCES: dict[str, str] = {
     "metr/runs_th11.jsonl": "https://raw.githubusercontent.com/METR/eval-analysis-public/main/reports/time-horizon-1-1/data/raw/runs.jsonl",
     # OpenAI "GPTs are GPTs" occupation-level exposure (Eloundou et al. 2023)
     "openai/gpts_are_gpts_occ_level.csv": "https://raw.githubusercontent.com/openai/GPTs-are-GPTs/main/data/occ_level.csv",
+    # task-level labels from the same study: human raters and GPT-4, E0/E1/E2 per O*NET task
+    "openai/gpts_are_gpts_full_labelset.tsv": "https://raw.githubusercontent.com/openai/GPTs-are-GPTs/main/data/full_labelset.tsv",
+    # US Census Business Trends and Outlook Survey: share of firms using AI, national and by NAICS sector
+    # (biweekly; refreshed on every fetch once the local copy is two weeks old, see FRESH_DAYS)
+    "census/btos_national.xlsx": "https://www.census.gov/hfp/btos/downloads/National.xlsx",
+    "census/btos_sector.xlsx": "https://www.census.gov/hfp/btos/downloads/Sector.xlsx",
     # reports kept for reference (numbers are hand-transcribed into data/reference/)
     "openai/how_people_use_chatgpt_2025.pdf": "https://cdn.openai.com/pdf/a253471f-8260-40c6-a2cc-aa93fe9f142e/economic-research-chatgpt-usage-paper.pdf",
     "google/GoogleATLASv1.pdf": "https://ai.google/static/documents/GoogleATLASv1.pdf",
@@ -80,11 +86,19 @@ def _sha256(p: Path) -> str:
     return h.hexdigest()
 
 
-def fetch_one(rel: str, url: str, force: bool = False) -> Path:
+# sources that are time series: re-download when the local copy is older than this many days
+FRESH_DAYS = {"census/btos_national.xlsx": 14, "census/btos_sector.xlsx": 14}
+
+
+def fetch_one(rel: str, url: str, force: bool = False, max_age_days: int | None = None) -> Path:
+    import time
+
     dest = RAW / rel
     dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.exists() and not force:
-        return dest
+        age_days = (time.time() - dest.stat().st_mtime) / 86400.0
+        if max_age_days is None or age_days <= max_age_days:
+            return dest
     req = urllib.request.Request(url, headers=UA)
     with urllib.request.urlopen(req, timeout=600) as r, open(dest, "wb") as fh:
         shutil.copyfileobj(r, fh)
@@ -99,7 +113,7 @@ def fetch_all(force: bool = False) -> dict:
     manifest = {}
     for rel, url in SOURCES.items():
         try:
-            p = fetch_one(rel, url, force)
+            p = fetch_one(rel, url, force, FRESH_DAYS.get(rel))
             manifest[rel] = {"url": url, "sha256": _sha256(p), "bytes": p.stat().st_size}
             print(f"ok    {rel}")
         except Exception as e:  # keep going; report at the end

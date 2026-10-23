@@ -24,7 +24,7 @@ from . import onet
 from . import singapore as sg
 from .config import ROOT
 from .io import load
-from .site import STATUS_CODE, _r
+from .site import STATUS_CODE, TIER_CODE, _r
 
 SITE = ROOT / "site"
 MODEL_NAME = "minishlab/potion-base-4M"
@@ -74,7 +74,7 @@ def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: l
     onet_tasks = []
     for _, t in tasks.iterrows():
         f = fc.loc[t.task_id]
-        onet_tasks.append([str(t.task_statement)[:160], STATUS_CODE.get(f.status, 3), _r(f.disrupt_year_p50, 1), occ.get(t.onet_soc_code, ""), top_ssoc.get(t.onet_soc_code, [])])
+        onet_tasks.append([str(t.task_statement)[:160], STATUS_CODE.get(f.status, 3), _r(f.disrupt_year_p50, 1), occ.get(t.onet_soc_code, ""), top_ssoc.get(t.onet_soc_code, []), TIER_CODE.get(f.get("evidence_tier"), None)])
     (SITE / "search.json").write_text(json.dumps({"alt": alt, "onet": onet_tasks}, ensure_ascii=True, separators=(",", ":")))
 
     # ---- items to embed

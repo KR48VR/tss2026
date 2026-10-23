@@ -17,6 +17,11 @@ SITE = ROOT / "site"
 TEMPLATE = Path(__file__).with_name("site_template.html")
 STATUS_CODE = {"observed_automation": 0, "observed_augmentation": 1, "physical_robotics": 2, "not_observed": 3}
 BARRIER_CODE = {"none": 0, "interpersonal": 1, "in_person": 2, "accountability": 3, "handover": 4, "physical": 5}
+TIERS = ["seen", "rated", "newly_rated", "mixed", "unproven", "physical"]
+TIER_CODE = {t: i for i, t in enumerate(TIERS)}
+AUTONOMY_CODE = {"A0": 0, "A1": 1, "A2": 2, "A3": 3}
+RUBRIC_BARRIERS = ["none", "physical", "in_person", "relationship", "accountability", "system_access", "judgement", "data_absent"]
+RBARRIER_CODE = {b: i for i, b in enumerate(RUBRIC_BARRIERS)}
 
 
 def _r(x, nd=0):
@@ -37,6 +42,24 @@ def _half(row):
     return [_r(row.get(f"half_year_{q}"), 1) for q in ("p10", "p50", "p90")]
 
 
+def _sbq(row, q):
+    if row is None:
+        return None
+    vals = [row.get(f"share_by_{y}_{q}") for y in YEARS]
+    return [_pct(v) for v in vals] if any(pd.notna(v) for v in vals) else None
+
+
+def _tiers(row):
+    if row is None:
+        return None
+    vals = [row.get(f"share_tier_{t}") for t in TIERS]
+    return [_pct(v) for v in vals] if any(pd.notna(v) for v in vals) else None
+
+
+def _code(mapping, v):
+    return mapping.get(v) if isinstance(v, str) else None
+
+
 def build_data(companion_url: str | None = None) -> dict:
     stats = json.loads((PROCESSED / "build_stats.json").read_text())
     econ = load("sg_economy_exposure")
@@ -55,6 +78,9 @@ def build_data(companion_url: str | None = None) -> dict:
     skills = load("frontier_skills").merge(load("forecast_skills").drop(columns=["family", "element_name", "n_occupations", "onet_version"]), on="element_id", how="left")
     act = load("frontier_activities").merge(load("forecast_activities").drop(columns=["name", "level", "n_tasks"]), on="activity_id", how="left")
     sectors = load("sg_sfw_sectors")
+    sh_ssoc = load("sg_adoption_shift_ssoc2024").set_index("ssoc_code").adoption_shift_years if (PROCESSED / "sg_adoption_shift_ssoc2024.parquet").exists() else pd.Series(dtype=float)
+    sh_role = load("sg_adoption_shift_sfw_roles").set_index("role_id").adoption_shift_years if (PROCESSED / "sg_adoption_shift_sfw_roles.parquet").exists() else pd.Series(dtype=float)
+    sh_onet = load("sg_adoption_shift_onet").set_index("onet_soc_code").adoption_shift_years if (PROCESSED / "sg_adoption_shift_onet.parquet").exists() else pd.Series(dtype=float)
 
     # ---- economy
     economy = []
@@ -71,11 +97,15 @@ def build_data(companion_url: str | None = None) -> dict:
     ssoc_list = []
     for _, r in ssocw.sort_values("ssoc_code").iterrows():
         f = fssoc.loc[r.ssoc_code] if r.ssoc_code in fssoc.index else None
-        ssoc_list.append({"c": r.ssoc_code, "t": r.ssoc_title, "mg": r.major_group, "sm": r.submajor_label, "smn": r.submajor_name, "emp": _r(r.employment_thousands, 1), "wage": _r(r.wage_median), "ws": r.wage_source, "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "ai": _r(r.ai_applicability_score, 2), "sb": _sb(r) if f is not None else None, "h": _half(r), "bi": _r(f.barrier_index, 2) if f is not None else None, "onet": top_onet.get(r.ssoc_code, []), "roles": roles_by_ssoc.get(r.ssoc_code, [])})
+        ssoc_list.append({"c": r.ssoc_code, "t": r.ssoc_title, "mg": r.major_group, "sm": r.submajor_label, "smn": r.submajor_name, "emp": _r(r.employment_thousands, 1), "wage": _r(r.wage_median), "ws": r.wage_source, "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "ai": _r(r.ai_applicability_score, 2), "sb": _sb(r) if f is not None else None, "sb10": _sbq(f, "p10"), "sb90": _sbq(f, "p90"), "tiers": _tiers(f), "shift": _r(sh_ssoc.get(r.ssoc_code), 1) if r.ssoc_code in sh_ssoc.index else None, "h": _half(r), "bi": _r(f.barrier_index, 2) if f is not None else None, "onet": top_onet.get(r.ssoc_code, []), "roles": roles_by_ssoc.get(r.ssoc_code, [])})
 
     # ---- Skills Framework roles with key tasks
     ks = kt_scores.merge(kt[["key_task", "cwf"]], left_on="key_task_id", right_index=True, how="left")
-    ks = ks.merge(ft[["status", "disrupt_year_p50", "disrupt_year_p10", "disrupt_year_p90", "barrier_type"]], left_on="top_task_id", right_index=True, how="left")
+    ft_cols = ["status", "disrupt_year_p50", "disrupt_year_p10", "disrupt_year_p90", "barrier_type"] + [c for c in ["evidence_tier", "autonomy_2026", "barrier_2026"] if c in ft.columns]
+    ks = ks.merge(ft[ft_cols], left_on="top_task_id", right_index=True, how="left")
+    for c in ["evidence_tier", "autonomy_2026", "barrier_2026"]:
+        if c not in ks.columns:
+            ks[c] = None
     ks["task_text"] = ks.top_task_id.map(tasks.task_statement)
     kt_by_role = {rid: g for rid, g in ks.groupby("role_id")}
     ssoc_by_role = {rid: [[c, s, _r(sc, 0)] for c, s, sc in zip(g.ssoc_code, g.source, g.match_score)] for rid, g in role_ssoc.groupby("role_id")}
@@ -87,20 +117,20 @@ def build_data(companion_url: str | None = None) -> dict:
         groups = []
         if g is not None:
             for cwf, gg in g.groupby(g.cwf.fillna(""), sort=False):
-                items = [[str(k.key_task)[:150], STATUS_CODE.get(k.status, 3), _r(k.disrupt_year_p50, 1), BARRIER_CODE.get(k.barrier_type, 0), _r(k.top_score, 2), str(k.task_text)[:110] if isinstance(k.task_text, str) else None] for _, k in gg.sort_values("disrupt_year_p50").iterrows()]
+                items = [[str(k.key_task)[:150], STATUS_CODE.get(k.status, 3), _r(k.disrupt_year_p50, 1), BARRIER_CODE.get(k.barrier_type, 0), _r(k.top_score, 2), str(k.task_text)[:110] if isinstance(k.task_text, str) else None, _code(TIER_CODE, k.evidence_tier), _code(AUTONOMY_CODE, k.autonomy_2026), _code(RBARRIER_CODE, k.barrier_2026)] for _, k in gg.sort_values("disrupt_year_p50").iterrows()]
                 groups.append([str(cwf)[:90], items])
         key_tasks.append(groups)
-        role_list.append({"sector": r.sector, "track": r.track if isinstance(r.track, str) else "", "role": r.job_role, "desc": (r.job_role_description or "")[:360] if isinstance(r.job_role_description, str) else "", "ssoc": [[c, s, sc, ssoc_title.get(c, "")] for c, s, sc in ssoc_by_role.get(r.role_id, [])], "oat": _pct(r.observed_automation_via_tasks), "oas": _pct(r.observed_automation_via_ssoc), "sko": _pct(r.share_key_tasks_observed), "skp": _pct(r.share_key_tasks_physical), "nk": _r(r.n_key_tasks), "ms": _r(r.mean_match_score, 2), "sb": _sb(f) if f is not None else None, "h": _half(f) if f is not None else [None, None, None], "bi": _r(f.barrier_index, 2) if f is not None else None})
+        role_list.append({"sector": r.sector, "track": r.track if isinstance(r.track, str) else "", "role": r.job_role, "desc": (r.job_role_description or "")[:360] if isinstance(r.job_role_description, str) else "", "ssoc": [[c, s, sc, ssoc_title.get(c, "")] for c, s, sc in ssoc_by_role.get(r.role_id, [])], "oat": _pct(r.observed_automation_via_tasks), "oas": _pct(r.observed_automation_via_ssoc), "sko": _pct(r.share_key_tasks_observed), "skp": _pct(r.share_key_tasks_physical), "nk": _r(r.n_key_tasks), "ms": _r(r.mean_match_score, 2), "sb": _sb(f) if f is not None else None, "sb10": _sbq(f, "p10"), "sb90": _sbq(f, "p90"), "tiers": _tiers(f), "shift": _r(sh_role.get(r.role_id), 1) if r.role_id in sh_role.index else None, "h": _half(f) if f is not None else [None, None, None], "bi": _r(f.barrier_index, 2) if f is not None else None})
 
     # ---- O*NET occupations
     onet_list = []
     for _, r in occ.sort_values("title").iterrows():
         f = focc.loc[r.onet_soc_code] if r.onet_soc_code in focc.index else None
-        onet_list.append({"c": r.onet_soc_code, "t": r.title, "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "ms": _r(r.ai_applicability_score, 2), "oe": _r(r.openai_exposure_beta_gpt4, 2), "g": r.google_atlas_flag if isinstance(r.google_atlas_flag, str) else None, "np": _r(r.n_providers_positive), "h": _half(f) if f is not None else [None, None, None], "sb": _sb(f) if f is not None else None, "gd": bool(r.gdpval_covered)})
+        onet_list.append({"c": r.onet_soc_code, "t": r.title, "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "ms": _r(r.ai_applicability_score, 2), "oe": _r(r.openai_exposure_beta_gpt4, 2), "g": r.google_atlas_flag if isinstance(r.google_atlas_flag, str) else None, "np": _r(r.n_providers_positive), "h": _half(f) if f is not None else [None, None, None], "sb": _sb(f) if f is not None else None, "sb10": _sbq(f, "p10"), "sb90": _sbq(f, "p90"), "tiers": _tiers(f), "shift": _r(sh_onet.get(r.onet_soc_code), 1) if r.onet_soc_code in sh_onet.index else None, "gd": bool(r.gdpval_covered)})
 
-    skills_list = [{"f": r.family, "name": r.element_name, "n": _r(r.n_occupations), "oa": _pct(r.via_occupations_observed_automation), "oaa": _pct(r.via_activities_observed_automation), "h": _half(r), "sb": _sb(r)} for _, r in skills.sort_values(["family", "element_name"]).iterrows()]
-    gwa_list = [{"name": r["name"], "n": _r(r.n_tasks), "so": _pct(r.share_tasks_observed), "oa": _pct(r.observed_automation), "ms": _r(r.ms_share * 100, 1) if pd.notna(r.ms_share) else None, "h": _half(r), "sb": _sb(r)} for _, r in act[act.level == "gwa"].sort_values("observed_automation", ascending=False).iterrows()]
-    sector_list = [{"sector": r.sector, "n": _r(r.n_roles), "oat": _pct(r.observed_automation_via_tasks), "sko": _pct(r.share_key_tasks_observed), "skp": _pct(r.share_key_tasks_physical), "sb30": _pct(r.share_by_2030), "sb35": _pct(r.share_by_2035), "h50": _r(r.half_year_p50_median_role, 1), "h90": _r(r.half_year_p90_median_role, 1)} for _, r in sectors.iterrows()]
+    skills_list = [{"f": r.family, "name": r.element_name, "n": _r(r.n_occupations), "oa": _pct(r.via_occupations_observed_automation), "oaa": _pct(r.via_activities_observed_automation), "h": _half(r), "sb": _sb(r), "sb10": _sbq(r, "p10"), "sb90": _sbq(r, "p90")} for _, r in skills.sort_values(["family", "element_name"]).iterrows()]
+    gwa_list = [{"name": r["name"], "n": _r(r.n_tasks), "so": _pct(r.share_tasks_observed), "oa": _pct(r.observed_automation), "ms": _r(r.ms_share * 100, 1) if pd.notna(r.ms_share) else None, "h": _half(r), "sb": _sb(r), "sb10": _sbq(r, "p10"), "sb90": _sbq(r, "p90")} for _, r in act[act.level == "gwa"].sort_values("observed_automation", ascending=False).iterrows()]
+    sector_list = [{"sector": r.sector, "n": _r(r.n_roles), "oat": _pct(r.observed_automation_via_tasks), "sko": _pct(r.share_key_tasks_observed), "skp": _pct(r.share_key_tasks_physical), "sb30": _pct(r.share_by_2030), "sb35": _pct(r.share_by_2035), "sb30f": _pct(r.get("share_by_2030_p10")), "sb30s": _pct(r.get("share_by_2030_p90")), "sb35f": _pct(r.get("share_by_2035_p10")), "sb35s": _pct(r.get("share_by_2035_p90")), "h": [_r(r.get("half_year_p10_median_role"), 1), _r(r.half_year_p50_median_role, 1), _r(r.half_year_p90_median_role, 1)]} for _, r in sectors.iterrows()]
 
     fp = stats.get("forecast_params", {})
     meta = {
@@ -114,6 +144,11 @@ def build_data(companion_url: str | None = None) -> dict:
         "singapore_economy": stats.get("singapore_economy", {}),
         "usage_ratio": stats.get("singapore_usage_ratio", {}),
         "companion_url": companion_url,
+        "data_as_of": stats.get("data_as_of", {}),
+        "adoption": {"us_half": {k: _r(v, 1) for k, v in stats.get("adoption_anchor_years", {}).items()}, "sg_half": {k: _r(v - (stats.get("geo_lead_years_central") or 0), 1) for k, v in stats.get("adoption_anchor_years", {}).items()}, "lead": _r(stats.get("geo_lead_years_central"), 1), "lead_years_used": (stats.get("singapore_firm_lead") or {}).get("years_used"), "btos_last_pct": (stats.get("btos_adoption_fit") or {}).get("last_pct"), "btos_last_date": (stats.get("btos_adoption_fit") or {}).get("last_ref_end"), "half_old_wording": _r((stats.get("btos_adoption_fit") or {}).get("year_cross_50pct_old_wording"), 1), "sg_own_half": _r((stats.get("singapore_firm_lead") or {}).get("sg_year_cross_50pct"), 1)},
+        "evidence": {"tiers": (stats.get("evidence") or {}).get("tiers", {}), "lag_unproven": _r(((stats.get("evidence") or {}).get("evidence_lag_years", {}).get("unproven") or [None, None, None])[1], 1), "lag_mixed": _r(((stats.get("evidence") or {}).get("evidence_lag_years", {}).get("mixed") or [None, None, None])[1], 1), "lag_newly": _r(((stats.get("evidence") or {}).get("evidence_lag_years", {}).get("newly_rated") or [None, None, None])[1], 1), "ratings_2026_used": (stats.get("evidence") or {}).get("ratings_2026_used", False)},
+        "sector_shift": (stats.get("sector_adoption") or {}).get("industry_shift_years", {}),
+        "sector_labels": {"J": "Information & communications", "K": "Financial & insurance services", "M": "Professional services", "OP": "Public administration & education", "L": "Real estate services", "Q": "Health & social services", "N": "Administrative & support services", "R": "Arts, entertainment & recreation", "C": "Manufacturing", "G": "Wholesale & retail trade", "F": "Construction", "SU": "Other community, social & personal services", "ABDE": "Agriculture, mining, utilities", "H": "Transportation & storage", "I": "Accommodation & food services"},
     }
     return {"meta": meta, "economy": economy, "ssoc": ssoc_list, "roles": role_list, "onet": onet_list, "skills": skills_list, "gwa": gwa_list, "sectors": sector_list, "_key_tasks": key_tasks}
 

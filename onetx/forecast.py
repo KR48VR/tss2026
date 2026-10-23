@@ -63,7 +63,12 @@ class ForecastParams:
     adoption_intercept: float = -2.99
     adoption_growth_mult: tuple = (1.5, 1.0, 0.6)   # fast / central / slow
     geo: str = "SGP"
-    geo_usage_ratio_vs_us: float = 1.7              # Singapore individual AI use relative to the US (Microsoft x Anthropic, geometric mean)
+    geo_usage_ratio_vs_us: float = 1.7              # Singapore individual AI use relative to the US (Microsoft x Anthropic, geometric mean); fallback for the lead
+    geo_lead_years_measured: float | None = None     # Singapore firms' lead over US firms at matched adoption levels (IMDA vs Census); used when set
+    # capability evidence: years before a desk task with no usage evidence is treated as capable, by
+    # evidence tier (overwritten by calibrate_evidence(): measured from how far each tier lags the
+    # best-rated tasks in being seen in actual use)
+    evidence_lag_years: dict = field(default_factory=lambda: {"mixed": (0.7, 1.4, 2.8), "unproven": (1.1, 2.2, 4.4), "newly_rated": (0.0, 0.0, 0.0)})
     # barriers
     max_barrier_years: tuple = (2.0, 4.0, 6.0)      # fast / central / slow
     observed_credit_years: float = 1.0
@@ -83,7 +88,7 @@ def calibrate(p: ForecastParams, tf: pd.DataFrame) -> ForecastParams:
     return p
 
 
-def calibrate_adoption(p: ForecastParams, btos_fit: dict | None = None, geo_ratio: float | None = None) -> ForecastParams:
+def calibrate_adoption(p: ForecastParams, btos_fit: dict | None = None, geo_ratio: float | None = None, geo_lead: float | None = None) -> ForecastParams:
     p = ForecastParams(**asdict(p))
     if btos_fit:
         p.adoption_saturation = float(btos_fit["saturation"])
@@ -91,6 +96,8 @@ def calibrate_adoption(p: ForecastParams, btos_fit: dict | None = None, geo_rati
         p.adoption_intercept = float(btos_fit["intercept"])
     if geo_ratio:
         p.geo_usage_ratio_vs_us = float(geo_ratio)
+    if geo_lead is not None:
+        p.geo_lead_years_measured = float(geo_lead)
     return p
 
 
@@ -124,9 +131,107 @@ def adoption_cross_year(p: ForecastParams, level: float = 0.5, mult: float = 1.0
 
 
 def geo_lead_years(p: ForecastParams, mult: float = 1.0) -> float:
-    if p.geo.upper() in ("US", "USA") or not p.geo_usage_ratio_vs_us:
+    """Years Singapore runs ahead of the US curve: the measured firm-adoption lead when available,
+    else inferred from the individual-usage ratio through the growth rate."""
+    if p.geo.upper() in ("US", "USA"):
+        return 0.0
+    if p.geo_lead_years_measured is not None:
+        return float(p.geo_lead_years_measured)
+    if not p.geo_usage_ratio_vs_us:
         return 0.0
     return float(np.log(p.geo_usage_ratio_vs_us) / (p.adoption_growth_per_year * mult))
+
+
+EVIDENCE_TIERS = ["seen", "rated", "newly_rated", "mixed", "unproven", "physical"]
+
+
+def evidence_tiers(tf: pd.DataFrame, labels: pd.DataFrame | None, ratings: pd.DataFrame | None = None) -> pd.DataFrame:
+    """One evidence tier per task, from strongest to weakest:
+      seen         AI use on this task has been published in at least one Economic Index release
+      rated        not seen, but rated doable by the 2023 raters (human or GPT-4) and, when a 2026 rating
+                   exists, by the 2026 rating too
+      newly_rated  not seen; the 2023 raters said no but the 2026 rating says yes (the frontier moved)
+      mixed        not seen; the raters disagree (one 2023 rater yes / without 2026 ratings: one of two
+                   2023 raters yes; with them: 2026 says no but a 2023 rater said yes)
+      unproven     not seen; every rater said no
+      physical     physical task (robot track; the ratings exclude robots)
+    'Yes' means exposure E1 or E2: AI could cut the time by at least half."""
+    d = tf[["task_id", "physical", "usage_n_vintages"]].copy()
+    d["task_id"] = d.task_id.astype(str)
+    if labels is not None and len(labels):
+        lab = labels.copy(); lab["task_id"] = lab.task_id.astype(str)
+        d = d.merge(lab[["task_id", "exposure_human_2023", "exposure_gpt4_2023", "automation_gpt4_2023"]], on="task_id", how="left")
+    else:
+        d["exposure_human_2023"] = np.nan; d["exposure_gpt4_2023"] = np.nan; d["automation_gpt4_2023"] = np.nan
+    h_yes = d.exposure_human_2023.isin(["E1", "E2"]); g_yes = d.exposure_gpt4_2023.isin(["E1", "E2"])
+    has23 = d.exposure_human_2023.notna() | d.exposure_gpt4_2023.notna()
+    yes23_any = h_yes | g_yes
+    yes23_both = h_yes & g_yes
+    has26 = pd.Series(False, index=d.index)
+    if ratings is not None and len(ratings):
+        r = ratings.copy(); r["task_id"] = r.task_id.astype(str)
+        d = d.merge(r[["task_id", "exposure", "autonomy", "barrier"]].rename(columns={"exposure": "exposure_2026", "autonomy": "autonomy_2026", "barrier": "barrier_2026"}), on="task_id", how="left")
+        has26 = d.exposure_2026.notna()
+    else:
+        d["exposure_2026"] = np.nan; d["autonomy_2026"] = np.nan; d["barrier_2026"] = np.nan
+    yes26 = d.exposure_2026.isin(["E1", "E2"])
+    seen = d.usage_n_vintages.fillna(0) >= 1
+    tier = np.select(
+        [d.physical, seen,
+         has26 & yes26 & yes23_any, has26 & yes26 & ~yes23_any, has26 & ~yes26 & yes23_any, has26 & ~yes26 & ~yes23_any,
+         ~has23, yes23_both, yes23_any],
+        ["physical", "seen", "rated", "newly_rated", "mixed", "unproven", "mixed", "rated", "mixed"], default="unproven")
+    d["evidence_tier"] = tier
+    d["rated_yes_2023"] = np.where(has23, np.where(yes23_both, "both", np.where(yes23_any, "one", "none")), "no_rating")
+    d["rated_yes_2026"] = np.where(has26, np.where(yes26, "yes", "no"), "no_rating")
+    return d.drop(columns=["physical", "usage_n_vintages"])
+
+
+def calibrate_evidence(p: ForecastParams, usage_long: pd.DataFrame, tiers: pd.DataFrame, tf: pd.DataFrame, source: str = "claude_ai") -> tuple[ForecastParams, dict]:
+    """Measure how far each evidence tier lags the 'rated' tier in being seen in actual use, release by
+    release: for desk tasks, the share ever seen by each release is tracked per tier; the rated tier's
+    coverage grows at g points a year; a tier whose coverage today equals what the rated tier had
+    (today's rated coverage - its own) / g years ago lags by that many years. Central = that lag, fast =
+    half, slow = double. Tiers are assigned ignoring the 'seen' split (a task's rating group), so the
+    comparison is between rating groups."""
+    d = tf[["task_id", "physical"]].copy(); d["task_id"] = d.task_id.astype(str)
+    t = tiers.copy(); t["task_id"] = t.task_id.astype(str)
+    # rating group = the tier the task would have without usage evidence
+    g26 = t.rated_yes_2026; g23 = t.rated_yes_2023
+    group = np.where(g26 == "no_rating",
+                     np.where(g23 == "both", "rated", np.where(g23 == "one", "mixed", np.where(g23 == "none", "unproven", "mixed"))),
+                     np.where(g26 == "yes", np.where(g23.isin(["both", "one"]), "rated", "newly_rated"), np.where(g23.isin(["both", "one"]), "mixed", "unproven")))
+    t["group"] = group
+    d = d.merge(t[["task_id", "group"]], on="task_id", how="left")
+    d = d[~d.physical]
+    u = usage_long[(usage_long.metric == "usage_pct") & (usage_long.source == source) & (usage_long.value > 0)].copy()
+    u["task_id"] = u.task_id.astype(str)
+    vint = sorted(u.vintage.unique())
+    ever = set(); cov = []
+    for v in vint:
+        ever |= set(u[u.vintage == v].task_id)
+        s = d.task_id.isin(ever)
+        row = {"vintage": v, "mid_date": str(u[u.vintage == v].mid_date.iloc[0])[:10]}
+        for grp in ["rated", "newly_rated", "mixed", "unproven"]:
+            m = (d.group == grp).values
+            row[grp] = float(s[m].mean()) if m.any() else np.nan
+        cov.append(row)
+    cov = pd.DataFrame(cov)
+    cov["t"] = (pd.to_datetime(cov.mid_date) - pd.Timestamp("2025-01-01")).dt.days / 365.25
+    out = {"coverage_by_release": cov.round(4).to_dict("records")}
+    p = ForecastParams(**asdict(p)); lags = dict(p.evidence_lag_years)
+    if len(cov) >= 2 and cov.rated.notna().all():
+        g = float(np.polyfit(cov.t.values, cov.rated.values, 1)[0])  # points of coverage per year
+        out["rated_coverage_growth_per_year"] = g
+        if g > 0:
+            for grp in ["newly_rated", "mixed", "unproven"]:
+                c = cov[grp].iloc[-1]
+                if pd.notna(c):
+                    lag = max(0.0, (float(cov.rated.iloc[-1]) - float(c)) / g)
+                    lags[grp] = (round(lag * 0.5, 2), round(lag, 2), round(lag * 2.0, 2))
+    p.evidence_lag_years = lags
+    out["evidence_lag_years"] = lags
+    return p, out
 
 
 def impute_task_minutes(tf: pd.DataFrame) -> pd.DataFrame:
@@ -158,12 +263,22 @@ def _frac_year(ts: pd.Timestamp) -> float:
     return ts.year + (ts.dayofyear - 1) / 365.25
 
 
-def forecast_tasks(tf: pd.DataFrame, barriers: pd.DataFrame, params: ForecastParams | None = None, now: str = "2026-10-01") -> pd.DataFrame:
+def forecast_tasks(tf: pd.DataFrame, barriers: pd.DataFrame, params: ForecastParams | None = None, now: str = "2026-10-01", tiers: pd.DataFrame | None = None, occ_shift: pd.DataFrame | None = None) -> pd.DataFrame:
+    """occ_shift: optional (onet_soc_code, adoption_shift_years) = years the occupation's industries run
+    ahead (negative) or behind the national adoption curve (sector_adoption.py); divided by the growth
+    multiplier in the fast and slow cases."""
     p = params or ForecastParams()
     now_y = _frac_year(pd.Timestamp(now))
     mins = impute_task_minutes(tf)
     d = tf[["task_id", "onet_soc_code", "task_weight", "physical", "robot_tier", "status", "usage_latest", "automation_share", "observed_automation", "human_only_ability_pct", "usage_index", "usage_trend"]].merge(mins, on="task_id").merge(barriers[["task_id", "barrier_index", "barrier_type", "b_interpersonal", "b_in_person", "b_accountability", "b_handover"]], on="task_id", how="left")
     d["barrier_index"] = d.barrier_index.fillna(float(d.barrier_index.median()))
+    if tiers is not None:
+        t = tiers.copy(); t["task_id"] = t.task_id.astype(d.task_id.dtype) if d.task_id.dtype != object else t.task_id.astype(str)
+        d = d.merge(t[["task_id", "evidence_tier", "exposure_2026", "autonomy_2026", "barrier_2026"]], on="task_id", how="left")
+        d["evidence_tier"] = d.evidence_tier.fillna("mixed")
+    else:
+        d["evidence_tier"] = np.where(d.physical, "physical", np.where(d.usage_latest > 0, "seen", "mixed"))
+        d["exposure_2026"] = np.nan; d["autonomy_2026"] = np.nan; d["barrier_2026"] = np.nan
 
     # 1. capability
     doublings = np.log2(d.minutes.values / p.delegation_horizon_now_min)
@@ -176,6 +291,11 @@ def forecast_tasks(tf: pd.DataFrame, barriers: pd.DataFrame, params: ForecastPar
     observed = (d.status == "observed_automation").values
     for name in cap:
         cap[name] = np.where(observed & ~d.physical.values, now_y, cap[name])
+    # evidence lag: a desk task nobody has seen AI do, and that raters say AI cannot do, is not treated
+    # as capable today; it waits the measured lag of its evidence tier (never "AI cannot")
+    for name, i in [("fast", 0), ("central", 1), ("slow", 2)]:
+        lag = d.evidence_tier.map(lambda tname: p.evidence_lag_years.get(tname, (0.0, 0.0, 0.0))[i]).astype(float).values
+        cap[name] = np.where(~d.physical.values & ~observed, np.maximum(cap[name], now_y + lag), cap[name])
 
     # 2. adoption anchor and geo lead, 3. barriers
     out = d.copy()
@@ -184,9 +304,14 @@ def forecast_tasks(tf: pd.DataFrame, barriers: pd.DataFrame, params: ForecastPar
         anchors[name] = adoption_cross_year(p, 0.5, mult)
         leads[name] = geo_lead_years(p, mult)
     credit = np.where(observed, p.observed_credit_years, 0.0)
-    for name, q, mb in [("fast", "p10", p.max_barrier_years[0]), ("central", "p50", p.max_barrier_years[1]), ("slow", "p90", p.max_barrier_years[2])]:
+    if occ_shift is not None and len(occ_shift):
+        shift = d.onet_soc_code.map(occ_shift.set_index("onet_soc_code").adoption_shift_years).fillna(0.0).values
+    else:
+        shift = np.zeros(len(d))
+    out["adoption_shift_years"] = shift
+    for (name, q, mb), mult in zip([("fast", "p10", p.max_barrier_years[0]), ("central", "p50", p.max_barrier_years[1]), ("slow", "p90", p.max_barrier_years[2])], p.adoption_growth_mult):
         barrier_years = d.barrier_index.values * mb
-        y = anchors[name] - leads[name] + np.maximum(cap[name] - now_y, 0.0) + barrier_years - credit
+        y = anchors[name] - leads[name] + shift / mult + np.maximum(cap[name] - now_y, 0.0) + barrier_years - credit
         y = np.maximum(y, now_y + 0.5)
         out[f"capable_year_{name}"] = cap[name]
         out[f"barrier_years_{name}"] = barrier_years
@@ -204,6 +329,19 @@ def forecast_tasks(tf: pd.DataFrame, barriers: pd.DataFrame, params: ForecastPar
 
 
 YEARS = list(range(2026, 2041))
+
+
+def reshift_years(df: pd.DataFrame, new_shift: pd.Series, p: ForecastParams, now_y: float) -> pd.DataFrame:
+    """Move task disruption years from their occupation's adoption shift to another entity's shift
+    (an SSOC code's or a Skills Framework role's industry), scenario by scenario."""
+    d = df.copy()
+    delta = (new_shift.fillna(0.0).values - d.adoption_shift_years.fillna(0.0).values)
+    for q, mult in zip(["p10", "p50", "p90"], p.adoption_growth_mult):
+        col = f"disrupt_year_{q}"
+        y = d[col].values + delta / mult
+        d[col] = np.where(np.isnan(d[col].values), np.nan, np.maximum(y, now_y + 0.5))
+        d[col] = d[col].where(d[col] <= p.horizon_cap_year, np.nan)
+    return d
 
 
 def disruption_curve(fc: pd.DataFrame, by: str, weight: str = "task_weight", col: str = "disrupt_year_p50") -> pd.DataFrame:
@@ -225,6 +363,9 @@ def disruption_curve(fc: pd.DataFrame, by: str, weight: str = "task_weight", col
     out["share_already_observed"] = d.assign(_x=d.w * d["already_observed"]).groupby(by)._x.sum() / tot if "already_observed" in d else np.nan
     if "barrier_index" in d:
         out["barrier_index"] = d.assign(_x=d.w * d.barrier_index).groupby(by)._x.sum() / tot
+    if "evidence_tier" in d:
+        for tname in EVIDENCE_TIERS:
+            out[f"share_tier_{tname}"] = d.assign(_x=d.w * (d.evidence_tier == tname)).groupby(by)._x.sum() / tot
 
     def half(colname):
         res = {}

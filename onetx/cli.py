@@ -19,6 +19,11 @@ def main(argv=None):
     st.add_argument("--companion", default="https://claude.ai/artifact/Pxd31ubFiwTQjdTSBsu7qZ", help="URL of the companion page linked from the method view ('' for none)")
     q = sub.add_parser("query", help="run SQL against the DuckDB file")
     q.add_argument("sql")
+    rt = sub.add_parser("rate", help="rate every O*NET task on the 2026 rubric with Claude (resumes; cached in data/reference)")
+    rt.add_argument("--model", default="sonnet")
+    rt.add_argument("--batch", type=int, default=80)
+    rt.add_argument("--workers", type=int, default=4)
+    rt.add_argument("--limit", type=int, default=None, help="rate only this many tasks (pilot)")
     args = ap.parse_args(argv)
     if args.cmd == "fetch":
         from .fetch import fetch_all
@@ -51,6 +56,10 @@ def main(argv=None):
         from .site import build_site
 
         print(build_site(args.companion or None))
+    elif args.cmd == "rate":
+        from .rate import rate_all
+
+        print(json.dumps(rate_all(args.model, args.batch, args.workers, args.limit), indent=1))
     elif args.cmd == "query":
         import duckdb
 

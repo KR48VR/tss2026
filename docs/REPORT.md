@@ -7,9 +7,9 @@ Built with 'today' = 2026-10-01. Every number below is a planning signal with a 
 - O*NET occupations: 1016; tasks: 18,796; activities (DWA/IWA/GWA): 2,452.
 - O*NET -> ISCO-08 pairs: 4,755; O*NET -> SSOC 2024 pairs: 16,720 covering 997 of 1,006 SSOC occupations.
 - Skills Framework roles linked to SSOC: 2030 (of which 1556 carry SingStat's own code; the rest use the text matcher, whose hold-out accuracy is top-1 37%, top-5 64%).
-- Task status: 464 observed with AI mostly doing the task, 670 observed with AI mostly helping, 7,579 physical (robotics signal), 10,083 not observed in Claude usage data.
-- Provider agreement at occupation level (Anthropic usage, Microsoft applicability, OpenAI exposure, Google ATLAS where listed): {"0": 634, "1": 193, "2": 139, "3": 47, "4": 3} occupations by number of providers flagging them.
-- Dominant barrier per task: {"physical": 7579, "handover": 3950, "none": 2967, "interpersonal": 2056, "accountability": 1133, "in_person": 1111}.
+- Task status: 1,874 observed with AI mostly doing the task, 2,646 observed with AI mostly helping, 7,579 physical (robotics signal), 6,697 not observed in Claude usage data.
+- Provider agreement at occupation level (Anthropic usage, Microsoft applicability, OpenAI exposure, Google ATLAS where listed): {"0": 510, "1": 210, "2": 138, "3": 152, "4": 6} occupations by number of providers flagging them.
+- Dominant barrier per task: {"physical": 7579, "handover": 4760, "none": 2767, "interpersonal": 2048, "accountability": 885, "in_person": 757}.
 
 ## 2. The capability frontier (METR time horizons, re-fitted here)
 
@@ -24,161 +24,161 @@ Built with 'today' = 2026-10-01. Every number below is a planning signal with a 
 | GPT-5 (Inspect)             | 2025-08-07     |             215 |            1147 |
 | Claude 4.1 Opus (Inspect)   | 2025-08-05     |             101 |             467 |
 
-Frontier doubling time since 2024 (our fit): about 106 days. Forecast parameters: {"anchor_date": "2024-01-01", "log2_h50_at_anchor": 1.914, "doubling_days_central": 106, "doubling_days_fast": 85.0, "doubling_days_slow": 212.0, "delegation_horizon_now_min": 259.27244291853253, "delegation_slope": -0.28637943906498253, "robot_tier_years": {"1": [2, 4, 8], "2": [4, 7, 12], "3": [8, 12, 20], "0": [NaN, NaN, NaN]}, "adoption_saturation": 0.9, "adoption_growth_per_year": 0.5053148803882318, "adoption_intercept": -2.988186282451522, "adoption_growth_mult": [1.5, 1.0, 0.6], "geo": "SGP", "geo_usage_ratio_vs_us": 1.714504172028714, "max_barrier_years": [2.0, 4.0, 6.0], "observed_credit_years": 1.0, "horizon_cap_year": 2045.0}
+Frontier doubling time since 2024 (our fit): about 106 days. Forecast parameters: {"anchor_date": "2024-01-01", "log2_h50_at_anchor": 1.914, "doubling_days_central": 106, "doubling_days_fast": 85.0, "doubling_days_slow": 212.0, "delegation_horizon_now_min": 208.18679031798874, "delegation_slope": -0.31269927775419337, "robot_tier_years": {"1": [2, 4, 8], "2": [4, 7, 12], "3": [8, 12, 20], "0": [NaN, NaN, NaN]}, "adoption_saturation": 0.9, "adoption_growth_per_year": 0.5059989406731061, "adoption_intercept": -2.418079992785001, "adoption_growth_mult": [1.5, 1.0, 0.6], "geo": "SGP", "geo_usage_ratio_vs_us": 1.714504172028714, "geo_lead_years_measured": 0.6366900641736493, "evidence_lag_years": {"mixed": [0.5, 1.01, 2.01], "unproven": [0.93, 1.86, 3.72], "newly_rated": [1.57, 3.14, 6.27]}, "max_barrier_years": [2.0, 4.0, 6.0], "observed_credit_years": 1.0, "horizon_cap_year": 2045.0}
 
 ## 3. Where AI usage is concentrated today
 
 ### Most-used O*NET tasks (share of Claude.ai conversations, Apr-May 2026)
 
-|   task_id | onet_soc_code   | task_statement                                                                                                                        |   usage_latest |   automation_share |   ai_autonomy |   human_only_hours |
-|----------:|:----------------|:--------------------------------------------------------------------------------------------------------------------------------------|---------------:|-------------------:|--------------:|-------------------:|
-|     16221 | 15-1299.03      | Search electronic sources, such as databases or repositories, or manual sources for information.                                      |           4.82 |               0.67 |          2.74 |               1.97 |
-|     22411 | 25-4022.00      | Search standard reference materials, including online sources and the Internet, to answer patrons' reference questions.               |           3.64 |               0.51 |          2.52 |               2.08 |
-|       680 | 41-2021.00      | Recommend and provide advice on a wide variety of products and services.                                                              |           2.13 |               0.42 |          2.6  |               2.26 |
-|      1282 | 15-1232.00      | Answer user inquiries regarding computer software or hardware operation to resolve problems.                                          |           2.02 |               0.66 |          2.38 |               1.3  |
-|     16120 | 15-1243.01      | Write new programs or modify existing programs to meet customer requirements, using current programming languages and technologies.   |           1.49 |               0.61 |          3.08 |               8.39 |
-|      1695 | 25-4031.00      | Conduct reference searches, using printed materials and in-house and online databases.                                                |           1.34 |               0.5  |          2.7  |               4.82 |
-|     18933 | 13-2071.00      | Advise clients or respond to inquiries about financial matters in person or via phone, email, Web site, or Internet chat.             |           1.32 |               0.35 |          2.56 |               3.77 |
-|      8114 | 41-4012.00      | Recommend products to customers, based on customers' needs and interests.                                                             |           1.2  |               0.47 |          2.68 |               1.85 |
-|     22389 | 25-3031.00      | Answer students' questions.                                                                                                           |           1.1  |               0.22 |          2.52 |               4.29 |
-|      3968 | 27-3042.00      | Edit, standardize, or make changes to material prepared by other writers or establishment personnel.                                  |           1.04 |               0.35 |          2.57 |               3.76 |
-|     23972 | 27-1024.00      | Write or edit copy for clients.                                                                                                       |           0.97 |               0.28 |          2.55 |               3.47 |
-|     20950 | 15-1211.00      | Troubleshoot program and system malfunctions to restore normal functioning.                                                           |           0.97 |               0.9  |          2.82 |               6.42 |
-|     14642 | 15-1253.00      | Identify, analyze, and document problems with program function, output, online screen, or content.                                    |           0.94 |               0.8  |          2.82 |               6.18 |
-|     22664 | 27-3043.00      | Edit or rewrite existing written material as necessary, and submit written material for approval by supervisor, editor, or publisher. |           0.93 |               0.28 |          2.52 |               4.12 |
-|     17031 | 25-3041.00      | Develop teaching or training materials, such as handouts, study materials, or quizzes.                                                |           0.92 |               0.55 |          3.11 |               7.98 |
+|   task_id | onet_soc_code   | task_statement                                                                                                                             |   usage_latest |   automation_share |   ai_autonomy |   human_only_hours |
+|----------:|:----------------|:-------------------------------------------------------------------------------------------------------------------------------------------|---------------:|-------------------:|--------------:|-------------------:|
+|     16221 | 15-1299.03      | Search electronic sources, such as databases or repositories, or manual sources for information.                                           |           4.82 |               0.67 |          2.74 |               1.97 |
+|     22411 | 25-4022.00      | Search standard reference materials, including online sources and the Internet, to answer patrons' reference questions.                    |           3.64 |               0.51 |          2.52 |               2.08 |
+|     20093 | 25-1123.00      | Assist students who need extra help with their coursework outside of class.                                                                |           2.35 |               0.37 |          3.2  |               2.88 |
+|       680 | 41-2021.00      | Recommend and provide advice on a wide variety of products and services.                                                                   |           2.13 |               0.42 |          2.6  |               2.26 |
+|      1282 | 15-1232.00      | Answer user inquiries regarding computer software or hardware operation to resolve problems.                                               |           2.02 |               0.66 |          2.38 |               1.3  |
+|     21692 | 15-1255.00      | Design, build, or maintain Web sites, using authoring or scripting languages, content creation tools, management tools, and digital media. |           1.76 |               0.59 |          3.45 |               5.21 |
+|     16120 | 15-1243.01      | Write new programs or modify existing programs to meet customer requirements, using current programming languages and technologies.        |           1.49 |               0.61 |          3.08 |               8.39 |
+|      1695 | 25-4031.00      | Conduct reference searches, using printed materials and in-house and online databases.                                                     |           1.34 |               0.5  |          2.7  |               4.82 |
+|     18933 | 13-2071.00      | Advise clients or respond to inquiries about financial matters in person or via phone, email, Web site, or Internet chat.                  |           1.32 |               0.35 |          2.56 |               3.77 |
+|      8114 | 41-4012.00      | Recommend products to customers, based on customers' needs and interests.                                                                  |           1.2  |               0.47 |          2.68 |               1.85 |
+|       844 | 43-9061.00      | Troubleshoot problems involving office equipment, such as computer hardware and software.                                                  |           1.2  |               0.6  |          3.41 |               0.79 |
+|     22389 | 25-3031.00      | Answer students' questions.                                                                                                                |           1.1  |               0.22 |          2.52 |               4.29 |
+|      3968 | 27-3042.00      | Edit, standardize, or make changes to material prepared by other writers or establishment personnel.                                       |           1.04 |               0.35 |          2.57 |               3.76 |
+|     23972 | 27-1024.00      | Write or edit copy for clients.                                                                                                            |           0.97 |               0.28 |          2.55 |               3.47 |
+|     20950 | 15-1211.00      | Troubleshoot program and system malfunctions to restore normal functioning.                                                                |           0.97 |               0.9  |          2.82 |               6.42 |
 
 ### Generalized work activities ranked by observed automation
 
-| activity_id   | name                                               |   n_tasks |   share_tasks_observed |   observed_automation |   ms_share |
-|:--------------|:---------------------------------------------------|----------:|-----------------------:|----------------------:|-----------:|
-| 4.A.3.b.1     | Working with Computers                             |       280 |                   0.3  |                  0.23 |       0.01 |
-| 4.A.4.b.6     | Providing Consultation and Advice to Others        |       785 |                   0.33 |                  0.14 |       0    |
-| 4.A.2.a.4     | Analyzing Data or Information                      |       704 |                   0.23 |                  0.12 |       0    |
-| 4.A.4.a.8     | Performing for or Working Directly with the Public |       159 |                   0.15 |                  0.09 |       0.05 |
-| 4.A.4.a.1     | Interpreting the Meaning of Information for Others |       282 |                   0.21 |                  0.08 |       0.01 |
-| 4.A.2.b.2     | Thinking Creatively                                |      1418 |                   0.15 |                  0.07 |       0    |
-| 4.A.4.b.5     | Coaching and Developing Others                     |        61 |                   0.15 |                  0.07 |       0    |
-| 4.A.2.a.2     | Processing Information                             |       331 |                   0.1  |                  0.07 |       0    |
-| 4.A.3.b.6     | Documenting/Recording Information                  |      1658 |                   0.12 |                  0.07 |       0    |
-| 4.A.2.b.5     | Scheduling Work and Activities                     |       128 |                   0.07 |                  0.05 |       0    |
-| 4.A.4.a.3     | Communicating with People Outside the Organization |       302 |                   0.08 |                  0.05 |       0.02 |
-| 4.A.2.b.1     | Making Decisions and Solving Problems              |       683 |                   0.09 |                  0.04 |       0    |
+| activity_id   | name                                                     |   n_tasks |   share_tasks_observed |   observed_automation |   ms_share |
+|:--------------|:---------------------------------------------------------|----------:|-----------------------:|----------------------:|-----------:|
+| 4.A.3.b.1     | Working with Computers                                   |       280 |                   0.58 |                  0.43 |       0.01 |
+| 4.A.2.a.1     | Judging the Qualities of Objects, Services, or People    |       551 |                   0.58 |                  0.27 |       0    |
+| 4.A.2.a.4     | Analyzing Data or Information                            |       704 |                   0.52 |                  0.27 |       0    |
+| 4.A.4.b.6     | Providing Consultation and Advice to Others              |       785 |                   0.66 |                  0.26 |       0    |
+| 4.A.4.a.8     | Performing for or Working Directly with the Public       |       159 |                   0.44 |                  0.25 |       0.05 |
+| 4.A.4.a.4     | Establishing and Maintaining Interpersonal Relationships |        45 |                   0.46 |                  0.24 |       0    |
+| 4.A.3.b.6     | Documenting/Recording Information                        |      1658 |                   0.43 |                  0.22 |       0    |
+| 4.A.4.a.1     | Interpreting the Meaning of Information for Others       |       282 |                   0.59 |                  0.22 |       0.01 |
+| 4.A.4.b.5     | Coaching and Developing Others                           |        61 |                   0.45 |                  0.22 |       0    |
+| 4.A.2.b.2     | Thinking Creatively                                      |      1418 |                   0.46 |                  0.22 |       0    |
+| 4.A.2.a.2     | Processing Information                                   |       331 |                   0.39 |                  0.22 |       0    |
+| 4.A.4.a.3     | Communicating with People Outside the Organization       |       302 |                   0.39 |                  0.21 |       0.02 |
 
 ### O*NET occupations ranked by observed automation (task-weighted)
 
-| onet_soc_code   | title                                                                                            |   share_weight_observed |   observed_automation |   aei_job_exposure |   ai_applicability_score |   robot_exposure_index |
-|:----------------|:-------------------------------------------------------------------------------------------------|------------------------:|----------------------:|-------------------:|-------------------------:|-----------------------:|
-| 15-1251.00      | Computer Programmers                                                                             |                    0.57 |                  0.38 |               0.75 |                     0.31 |                   0    |
-| 43-9021.00      | Data Entry Keyers                                                                                |                    0.47 |                  0.35 |               0.67 |                     0.32 |                   0.1  |
-| 15-2051.01      | Business Intelligence Analysts                                                                   |                    0.6  |                  0.35 |               0.46 |                     0.36 |                   0    |
-| 15-1232.00      | Computer User Support Specialists                                                                |                    0.45 |                  0.35 |               0.47 |                     0.33 |                   0.18 |
-| 15-1211.00      | Computer Systems Analysts                                                                        |                    0.51 |                  0.33 |               0.28 |                     0.31 |                   0    |
-| 15-2051.00      | Data Scientists                                                                                  |                    0.62 |                  0.31 |               0.46 |                     0.36 |                   0    |
-| 15-1299.08      | Computer Systems Engineers/Architects                                                            |                    0.49 |                  0.28 |               0.31 |                     0.3  |                   0.04 |
-| 43-9022.00      | Word Processors and Typists                                                                      |                    0.47 |                  0.27 |               0.24 |                     0.26 |                   0.32 |
-| 43-9111.00      | Statistical Assistants                                                                           |                    0.37 |                  0.25 |               0.51 |                     0.32 |                   0.06 |
-| 15-2031.00      | Operations Research Analysts                                                                     |                    0.49 |                  0.25 |               0.43 |                     0.31 |                   0    |
-| 15-2041.00      | Statisticians                                                                                    |                    0.61 |                  0.24 |               0.21 |                     0.32 |                   0    |
-| 41-3091.00      | Sales Representatives of Services, Except Advertising, Insurance, Financial Services, and Travel |                    0.47 |                  0.23 |             nan    |                     0.45 |                   0.03 |
-| 27-3042.00      | Technical Writers                                                                                |                    0.49 |                  0.23 |               0.47 |                     0.37 |                   0    |
-| 43-4171.00      | Receptionists and Information Clerks                                                             |                    0.28 |                  0.22 |               0.43 |                     0.24 |                   0.22 |
-| 43-4021.00      | Correspondence Clerks                                                                            |                    0.36 |                  0.21 |               0.28 |                     0.28 |                   0.03 |
-| 15-1243.01      | Data Warehousing Specialists                                                                     |                    0.32 |                  0.21 |               0.58 |                     0.31 |                   0    |
-| 15-2021.00      | Mathematicians                                                                                   |                    0.5  |                  0.21 |               0.42 |                     0.39 |                   0    |
-| 43-9031.00      | Desktop Publishers                                                                               |                    0.4  |                  0.2  |               0.46 |                     0.31 |                   0    |
-| 13-1111.00      | Management Analysts                                                                              |                    0.38 |                  0.2  |               0.24 |                     0.35 |                   0    |
-| 43-9061.00      | Office Clerks, General                                                                           |                    0.25 |                  0.2  |               0.45 |                     0.24 |                   0.52 |
+| onet_soc_code   | title                                                         |   share_weight_observed |   observed_automation |   aei_job_exposure |   ai_applicability_score |   robot_exposure_index |
+|:----------------|:--------------------------------------------------------------|------------------------:|----------------------:|-------------------:|-------------------------:|-----------------------:|
+| 15-1232.00      | Computer User Support Specialists                             |                    0.77 |                  0.56 |               0.47 |                     0.33 |                   0.18 |
+| 15-1299.03      | Document Management Specialists                               |                    0.73 |                  0.49 |               0.31 |                     0.3  |                   0    |
+| 25-4011.00      | Archivists                                                    |                    0.76 |                  0.49 |               0.13 |                     0.28 |                   0.08 |
+| 15-2051.01      | Business Intelligence Analysts                                |                    0.88 |                  0.48 |               0.46 |                     0.36 |                   0    |
+| 15-1251.00      | Computer Programmers                                          |                    0.84 |                  0.47 |               0.75 |                     0.31 |                   0    |
+| 15-1299.08      | Computer Systems Engineers/Architects                         |                    0.74 |                  0.47 |               0.31 |                     0.3  |                   0.04 |
+| 15-2099.01      | Bioinformatics Technicians                                    |                    0.81 |                  0.46 |               0.48 |                     0.34 |                   0    |
+| 15-1243.01      | Data Warehousing Specialists                                  |                    0.95 |                  0.46 |               0.58 |                     0.31 |                   0    |
+| 43-6011.00      | Executive Secretaries and Executive Administrative Assistants |                    0.68 |                  0.45 |               0.23 |                     0.26 |                   0.05 |
+| 13-1199.06      | Online Merchants                                              |                    0.83 |                  0.45 |               0.18 |                     0.22 |                   0.21 |
+| 15-1231.00      | Computer Network Support Specialists                          |                    0.6  |                  0.45 |               0.29 |                     0.3  |                   0.12 |
+| 27-3091.00      | Interpreters and Translators                                  |                    0.78 |                  0.45 |               0.43 |                     0.49 |                   0    |
+| 43-9021.00      | Data Entry Keyers                                             |                    0.56 |                  0.44 |               0.67 |                     0.32 |                   0.1  |
+| 15-1211.00      | Computer Systems Analysts                                     |                    0.73 |                  0.44 |               0.28 |                     0.31 |                   0    |
+| 43-9111.00      | Statistical Assistants                                        |                    0.65 |                  0.44 |               0.51 |                     0.32 |                   0.06 |
+| 15-2051.02      | Clinical Data Managers                                        |                    0.75 |                  0.43 |               0.46 |                     0.36 |                   0    |
+| 13-1161.01      | Search Marketing Strategists                                  |                    0.8  |                  0.43 |               0.65 |                     0.35 |                   0    |
+| 13-1161.00      | Market Research Analysts and Marketing Specialists            |                    0.78 |                  0.42 |               0.65 |                     0.35 |                   0    |
+| 43-4171.00      | Receptionists and Information Clerks                          |                    0.56 |                  0.42 |               0.43 |                     0.24 |                   0.22 |
+| 43-9061.00      | Office Clerks, General                                        |                    0.56 |                  0.41 |               0.45 |                     0.24 |                   0.52 |
 
 ### Occupations flagged by the most providers
 
 | onet_soc_code   | title                                              |   share_weight_observed |   ai_applicability_score |   openai_exposure_beta_gpt4 | google_atlas_flag   |   n_providers_positive |
 |:----------------|:---------------------------------------------------|------------------------:|-------------------------:|----------------------------:|:--------------------|-----------------------:|
-| 13-1161.00      | Market Research Analysts and Marketing Specialists |                    0.38 |                     0.35 |                        0.5  | positive            |                      4 |
-| 15-1252.00      | Software Developers                                |                    0.36 |                     0.28 |                        0.87 | positive            |                      4 |
-| 15-1253.00      | Software Quality Assurance Analysts and Testers    |                    0.27 |                     0.33 |                        0.88 | positive            |                      4 |
-| 15-2051.00      | Data Scientists                                    |                    0.62 |                     0.36 |                        0.75 | nan                 |                      3 |
-| 15-2041.00      | Statisticians                                      |                    0.61 |                     0.32 |                        0.79 | nan                 |                      3 |
-| 15-2051.01      | Business Intelligence Analysts                     |                    0.6  |                     0.36 |                        0.7  | nan                 |                      3 |
-| 15-1251.00      | Computer Programmers                               |                    0.57 |                     0.31 |                        0.95 | nan                 |                      3 |
-| 27-3043.05      | Poets, Lyricists and Creative Writers              |                    0.54 |                     0.45 |                        0.89 | nan                 |                      3 |
-| 15-1211.00      | Computer Systems Analysts                          |                    0.51 |                     0.31 |                        0.75 | nan                 |                      3 |
-| 15-2021.00      | Mathematicians                                     |                    0.5  |                     0.39 |                        1    | nan                 |                      3 |
-| 15-1299.08      | Computer Systems Engineers/Architects              |                    0.49 |                     0.3  |                        0.77 | nan                 |                      3 |
-| 27-3042.00      | Technical Writers                                  |                    0.49 |                     0.37 |                        0.7  | nan                 |                      3 |
-| 15-2031.00      | Operations Research Analysts                       |                    0.49 |                     0.31 |                        0.63 | nan                 |                      3 |
-| 43-9022.00      | Word Processors and Typists                        |                    0.47 |                     0.26 |                        0.74 | nan                 |                      3 |
-| 43-9021.00      | Data Entry Keyers                                  |                    0.47 |                     0.32 |                        0.89 | nan                 |                      3 |
+| 13-1161.00      | Market Research Analysts and Marketing Specialists |                    0.78 |                     0.35 |                        0.5  | positive            |                      4 |
+| 15-1299.03      | Document Management Specialists                    |                    0.73 |                     0.3  |                        0.61 | positive            |                      4 |
+| 15-1244.00      | Network and Computer Systems Administrators        |                    0.65 |                     0.25 |                        0.73 | positive            |                      4 |
+| 15-1253.00      | Software Quality Assurance Analysts and Testers    |                    0.63 |                     0.33 |                        0.88 | positive            |                      4 |
+| 13-1071.00      | Human Resources Specialists                        |                    0.58 |                     0.2  |                        0.64 | positive            |                      4 |
+| 15-1252.00      | Software Developers                                |                    0.42 |                     0.28 |                        0.87 | positive            |                      4 |
+| 15-2021.00      | Mathematicians                                     |                    1    |                     0.39 |                        1    | nan                 |                      3 |
+| 15-1243.01      | Data Warehousing Specialists                       |                    0.95 |                     0.31 |                        0.94 | nan                 |                      3 |
+| 15-2051.01      | Business Intelligence Analysts                     |                    0.88 |                     0.36 |                        0.7  | nan                 |                      3 |
+| 15-1251.00      | Computer Programmers                               |                    0.84 |                     0.31 |                        0.95 | nan                 |                      3 |
+| 13-1199.06      | Online Merchants                                   |                    0.83 |                     0.22 |                        0.63 | nan                 |                      3 |
+| 15-2099.01      | Bioinformatics Technicians                         |                    0.81 |                     0.34 |                        0.87 | nan                 |                      3 |
+| 27-3043.05      | Poets, Lyricists and Creative Writers              |                    0.81 |                     0.45 |                        0.89 | nan                 |                      3 |
+| 25-1126.00      | Philosophy and Religion Teachers, Postsecondary    |                    0.81 |                     0.34 |                        0.51 | nan                 |                      3 |
+| 25-1082.00      | Library Science Teachers, Postsecondary            |                    0.8  |                     0.34 |                        0.51 | nan                 |                      3 |
 
 ### Singapore SSOC 2024 occupations ranked by observed automation (pulled through the crosswalk)
 
-|   ssoc_code | ssoc_title                                                   |   n_onet_occupations |   share_weight_observed |   observed_automation |   ai_applicability_score |
-|------------:|:-------------------------------------------------------------|---------------------:|------------------------:|----------------------:|-------------------------:|
-|       41320 | Data entry clerk                                             |                    4 |                    0.42 |                  0.3  |                     0.3  |
-|       41310 | Typist/Word processing operator                              |                    7 |                    0.37 |                  0.22 |                     0.27 |
-|       25141 | Applications/Systems programmer                              |                   12 |                    0.33 |                  0.21 |                     0.3  |
-|       25143 | Artificial intelligence/Machine learning engineer            |                   12 |                    0.33 |                  0.21 |                     0.3  |
-|       25220 | Network/Server/Applications/Computer systems administrator   |                    5 |                    0.27 |                  0.19 |                     0.28 |
-|       25121 | Software developer                                           |                   11 |                    0.31 |                  0.18 |                     0.3  |
-|       25125 | DevOps engineer                                              |                   14 |                    0.31 |                  0.18 |                     0.31 |
-|       35121 | IT infrastructure technician                                 |                   11 |                    0.24 |                  0.17 |                     0.28 |
-|       35129 | Computer technician n.e.c.                                   |                   11 |                    0.24 |                  0.17 |                     0.28 |
-|       35123 | IT support technician                                        |                   11 |                    0.24 |                  0.17 |                     0.28 |
-|       35122 | IT security technician                                       |                   11 |                    0.24 |                  0.17 |                     0.28 |
-|       21231 | Statistical officer/Data analyst                             |                   23 |                    0.33 |                  0.17 |                     0.3  |
-|       21239 | Other statistical/mathematical/actuarial professional n.e.c. |                   23 |                    0.33 |                  0.17 |                     0.3  |
-|       25122 | Web/Mobile applications developer                            |                    8 |                    0.31 |                  0.17 |                     0.32 |
-|       35110 | Computer systems operator                                    |                    3 |                    0.22 |                  0.17 |                     0.29 |
-|       25112 | ICT business process consultant/business analyst             |                   25 |                    0.29 |                  0.16 |                     0.28 |
-|       25111 | Systems designer/analyst                                     |                   25 |                    0.29 |                  0.16 |                     0.28 |
-|       42245 | Customer service officer/clerk                               |                    5 |                    0.25 |                  0.16 |                     0.31 |
-|       42249 | Receptionist/Customer service/information clerk n.e.c.       |                    5 |                    0.25 |                  0.16 |                     0.31 |
-|       41202 | Verbatim reporter                                            |                    9 |                    0.24 |                  0.16 |                     0.24 |
+|   ssoc_code | ssoc_title                                                 |   n_onet_occupations |   share_weight_observed |   observed_automation |   ai_applicability_score |
+|------------:|:-----------------------------------------------------------|---------------------:|------------------------:|----------------------:|-------------------------:|
+|       41320 | Data entry clerk                                           |                    4 |                    0.55 |                  0.41 |                     0.3  |
+|       26550 | Actor                                                      |                    1 |                    0.53 |                  0.4  |                     0.13 |
+|       25220 | Network/Server/Applications/Computer systems administrator |                    5 |                    0.67 |                  0.39 |                     0.28 |
+|       35110 | Computer systems operator                                  |                    3 |                    0.62 |                  0.39 |                     0.29 |
+|       43142 | Enumerator/Market research interviewer                     |                    5 |                    0.56 |                  0.37 |                     0.23 |
+|       35140 | Website administrator/Webmaster                            |                    4 |                    0.67 |                  0.36 |                     0.31 |
+|       25122 | Web/Mobile applications developer                          |                    8 |                    0.66 |                  0.36 |                     0.32 |
+|       25142 | Artificial intelligence applied researcher                 |                   21 |                    0.61 |                  0.34 |                     0.3  |
+|       25190 | Software and applications developer/analyst n.e.c.         |                   21 |                    0.61 |                  0.34 |                     0.3  |
+|       25152 | ICT auditor                                                |                   21 |                    0.61 |                  0.34 |                     0.3  |
+|       25151 | ICT quality assurance specialist                           |                   21 |                    0.61 |                  0.34 |                     0.3  |
+|       51950 | Driving instructor/tester                                  |                    2 |                    0.61 |                  0.34 |                     0.2  |
+|       25213 | Data engineer                                              |                    5 |                    0.66 |                  0.34 |                     0.3  |
+|       25212 | Data/Database architect                                    |                    5 |                    0.66 |                  0.34 |                     0.3  |
+|       25211 | Data/Database administrator                                |                    5 |                    0.66 |                  0.34 |                     0.3  |
+|       41201 | Secretary                                                  |                    9 |                    0.52 |                  0.34 |                     0.24 |
+|       41202 | Verbatim reporter                                          |                    9 |                    0.52 |                  0.34 |                     0.24 |
+|       42241 | Receptionist (general)                                     |                    6 |                    0.48 |                  0.34 |                     0.23 |
+|       42243 | Medical/Dental receptionist                                |                   17 |                    0.53 |                  0.33 |                     0.2  |
+|       41310 | Typist/Word processing operator                            |                    7 |                    0.5  |                  0.33 |                     0.27 |
 
 ### Skills Framework roles ranked by observed automation via their key tasks
 
-| sector                           | job_role                                                                                                                    |   n_key_tasks |   share_key_tasks_observed |   observed_automation_via_tasks |   observed_automation_via_ssoc |   mean_match_score |
-|:---------------------------------|:----------------------------------------------------------------------------------------------------------------------------|--------------:|---------------------------:|--------------------------------:|-------------------------------:|-------------------:|
-| Air Transport                    | Customer Services Officer (Call Centre) / Customer Service Officer (Reservations & Ticketing) / Passenger Relations Officer |             6 |                       0.67 |                            0.25 |                           0.16 |               0.48 |
-| Accountancy                      | Accounts Executive / Accounts Assistant                                                                                     |            13 |                       0.85 |                            0.24 |                           0.08 |               0.48 |
-| Sea Transport                    | Senior Shipping Analyst                                                                                                     |            16 |                       0.69 |                            0.24 |                           0.14 |               0.42 |
-| Hotel and Accommodation Services | Sales Coordinator / Catering Sales Coordinator                                                                              |            13 |                       0.77 |                            0.24 |                           0.11 |               0.5  |
-| Infocomm Technology              | Data Analyst / Associate Data Engineer                                                                                      |            14 |                       0.79 |                            0.24 |                           0.17 |               0.45 |
-| Infocomm Technology              | Pre-Sales Consultant                                                                                                        |            18 |                       0.78 |                            0.23 |                           0.14 |               0.43 |
-| Sea Transport                    | Shipping Analyst                                                                                                            |            15 |                       0.73 |                            0.22 |                           0.14 |               0.43 |
-| Infocomm Technology              | Sales Account Manager                                                                                                       |            22 |                       0.77 |                            0.22 |                           0.14 |               0.44 |
-| Accountancy                      | Management Accountant / Financial Planning and Analysis Analyst / Business Analyst                                          |             8 |                       0.88 |                            0.22 |                           0.07 |               0.46 |
-| Logistics                        | Customer Service Officer / Service Quality Analyst                                                                          |            11 |                       0.82 |                            0.22 |                           0.16 |               0.42 |
-| Financial Services               | Head of Sales and Distribution / Head of Coverage                                                                           |             6 |                       0.5  |                            0.22 |                           0.11 |               0.42 |
-| Design                           | Visualiser/Storyteller                                                                                                      |            18 |                       0.67 |                            0.21 |                           0.12 |               0.43 |
-| Infocomm Technology              | Artificial Intelligence Applied Researcher                                                                                  |            20 |                       0.85 |                            0.21 |                           0.15 |               0.4  |
-| Tourism                          | Sponsorship Executive                                                                                                       |            14 |                       0.79 |                            0.21 |                           0.14 |               0.4  |
-| Infocomm Technology              | Operations Centre Support Engineer                                                                                          |            15 |                       0.53 |                            0.2  |                           0.17 |               0.44 |
-| Energy and Power                 | Customer Service Executive                                                                                                  |            10 |                       0.6  |                            0.2  |                           0.16 |               0.46 |
-| Logistics                        | Logistics Solutions Analyst                                                                                                 |            13 |                       0.54 |                            0.2  |                           0.02 |               0.48 |
-| Accountancy                      | Finance Manager                                                                                                             |            30 |                       0.7  |                            0.2  |                           0.12 |               0.43 |
-| Media                            | Executive - On-Demand Media Technology and Operations                                                                       |            18 |                       0.56 |                            0.2  |                           0.04 |               0.43 |
-| Logistics                        | Senior Customer Service Officer / Customer Service Specialist                                                               |            12 |                       0.75 |                            0.2  |                           0.16 |               0.43 |
+| sector              | job_role                                                            |   n_key_tasks |   share_key_tasks_observed |   observed_automation_via_tasks |   observed_automation_via_ssoc |   mean_match_score |
+|:--------------------|:--------------------------------------------------------------------|--------------:|---------------------------:|--------------------------------:|-------------------------------:|-------------------:|
+| Financial Services  | Family Office Advisor - Private Banking                             |             3 |                       1    |                            0.58 |                           0.24 |               0.4  |
+| Financial Services  | Research Analyst                                                    |             5 |                       1    |                            0.5  |                           0.21 |               0.4  |
+| Logistics           | Customer Service Officer / Service Quality Analyst                  |            11 |                       1    |                            0.44 |                           0.29 |               0.42 |
+| Sea Transport       | Demurrage Analyst / Laytime Analyst / Post Fixture Executive        |            14 |                       0.93 |                            0.43 |                           0.2  |               0.39 |
+| Financial Services  | Head of Product Marketing (Private Banking and Wealth Management)   |            25 |                       1    |                            0.43 |                           0.29 |               0.49 |
+| Financial Services  | Head of Product Marketing (Asset Management)                        |            25 |                       1    |                            0.43 |                           0.29 |               0.49 |
+| Financial Services  | Head of Product Marketing (Retail Banking)                          |            25 |                       1    |                            0.43 |                           0.29 |               0.49 |
+| Financial Services  | Head of Product Marketing (Investment Banking)                      |            25 |                       1    |                            0.43 |                           0.29 |               0.49 |
+| Financial Services  | Head of Product Marketing (Insurance)                               |            25 |                       1    |                            0.43 |                           0.29 |               0.49 |
+| Infocomm Technology | Pre-Sales Consultant                                                |            18 |                       1    |                            0.42 |                           0.29 |               0.43 |
+| Financial Services  | Customer Experience Executive / User Experience Executive           |             6 |                       1    |                            0.42 |                           0.31 |               0.41 |
+| Financial Services  | Head of Customer Experience / Head of User Experience               |             6 |                       1    |                            0.42 |                           0.31 |               0.41 |
+| Wholesale Trade     | Business Analyst / Market Research Analyst / Market Analyst         |            18 |                       0.94 |                            0.42 |                           0.32 |               0.43 |
+| Media               | Animator                                                            |            13 |                       1    |                            0.42 |                           0.28 |               0.38 |
+| Financial Services  | Product Marketing Manager                                           |            11 |                       1    |                            0.42 |                           0.26 |               0.48 |
+| Financial Services  | Head of Product Marketing                                           |            11 |                       1    |                            0.42 |                           0.26 |               0.48 |
+| Financial Services  | Product Marketing Executive (Asset Management)                      |            27 |                       1    |                            0.41 |                           0.26 |               0.46 |
+| Financial Services  | Product Marketing Executive (Private Banking and Wealth Management) |            27 |                       1    |                            0.41 |                           0.26 |               0.46 |
+| Financial Services  | Product Marketing Executive (Retail Banking)                        |            27 |                       1    |                            0.41 |                           0.26 |               0.46 |
+| Financial Services  | Product Marketing Executive (Investment Banking)                    |            27 |                       1    |                            0.41 |                           0.26 |               0.46 |
 
 ### O*NET skills ranked by observed automation of the occupations that need them
 
 | element_name                      |   n_occupations |   via_occupations_observed_automation |   via_activities_observed_automation |
 |:----------------------------------|----------------:|--------------------------------------:|-------------------------------------:|
-| Programming                       |              26 |                                  0.15 |                                 0.23 |
-| Technology Design                 |              19 |                                  0.07 |                                 0.07 |
-| Operations Analysis               |              90 |                                  0.07 |                               nan    |
-| Mathematics                       |             237 |                                  0.05 |                                 0.04 |
-| Systems Evaluation                |             326 |                                  0.05 |                                 0.07 |
-| Management of Financial Resources |              41 |                                  0.05 |                                 0.01 |
-| Systems Analysis                  |             369 |                                  0.04 |                                 0.11 |
-| Writing                           |             588 |                                  0.04 |                                 0.05 |
-| Negotiation                       |             257 |                                  0.04 |                                 0    |
-| Active Learning                   |             581 |                                  0.04 |                                 0.02 |
-| Reading Comprehension             |             729 |                                  0.04 |                                 0.06 |
-| Persuasion                        |             329 |                                  0.04 |                                 0.04 |
-| Management of Personnel Resources |             192 |                                  0.04 |                                 0.03 |
-| Learning Strategies               |             356 |                                  0.04 |                                 0.02 |
-| Management of Material Resources  |              29 |                                  0.04 |                                 0.01 |
+| Programming                       |              26 |                                  0.32 |                                 0.43 |
+| Technology Design                 |              19 |                                  0.2  |                                 0.22 |
+| Management of Financial Resources |              41 |                                  0.19 |                                 0.08 |
+| Operations Analysis               |              90 |                                  0.18 |                               nan    |
+| Mathematics                       |             237 |                                  0.18 |                                 0.15 |
+| Systems Evaluation                |             326 |                                  0.18 |                                 0.21 |
+| Negotiation                       |             257 |                                  0.18 |                                 0.1  |
+| Writing                           |             588 |                                  0.17 |                                 0.18 |
+| Systems Analysis                  |             369 |                                  0.17 |                                 0.26 |
+| Learning Strategies               |             356 |                                  0.17 |                                 0.13 |
+| Persuasion                        |             329 |                                  0.17 |                                 0.17 |
+| Active Learning                   |             581 |                                  0.16 |                                 0.12 |
+| Instructing                       |             397 |                                  0.16 |                                 0.18 |
+| Management of Material Resources  |              29 |                                  0.16 |                                 0.08 |
+| Social Perceptiveness             |             576 |                                  0.16 |                                 0.17 |
 
 ## 4. Singapore, weighted by employment and wages
 
@@ -186,242 +186,242 @@ Resident employment by SSOC sub-major group (MOM Labour Force in Singapore 2025,
 
 | scope_name                            | weighting   |   weight_scored_share |   observed_automation |   share_weight_observed |   share_weight_physical |   share_by_2030 |   share_by_2035 |   half_year_central_from_curve |
 |:--------------------------------------|:------------|----------------------:|----------------------:|------------------------:|------------------------:|----------------:|----------------:|-------------------------------:|
-| Whole economy (residents)             | employment  |                  0.97 |                  0.05 |                    0.1  |                    0.29 |            0.05 |            0.81 |                         2031.6 |
-| Whole economy (residents)             | wage_value  |                  0.98 |                  0.06 |                    0.11 |                    0.19 |            0.06 |            0.87 |                         2031.4 |
-| Managers & administrators             | employment  |                  1    |                  0.06 |                    0.11 |                    0.07 |            0.04 |            0.94 |                         2031.4 |
-| Managers & administrators             | wage_value  |                  1    |                  0.06 |                    0.12 |                    0.06 |            0.05 |            0.95 |                         2031.4 |
-| Professionals                         | employment  |                  1    |                  0.07 |                    0.14 |                    0.13 |            0.09 |            0.9  |                         2030.9 |
-| Professionals                         | wage_value  |                  1    |                  0.07 |                    0.14 |                    0.12 |            0.09 |            0.91 |                         2031   |
-| Associate professionals & technicians | employment  |                  0.95 |                  0.05 |                    0.09 |                    0.26 |            0.03 |            0.82 |                         2031.5 |
-| Associate professionals & technicians | wage_value  |                  0.95 |                  0.05 |                    0.09 |                    0.25 |            0.03 |            0.83 |                         2031.5 |
-| Clerical support workers              | employment  |                  1    |                  0.1  |                    0.16 |                    0.26 |            0.1  |            0.9  |                         2031.3 |
-| Clerical support workers              | wage_value  |                  1    |                  0.1  |                    0.15 |                    0.25 |            0.09 |            0.9  |                         2031.3 |
-| Service & sales workers               | employment  |                  1    |                  0.03 |                    0.07 |                    0.49 |            0.02 |            0.61 |                         2033.4 |
-| Service & sales workers               | wage_value  |                  1    |                  0.03 |                    0.06 |                    0.48 |            0.02 |            0.62 |                         2033   |
-| Agricultural & fishery workers        | employment  |                  1    |                  0.01 |                    0.01 |                    0.7  |            0.01 |            0.45 |                         2035.6 |
-| Agricultural & fishery workers        | wage_value  |                  1    |                  0.01 |                    0.01 |                    0.7  |            0.01 |            0.44 |                         2035.9 |
-| Craftsmen & related trades            | employment  |                  1    |                  0.01 |                    0.02 |                    0.77 |            0.01 |            0.6  |                         2034.7 |
-| Craftsmen & related trades            | wage_value  |                  1    |                  0.01 |                    0.02 |                    0.74 |            0.01 |            0.6  |                         2034.7 |
-| Plant & machine operators             | employment  |                  1    |                  0    |                    0    |                    0.72 |            0    |            0.48 |                         2035.4 |
-| Plant & machine operators             | wage_value  |                  1    |                  0    |                    0    |                    0.72 |            0    |            0.48 |                         2035.4 |
-| Cleaners, labourers & related         | employment  |                  1    |                  0.01 |                    0.01 |                    0.82 |            0.01 |            0.63 |                         2034.6 |
-| Cleaners, labourers & related         | wage_value  |                  1    |                  0.01 |                    0.01 |                    0.81 |            0.01 |            0.62 |                         2034.7 |
+| Whole economy (residents)             | employment  |                  0.97 |                  0.17 |                    0.33 |                    0.29 |            0.29 |            0.8  |                         2031.2 |
+| Whole economy (residents)             | wage_value  |                  0.98 |                  0.19 |                    0.38 |                    0.19 |            0.37 |            0.87 |                         2030.6 |
+| Managers & administrators             | employment  |                  1    |                  0.19 |                    0.37 |                    0.07 |            0.28 |            0.95 |                         2030.7 |
+| Managers & administrators             | wage_value  |                  1    |                  0.19 |                    0.38 |                    0.06 |            0.31 |            0.96 |                         2030.7 |
+| Professionals                         | employment  |                  1    |                  0.22 |                    0.45 |                    0.13 |            0.56 |            0.91 |                         2029.8 |
+| Professionals                         | wage_value  |                  1    |                  0.23 |                    0.46 |                    0.12 |            0.57 |            0.92 |                         2029.8 |
+| Associate professionals & technicians | employment  |                  0.95 |                  0.18 |                    0.34 |                    0.26 |            0.29 |            0.84 |                         2030.9 |
+| Associate professionals & technicians | wage_value  |                  0.95 |                  0.18 |                    0.34 |                    0.25 |            0.3  |            0.85 |                         2030.8 |
+| Clerical support workers              | employment  |                  1    |                  0.25 |                    0.4  |                    0.26 |            0.27 |            0.91 |                         2030.8 |
+| Clerical support workers              | wage_value  |                  1    |                  0.24 |                    0.39 |                    0.25 |            0.27 |            0.91 |                         2030.8 |
+| Service & sales workers               | employment  |                  1    |                  0.12 |                    0.22 |                    0.49 |            0.03 |            0.58 |                         2034.3 |
+| Service & sales workers               | wage_value  |                  1    |                  0.12 |                    0.22 |                    0.48 |            0.03 |            0.58 |                         2034.2 |
+| Agricultural & fishery workers        | employment  |                  1    |                  0.04 |                    0.07 |                    0.7  |            0.15 |            0.54 |                         2033.9 |
+| Agricultural & fishery workers        | wage_value  |                  1    |                  0.04 |                    0.08 |                    0.7  |            0.16 |            0.52 |                         2034.2 |
+| Craftsmen & related trades            | employment  |                  1    |                  0.05 |                    0.09 |                    0.77 |            0.02 |            0.56 |                         2034.8 |
+| Craftsmen & related trades            | wage_value  |                  1    |                  0.05 |                    0.1  |                    0.74 |            0.02 |            0.57 |                         2034.8 |
+| Plant & machine operators             | employment  |                  1    |                  0.04 |                    0.06 |                    0.72 |            0    |            0.29 |                         2036   |
+| Plant & machine operators             | wage_value  |                  1    |                  0.03 |                    0.06 |                    0.72 |            0    |            0.29 |                         2036   |
+| Cleaners, labourers & related         | employment  |                  1    |                  0.05 |                    0.08 |                    0.82 |            0.02 |            0.6  |                         2034.7 |
+| Cleaners, labourers & related         | wage_value  |                  1    |                  0.05 |                    0.08 |                    0.81 |            0.02 |            0.59 |                         2034.7 |
 
 ### Sub-major groups (2-digit SSOC), wage-weighted, earliest half-way year first
 
 | scope_name                                                                               |   wage_bill_sgd_m_per_month |   observed_automation |   share_weight_observed |   share_weight_physical |   share_by_2030 |   share_by_2032 |   share_by_2035 |   half_year_central_from_curve |
 |:-----------------------------------------------------------------------------------------|----------------------------:|----------------------:|------------------------:|------------------------:|----------------:|----------------:|----------------:|-------------------------------:|
-| 25 Information & Communications Technology Professionals                                 |                      722.38 |                  0.14 |                    0.24 |                    0.04 |            0.23 |            0.94 |            0.99 |                         2030.4 |
-| 35 Information & Communications Technicians                                              |                      100.92 |                  0.11 |                    0.15 |                    0.28 |            0.1  |            0.68 |            0.84 |                         2030.8 |
-| 23 Teaching & Training Professionals                                                     |                      414.47 |                  0.02 |                    0.06 |                    0.12 |            0.04 |            0.8  |            0.9  |                         2030.9 |
-| 21 Science & Engineering Professionals                                                   |                     1115.76 |                  0.05 |                    0.1  |                    0.23 |            0.12 |            0.72 |            0.85 |                         2030.9 |
-| 41 General & Keyboard Clerks                                                             |                      279.78 |                  0.15 |                    0.23 |                    0.27 |            0.16 |            0.63 |            0.96 |                         2030.9 |
-| 43 Numerical & Material-Recording Clerks                                                 |                      168.5  |                  0.05 |                    0.1  |                    0.16 |            0.03 |            0.76 |            0.92 |                         2031   |
-| 24 Business & Administration Professionals                                               |                     1943.08 |                  0.08 |                    0.16 |                    0.05 |            0.05 |            0.82 |            0.96 |                         2031.1 |
-| 26 Legal, Social, Religious & Cultural Professionals                                     |                      287.7  |                  0.06 |                    0.16 |                    0.1  |            0.09 |            0.79 |            0.93 |                         2031.1 |
-| 36 Teaching Associate Professionals                                                      |                      211.35 |                  0.05 |                    0.12 |                    0.2  |            0.04 |            0.72 |            0.85 |                         2031.2 |
-| 12 Administrative & Commercial Managers                                                  |                     1760.36 |                  0.07 |                    0.15 |                    0.03 |            0.05 |            0.74 |            0.98 |                         2031.3 |
-| 33 Business & Administration Associate Professionals                                     |                     1222.72 |                  0.05 |                    0.11 |                    0.14 |            0.03 |            0.71 |            0.9  |                         2031.3 |
-| 13 Production & Specialised Services Managers                                            |                     1132.17 |                  0.07 |                    0.12 |                    0.07 |            0.07 |            0.71 |            0.94 |                         2031.3 |
-| 39 Other Associate Professionals Not Elsewhere Classified                                |                        7.2  |                  0.05 |                    0.13 |                    0.13 |            0.02 |            0.63 |            0.87 |                         2031.5 |
-| 40 Clerical Supervisors                                                                  |                       12.6  |                  0.1  |                    0.19 |                    0.06 |            0.07 |            0.66 |            0.97 |                         2031.6 |
-| 11 Legislators, Senior Officials & Chief Executives                                      |                      715.52 |                  0.03 |                    0.06 |                    0.03 |            0    |            0.63 |            0.97 |                         2031.6 |
-| 44 Other Clerical Support Workers                                                        |                       21.33 |                  0.07 |                    0.13 |                    0.41 |            0.07 |            0.52 |            0.8  |                         2031.7 |
-| 42 Customer Services Officers & Clerks                                                   |                      159.59 |                  0.05 |                    0.08 |                    0.28 |            0.02 |            0.54 |            0.78 |                         2031.9 |
-| 14 Hospitality, Retail & Related Services Managers                                       |                      254.04 |                  0.03 |                    0.07 |                    0.22 |            0.01 |            0.53 |            0.81 |                         2031.9 |
-| 22 Health Professionals                                                                  |                      398.54 |                  0.01 |                    0.03 |                    0.34 |            0    |            0.52 |            0.67 |                         2031.9 |
-| 34 Legal, Social, Cultural & Related Associate Professionals                             |                      161.24 |                  0.03 |                    0.05 |                    0.35 |            0.01 |            0.51 |            0.79 |                         2031.9 |
-| 31 Physical & Engineering Science Associate Professionals                                |                      461.56 |                  0.02 |                    0.04 |                    0.45 |            0.03 |            0.49 |            0.71 |                         2032.2 |
-| 59 Services Workers Not Elsewhere Classified                                             |                        3.14 |                  0.04 |                    0.08 |                    0.38 |            0    |            0.47 |            0.7  |                         2032.2 |
-| 54 Protective Services Workers                                                           |                      168.07 |                  0.01 |                    0.01 |                    0.43 |            0    |            0.45 |            0.59 |                         2032.5 |
-| 52 Sales Workers                                                                         |                      288.8  |                  0.05 |                    0.11 |                    0.48 |            0.02 |            0.42 |            0.64 |                         2032.9 |
-| 51 Personal Service Workers                                                              |                      222.42 |                  0.03 |                    0.05 |                    0.5  |            0.02 |            0.38 |            0.64 |                         2033.4 |
-| 73 Precision, Handicraft, Printing & Related Trades Workers                              |                       12.16 |                  0.02 |                    0.04 |                    0.59 |            0.03 |            0.36 |            0.73 |                         2034.2 |
-| 82 Assemblers & Quality Checkers                                                         |                        9.64 |                  0.01 |                    0.03 |                    0.66 |            0    |            0.3  |            0.75 |                         2034.3 |
-| 93 Labourers & Related Workers                                                           |                       56.39 |                  0.01 |                    0.03 |                    0.63 |            0    |            0.28 |            0.61 |                         2034.5 |
-| 81 Stationary Plant & Machine Operators                                                  |                       22.72 |                  0    |                    0.01 |                    0.77 |            0.01 |            0.2  |            0.72 |                         2034.5 |
-| 72 Metal, Machinery & Related Trades Workers                                             |                       34.97 |                  0.01 |                    0.01 |                    0.76 |            0.01 |            0.21 |            0.66 |                         2034.6 |
-| 75 Food Processing, Woodworking, Garment, Leather & Other Craft & Related Trades Workers |                       26.35 |                  0.01 |                    0.02 |                    0.76 |            0.01 |            0.2  |            0.61 |                         2034.6 |
-| 94 Food Preparation & Kitchen Assistants                                                 |                       66.03 |                  0.01 |                    0.01 |                    0.93 |            0    |            0.06 |            0.79 |                         2034.6 |
-| 74 Electrical & Electronic Trades Workers                                                |                       23.76 |                  0.01 |                    0.02 |                    0.6  |            0.01 |            0.33 |            0.55 |                         2034.7 |
-| 96 Waste Collection, Recycling & Material Recovery Workers & Other Elementary Workers    |                       50.68 |                  0.01 |                    0.02 |                    0.68 |            0.01 |            0.26 |            0.56 |                         2034.7 |
-| 91 Cleaners & Related Workers                                                            |                      174.05 |                  0    |                    0.01 |                    0.87 |            0.02 |            0.11 |            0.57 |                         2034.7 |
-| 71 Building & Related Trades Workers (Excluding Electricians)                            |                       40.92 |                  0.01 |                    0.01 |                    0.84 |            0    |            0.13 |            0.54 |                         2034.9 |
-| 32 Health Associate Professionals                                                        |                       70.21 |                  0.01 |                    0.03 |                    0.57 |            0    |            0.37 |            0.5  |                         2035   |
-| 53 Personal Care Workers                                                                 |                       46.62 |                  0.02 |                    0.04 |                    0.58 |            0.01 |            0.28 |            0.48 |                         2035.2 |
-| 83 Drivers & Mobile Machinery Operators                                                  |                      345.2  |                  0    |                    0    |                    0.72 |            0    |            0.25 |            0.45 |                         2035.7 |
-| 61-62 Agricultural & Fishery Workers                                                     |                        5.7  |                  0.01 |                    0.01 |                    0.7  |            0.01 |            0.24 |            0.44 |                         2035.9 |
-| 92 Agricultural, Fishery & Related Labourers                                             |                        2.03 |                  0.02 |                    0.03 |                    0.88 |            0.01 |            0.12 |            0.47 |                         2037   |
+| 25 Information & Communications Technology Professionals                                 |                      722.38 |                  0.31 |                    0.58 |                    0.04 |            0.91 |            0.97 |            0.99 |                         2028.4 |
+| 26 Legal, Social, Religious & Cultural Professionals                                     |                      287.7  |                  0.22 |                    0.47 |                    0.1  |            0.61 |            0.85 |            0.93 |                         2029.7 |
+| 35 Information & Communications Technicians                                              |                      100.92 |                  0.26 |                    0.43 |                    0.28 |            0.58 |            0.69 |            0.85 |                         2029.7 |
+| 24 Business & Administration Professionals                                               |                     1943.08 |                  0.26 |                    0.5  |                    0.05 |            0.58 |            0.9  |            0.97 |                         2029.8 |
+| 23 Teaching & Training Professionals                                                     |                      414.47 |                  0.23 |                    0.6  |                    0.12 |            0.59 |            0.84 |            0.91 |                         2029.8 |
+| 21 Science & Engineering Professionals                                                   |                     1115.76 |                  0.15 |                    0.33 |                    0.23 |            0.45 |            0.71 |            0.86 |                         2030.3 |
+| 12 Administrative & Commercial Managers                                                  |                     1760.36 |                  0.2  |                    0.41 |                    0.03 |            0.33 |            0.81 |            0.98 |                         2030.5 |
+| 13 Production & Specialised Services Managers                                            |                     1132.17 |                  0.22 |                    0.39 |                    0.07 |            0.4  |            0.79 |            0.94 |                         2030.5 |
+| 33 Business & Administration Associate Professionals                                     |                     1222.72 |                  0.2  |                    0.39 |                    0.14 |            0.35 |            0.76 |            0.91 |                         2030.5 |
+| 36 Teaching Associate Professionals                                                      |                      211.35 |                  0.21 |                    0.46 |                    0.2  |            0.4  |            0.74 |            0.87 |                         2030.5 |
+| 41 General & Keyboard Clerks                                                             |                      279.78 |                  0.32 |                    0.5  |                    0.27 |            0.36 |            0.7  |            0.96 |                         2030.5 |
+| 43 Numerical & Material-Recording Clerks                                                 |                      168.5  |                  0.19 |                    0.32 |                    0.16 |            0.28 |            0.77 |            0.92 |                         2030.7 |
+| 39 Other Associate Professionals Not Elsewhere Classified                                |                        7.2  |                  0.19 |                    0.45 |                    0.13 |            0.33 |            0.7  |            0.86 |                         2030.9 |
+| 11 Legislators, Senior Officials & Chief Executives                                      |                      715.52 |                  0.13 |                    0.32 |                    0.03 |            0.18 |            0.71 |            0.97 |                         2031   |
+| 22 Health Professionals                                                                  |                      398.54 |                  0.11 |                    0.25 |                    0.34 |            0.19 |            0.58 |            0.69 |                         2031.2 |
+| 42 Customer Services Officers & Clerks                                                   |                      159.59 |                  0.17 |                    0.3  |                    0.28 |            0.11 |            0.6  |            0.81 |                         2031.5 |
+| 14 Hospitality, Retail & Related Services Managers                                       |                      254.04 |                  0.14 |                    0.27 |                    0.22 |            0.13 |            0.58 |            0.85 |                         2031.6 |
+| 40 Clerical Supervisors                                                                  |                       12.6  |                  0.26 |                    0.51 |                    0.06 |            0.08 |            0.64 |            0.97 |                         2031.7 |
+| 44 Other Clerical Support Workers                                                        |                       21.33 |                  0.18 |                    0.29 |                    0.41 |            0.29 |            0.52 |            0.85 |                         2031.7 |
+| 34 Legal, Social, Cultural & Related Associate Professionals                             |                      161.24 |                  0.13 |                    0.27 |                    0.35 |            0.22 |            0.51 |            0.79 |                         2031.9 |
+| 31 Physical & Engineering Science Associate Professionals                                |                      461.56 |                  0.11 |                    0.21 |                    0.45 |            0.15 |            0.45 |            0.73 |                         2033   |
+| 54 Protective Services Workers                                                           |                      168.07 |                  0.09 |                    0.15 |                    0.43 |            0.02 |            0.35 |            0.59 |                         2033.7 |
+| 59 Services Workers Not Elsewhere Classified                                             |                        3.14 |                  0.1  |                    0.21 |                    0.38 |            0.02 |            0.31 |            0.68 |                         2033.7 |
+| 52 Sales Workers                                                                         |                      288.8  |                  0.15 |                    0.27 |                    0.48 |            0.04 |            0.4  |            0.62 |                         2034   |
+| 32 Health Associate Professionals                                                        |                       70.21 |                  0.08 |                    0.17 |                    0.57 |            0.08 |            0.37 |            0.61 |                         2034.2 |
+| 73 Precision, Handicraft, Printing & Related Trades Workers                              |                       12.16 |                  0.09 |                    0.16 |                    0.59 |            0.08 |            0.33 |            0.73 |                         2034.2 |
+| 61-62 Agricultural & Fishery Workers                                                     |                        5.7  |                  0.04 |                    0.08 |                    0.7  |            0.16 |            0.26 |            0.52 |                         2034.2 |
+| 51 Personal Service Workers                                                              |                      222.42 |                  0.11 |                    0.2  |                    0.5  |            0.03 |            0.28 |            0.54 |                         2034.6 |
+| 74 Electrical & Electronic Trades Workers                                                |                       23.76 |                  0.08 |                    0.15 |                    0.6  |            0.02 |            0.28 |            0.57 |                         2034.7 |
+| 93 Labourers & Related Workers                                                           |                       56.39 |                  0.04 |                    0.07 |                    0.63 |            0.01 |            0.22 |            0.57 |                         2034.7 |
+| 72 Metal, Machinery & Related Trades Workers                                             |                       34.97 |                  0.04 |                    0.06 |                    0.76 |            0.02 |            0.16 |            0.63 |                         2034.7 |
+| 94 Food Preparation & Kitchen Assistants                                                 |                       66.03 |                  0.09 |                    0.16 |                    0.93 |            0.01 |            0.03 |            0.72 |                         2034.7 |
+| 91 Cleaners & Related Workers                                                            |                      174.05 |                  0.03 |                    0.05 |                    0.87 |            0.02 |            0.09 |            0.57 |                         2034.8 |
+| 53 Personal Care Workers                                                                 |                       46.62 |                  0.13 |                    0.23 |                    0.58 |            0.04 |            0.25 |            0.51 |                         2034.9 |
+| 96 Waste Collection, Recycling & Material Recovery Workers & Other Elementary Workers    |                       50.68 |                  0.07 |                    0.12 |                    0.68 |            0.04 |            0.2  |            0.52 |                         2034.9 |
+| 75 Food Processing, Woodworking, Garment, Leather & Other Craft & Related Trades Workers |                       26.35 |                  0.05 |                    0.1  |                    0.76 |            0.02 |            0.16 |            0.51 |                         2034.9 |
+| 82 Assemblers & Quality Checkers                                                         |                        9.64 |                  0.07 |                    0.12 |                    0.66 |            0.01 |            0.2  |            0.49 |                         2035   |
+| 71 Building & Related Trades Workers (Excluding Electricians)                            |                       40.92 |                  0.04 |                    0.08 |                    0.84 |            0.01 |            0.11 |            0.52 |                         2035   |
+| 81 Stationary Plant & Machine Operators                                                  |                       22.72 |                  0.04 |                    0.06 |                    0.77 |            0    |            0.15 |            0.4  |                         2035.3 |
+| 92 Agricultural, Fishery & Related Labourers                                             |                        2.03 |                  0.03 |                    0.06 |                    0.88 |            0.03 |            0.1  |            0.47 |                         2036.1 |
+| 83 Drivers & Mobile Machinery Operators                                                  |                      345.2  |                  0.03 |                    0.06 |                    0.72 |            0    |            0.12 |            0.28 |                         2036.5 |
 
 ### Skills Framework sectors (unweighted mean over roles)
 
 | sector                           |   n_roles |   share_key_tasks_observed |   observed_automation_via_tasks |   share_key_tasks_physical |   share_by_2030 |   share_by_2035 |   half_year_p50_median_role |
 |:---------------------------------|----------:|---------------------------:|--------------------------------:|---------------------------:|----------------:|----------------:|----------------------------:|
-| Infocomm Technology              |       138 |                       0.52 |                            0.12 |                       0.05 |            0.15 |            0.97 |                     2030.63 |
-| Carbon Services and Trading      |         8 |                       0.24 |                            0.05 |                       0.08 |            0.08 |            0.95 |                     2030.63 |
-| Design                           |        28 |                       0.51 |                            0.11 |                       0.06 |            0.15 |            0.96 |                     2030.72 |
-| Accountancy                      |        46 |                       0.43 |                            0.09 |                       0.04 |            0.1  |            0.98 |                     2030.81 |
-| Wholesale Trade                  |        42 |                       0.39 |                            0.07 |                       0.04 |            0.05 |            0.98 |                     2030.83 |
-| Financial Services               |       293 |                       0.43 |                            0.09 |                       0.03 |            0.07 |            0.98 |                     2030.86 |
-| Marine and Offshore              |        29 |                       0.33 |                            0.06 |                       0.15 |            0.05 |            0.91 |                     2030.87 |
-| Engineering Services             |        35 |                       0.33 |                            0.07 |                       0.12 |            0.05 |            0.91 |                     2030.9  |
-| Precision Engineering            |        15 |                       0.2  |                            0.04 |                       0.18 |            0.02 |            0.9  |                     2030.92 |
-| Built Environment                |        49 |                       0.32 |                            0.06 |                       0.12 |            0.05 |            0.91 |                     2030.92 |
-| Training and Adult Education     |        13 |                       0.47 |                            0.1  |                       0.03 |            0.11 |            0.98 |                     2030.96 |
-| Energy and Chemicals             |        53 |                       0.3  |                            0.06 |                       0.19 |            0.04 |            0.89 |                     2030.96 |
-| Retail                           |        24 |                       0.48 |                            0.1  |                       0.1  |            0.09 |            0.91 |                     2030.98 |
-| Logistics                        |        57 |                       0.42 |                            0.09 |                       0.09 |            0.06 |            0.94 |                     2031    |
-| Aerospace                        |       102 |                       0.24 |                            0.05 |                       0.22 |            0.05 |            0.87 |                     2031    |
-| Workplace Safety and Health      |        11 |                       0.33 |                            0.07 |                       0.12 |            0.05 |            0.89 |                     2031    |
-| Human Resource                   |        21 |                       0.43 |                            0.07 |                       0.03 |            0.03 |            0.98 |                     2031    |
-| Media                            |       112 |                       0.41 |                            0.09 |                       0.12 |            0.11 |            0.94 |                     2031    |
-| Early Childhood                  |        27 |                       0.31 |                            0.06 |                       0.13 |            0.07 |            0.89 |                     2031.03 |
-| Tourism                          |        69 |                       0.4  |                            0.09 |                       0.09 |            0.06 |            0.92 |                     2031.04 |
-| Electronics                      |        29 |                       0.29 |                            0.06 |                       0.2  |            0.05 |            0.84 |                     2031.05 |
-| Intellectual Property            |        11 |                       0.31 |                            0.06 |                       0.02 |            0.04 |            0.98 |                     2031.05 |
-| Social Service                   |        73 |                       0.35 |                            0.06 |                       0.05 |            0.09 |            0.97 |                     2031.07 |
-| Food Manufacturing               |        26 |                       0.33 |                            0.07 |                       0.25 |            0.04 |            0.87 |                     2031.08 |
-| Legal Services                   |         9 |                       0.36 |                            0.06 |                       0.05 |            0.02 |            0.95 |                     2031.1  |
-| Energy and Power                 |       138 |                       0.32 |                            0.07 |                       0.19 |            0.05 |            0.85 |                     2031.11 |
-| Sea Transport                    |        85 |                       0.31 |                            0.07 |                       0.17 |            0.04 |            0.85 |                     2031.15 |
-| Public Transport                 |        87 |                       0.18 |                            0.03 |                       0.25 |            0.05 |            0.79 |                     2031.16 |
-| BioPharmaceuticals Manufacturing |        27 |                       0.23 |                            0.05 |                       0.21 |            0.03 |            0.92 |                     2031.17 |
-| Trade Associations and Chambers  |        22 |                       0.43 |                            0.08 |                       0.02 |            0.07 |            0.99 |                     2031.19 |
-| Landscape                        |        17 |                       0.25 |                            0.05 |                       0.26 |            0.06 |            0.78 |                     2031.21 |
-| Hotel and Accommodation Services |        38 |                       0.36 |                            0.08 |                       0.17 |            0.08 |            0.89 |                     2031.35 |
-| Air Transport                    |        93 |                       0.27 |                            0.06 |                       0.19 |            0.05 |            0.8  |                     2031.37 |
-| Environmental Services           |        30 |                       0.26 |                            0.06 |                       0.32 |            0.04 |            0.73 |                     2031.39 |
-| Healthcare                       |        77 |                       0.26 |                            0.05 |                       0.18 |            0.04 |            0.84 |                     2031.49 |
-| Arts                             |        48 |                       0.19 |                            0.04 |                       0.34 |            0.07 |            0.76 |                     2031.57 |
-| Food Services                    |        31 |                       0.33 |                            0.06 |                       0.26 |            0.06 |            0.85 |                     2031.85 |
-| Security                         |        11 |                       0.24 |                            0.05 |                       0.21 |            0.01 |            0.78 |                     2032.06 |
-| Agrifood                         |         6 |                       0.14 |                            0.02 |                       0.46 |            0.03 |            0.78 |                     2032.9  |
+| Infocomm Technology              |       138 |                       0.84 |                            0.27 |                       0.05 |            0.93 |            0.97 |                     2027.81 |
+| Media                            |       112 |                       0.8  |                            0.24 |                       0.12 |            0.8  |            0.95 |                     2028.28 |
+| Carbon Services and Trading      |         8 |                       0.68 |                            0.2  |                       0.08 |            0.86 |            0.96 |                     2028.61 |
+| Financial Services               |       293 |                       0.86 |                            0.27 |                       0.03 |            0.88 |            0.98 |                     2028.74 |
+| Design                           |        28 |                       0.88 |                            0.27 |                       0.06 |            0.82 |            0.96 |                     2028.76 |
+| Accountancy                      |        46 |                       0.78 |                            0.24 |                       0.04 |            0.87 |            0.98 |                     2028.85 |
+| Engineering Services             |        35 |                       0.66 |                            0.18 |                       0.12 |            0.75 |            0.92 |                     2028.96 |
+| Training and Adult Education     |        13 |                       0.89 |                            0.25 |                       0.03 |            0.82 |            0.99 |                     2028.98 |
+| Intellectual Property            |        11 |                       0.78 |                            0.22 |                       0.02 |            0.78 |            0.98 |                     2029.1  |
+| Early Childhood                  |        27 |                       0.79 |                            0.22 |                       0.13 |            0.66 |            0.92 |                     2029.17 |
+| Legal Services                   |         9 |                       0.73 |                            0.21 |                       0.05 |            0.68 |            0.96 |                     2029.27 |
+| Social Service                   |        73 |                       0.79 |                            0.19 |                       0.05 |            0.38 |            0.98 |                     2030.21 |
+| Human Resource                   |        21 |                       0.87 |                            0.24 |                       0.03 |            0.33 |            0.98 |                     2030.32 |
+| Workplace Safety and Health      |        11 |                       0.68 |                            0.17 |                       0.12 |            0.26 |            0.89 |                     2030.47 |
+| Tourism                          |        69 |                       0.74 |                            0.22 |                       0.09 |            0.22 |            0.92 |                     2030.73 |
+| Wholesale Trade                  |        42 |                       0.87 |                            0.26 |                       0.04 |            0.19 |            0.98 |                     2030.74 |
+| Landscape                        |        17 |                       0.59 |                            0.15 |                       0.26 |            0.18 |            0.8  |                     2030.8  |
+| Healthcare                       |        77 |                       0.71 |                            0.17 |                       0.18 |            0.24 |            0.86 |                     2030.8  |
+| Aerospace                        |       102 |                       0.65 |                            0.18 |                       0.22 |            0.2  |            0.87 |                     2030.82 |
+| Precision Engineering            |        15 |                       0.56 |                            0.15 |                       0.18 |            0.12 |            0.9  |                     2030.86 |
+| Marine and Offshore              |        29 |                       0.7  |                            0.19 |                       0.15 |            0.13 |            0.91 |                     2030.87 |
+| Retail                           |        24 |                       0.82 |                            0.26 |                       0.1  |            0.18 |            0.91 |                     2030.94 |
+| Food Manufacturing               |        26 |                       0.74 |                            0.21 |                       0.25 |            0.15 |            0.87 |                     2030.96 |
+| Energy and Chemicals             |        53 |                       0.6  |                            0.15 |                       0.19 |            0.11 |            0.89 |                     2030.96 |
+| Electronics                      |        29 |                       0.64 |                            0.18 |                       0.2  |            0.13 |            0.84 |                     2031.02 |
+| BioPharmaceuticals Manufacturing |        27 |                       0.57 |                            0.15 |                       0.21 |            0.12 |            0.92 |                     2031.06 |
+| Arts                             |        48 |                       0.58 |                            0.15 |                       0.34 |            0.19 |            0.77 |                     2031.55 |
+| Built Environment                |        49 |                       0.69 |                            0.19 |                       0.12 |            0.04 |            0.89 |                     2031.63 |
+| Security                         |        11 |                       0.47 |                            0.12 |                       0.21 |            0.04 |            0.8  |                     2031.9  |
+| Trade Associations and Chambers  |        22 |                       0.83 |                            0.25 |                       0.02 |            0.03 |            0.99 |                     2031.93 |
+| Environmental Services           |        30 |                       0.52 |                            0.14 |                       0.32 |            0.17 |            0.73 |                     2032.16 |
+| Logistics                        |        57 |                       0.78 |                            0.24 |                       0.09 |            0    |            0.9  |                     2032.24 |
+| Energy and Power                 |       138 |                       0.64 |                            0.18 |                       0.19 |            0    |            0.79 |                     2032.27 |
+| Sea Transport                    |        85 |                       0.66 |                            0.19 |                       0.17 |            0    |            0.78 |                     2032.39 |
+| Public Transport                 |        87 |                       0.62 |                            0.18 |                       0.25 |            0    |            0.71 |                     2032.63 |
+| Hotel and Accommodation Services |        38 |                       0.71 |                            0.23 |                       0.17 |            0    |            0.79 |                     2032.68 |
+| Air Transport                    |        93 |                       0.64 |                            0.18 |                       0.19 |            0    |            0.73 |                     2032.79 |
+| Food Services                    |        31 |                       0.73 |                            0.2  |                       0.26 |            0    |            0.7  |                     2033.23 |
+| Agrifood                         |         6 |                       0.49 |                            0.12 |                       0.46 |            0    |            0.53 |                     2034.63 |
 
 ## 5. Timing (central estimate = year by which half of a job's task weight is 'disruptable')
 
-Adoption anchor (US firms' AI use, BTOS logistic fit, crossing 50%): fast 2028.2, central 2030.4, slow 2034.6. Singapore lead on that curve: 1.1 years (usage ratio vs US: {"microsoft_ratio": 1.9484848484848485, "anthropic_ratio": 1.5086206896551722, "geometric_mean": 1.714504172028714}).
+Adoption anchor (US firms' AI use, BTOS logistic fit, crossing 50%): fast 2027.5, central 2029.2, slow 2032.7. Singapore lead on that curve: 0.6 years (usage ratio vs US: {"microsoft_ratio": 1.9484848484848485, "anthropic_ratio": 1.5086206896551722, "geometric_mean": 1.714504172028714}).
 
-Task timing buckets (central): {"2031_2033": 10293, "2034_2037": 4128, "beyond_2045_or_unknown": 2414, "2038_2045": 1155, "2029_2030": 806}
+Task timing buckets (central): {"2031_2033": 5626, "2034_2037": 4744, "2029_2030": 4634, "beyond_2045_or_unknown": 2417, "2038_2045": 1037, "by_2028": 338}
 
 ### O*NET occupations: earliest half-way years
 
-| onet_soc_code   | title                                                   |   share_by_2028 |   share_by_2030 |   share_by_2035 |   half_year_p10 |   half_year_p50 |   half_year_p90 |
-|:----------------|:--------------------------------------------------------|----------------:|----------------:|----------------:|----------------:|----------------:|----------------:|
-| 15-1251.00      | Computer Programmers                                    |               0 |             0.7 |             1   |          2027.2 |          2028.9 |          2032.7 |
-| 25-1124.00      | Foreign Language and Literature Teachers, Postsecondary |               0 |             0.7 |             1   |          2027.7 |          2029.7 |          2033.4 |
-| 19-1029.01      | Bioinformatics Scientists                               |               0 |             0.6 |             1   |          2027.7 |          2029.7 |          2033.4 |
-| 19-2011.00      | Astronomers                                             |               0 |             0.5 |             0.9 |          2027.8 |          2029.7 |          2033.5 |
-| 15-2021.00      | Mathematicians                                          |               0 |             1   |             1   |          2027.8 |          2029.7 |          2033.5 |
-| 15-2099.01      | Bioinformatics Technicians                              |               0 |             0.8 |             1   |          2027.8 |          2029.8 |          2033.5 |
-| 15-1243.01      | Data Warehousing Specialists                            |               0 |             0.9 |             1   |          2027.8 |          2029.8 |          2033.6 |
-| 19-3011.01      | Environmental Economists                                |               0 |             0.7 |             1   |          2027.8 |          2029.8 |          2033.6 |
-| 25-1064.00      | Geography Teachers, Postsecondary                       |               0 |             0.6 |             1   |          2027.8 |          2029.8 |          2033.7 |
-| 13-1161.01      | Search Marketing Strategists                            |               0 |             0.7 |             1   |          2027.8 |          2029.8 |          2033.6 |
-| 19-1029.03      | Geneticists                                             |               0 |             0.6 |             1   |          2027.8 |          2029.8 |          2033.7 |
-| 27-3043.05      | Poets, Lyricists and Creative Writers                   |               0 |             0.8 |             1   |          2027.9 |          2029.9 |          2033.8 |
-| 17-2031.00      | Bioengineers and Biomedical Engineers                   |               0 |             0.7 |             1   |          2027.9 |          2029.9 |          2033.8 |
-| 17-2141.01      | Fuel Cell Engineers                                     |               0 |             0.6 |             1   |          2027.9 |          2029.9 |          2033.8 |
-| 19-2041.01      | Climate Change Policy Analysts                          |               0 |             0.5 |             1   |          2027.8 |          2029.9 |          2033.8 |
-| 15-1252.00      | Software Developers                                     |               0 |             0.7 |             1   |          2028   |          2029.9 |          2034   |
-| 15-2031.00      | Operations Research Analysts                            |               0 |             0.5 |             1   |          2027.9 |          2029.9 |          2033.8 |
-| 19-2012.00      | Physicists                                              |               0 |             0.6 |             1   |          2027.9 |          2029.9 |          2033.9 |
-| 19-2041.03      | Industrial Ecologists                                   |               0 |             0.7 |             1   |          2027.9 |          2029.9 |          2033.8 |
-| 19-2099.01      | Remote Sensing Scientists and Technologists             |               0 |             0.7 |             0.9 |          2027.9 |          2029.9 |          2033.9 |
+| onet_soc_code   | title                                                        |   share_by_2028 |   share_by_2030 |   share_by_2035 |   half_year_p10 |   half_year_p50 |   half_year_p90 |
+|:----------------|:-------------------------------------------------------------|----------------:|----------------:|----------------:|----------------:|----------------:|----------------:|
+| 15-1251.00      | Computer Programmers                                         |             0.6 |             0.9 |               1 |          2027.2 |          2027.2 |          2030.1 |
+| 15-1299.03      | Document Management Specialists                              |             0.5 |             1   |               1 |          2027.2 |          2027.7 |          2031   |
+| 15-1211.00      | Computer Systems Analysts                                    |             0.5 |             0.9 |               1 |          2027.2 |          2027.8 |          2031.2 |
+| 15-2099.01      | Bioinformatics Technicians                                   |             0.5 |             1   |               1 |          2027.2 |          2027.8 |          2031.3 |
+| 15-1252.00      | Software Developers                                          |             0.3 |             0.9 |               1 |          2027.2 |          2028.2 |          2031.5 |
+| 43-9111.00      | Statistical Assistants                                       |             0.1 |             0.9 |               1 |          2027.2 |          2028.2 |          2031.9 |
+| 15-1243.01      | Data Warehousing Specialists                                 |             0.5 |             1   |               1 |          2027.2 |          2028.2 |          2031.3 |
+| 15-1253.00      | Software Quality Assurance Analysts and Testers              |             0.4 |             1   |               1 |          2027.2 |          2028.2 |          2031.2 |
+| 15-2021.00      | Mathematicians                                               |             0.4 |             1   |               1 |          2027.2 |          2028.3 |          2031.5 |
+| 19-3011.01      | Environmental Economists                                     |             0.2 |             1   |               1 |          2027.2 |          2028.3 |          2031.6 |
+| 19-3022.00      | Survey Researchers                                           |             0   |             0.8 |               1 |          2027.2 |          2028.3 |          2032.1 |
+| 15-1299.01      | Web Administrators                                           |             0.3 |             1   |               1 |          2027.2 |          2028.4 |          2031.6 |
+| 15-1243.00      | Database Architects                                          |             0.3 |             1   |               1 |          2027.2 |          2028.4 |          2031.6 |
+| 15-1299.02      | Geographic Information Systems Technologists and Technicians |             0.5 |             1   |               1 |          2027.2 |          2028.5 |          2031.8 |
+| 15-1242.00      | Database Administrators                                      |             0.4 |             0.9 |               1 |          2027.2 |          2028.5 |          2031.7 |
+| 19-2012.00      | Physicists                                                   |             0.3 |             0.9 |               1 |          2027.2 |          2028.5 |          2031.9 |
+| 15-2051.01      | Business Intelligence Analysts                               |             0.5 |             1   |               1 |          2027.2 |          2028.5 |          2031.8 |
+| 13-1199.04      | Business Continuity Planners                                 |             0.3 |             1   |               1 |          2027.2 |          2028.5 |          2031.8 |
+| 19-4061.00      | Social Science Research Assistants                           |             0.2 |             0.9 |               1 |          2027.2 |          2028.5 |          2031.9 |
+| 15-1255.01      | Video Game Designers                                         |             0   |             1   |               1 |          2027.2 |          2028.5 |          2032   |
 
 ### O*NET occupations: latest half-way years (most insulated)
 
 | onet_soc_code   | title                                                          |   share_by_2030 |   share_by_2035 |   share_beyond_horizon |   half_year_p50 |   half_year_p90 |
 |:----------------|:---------------------------------------------------------------|----------------:|----------------:|-----------------------:|----------------:|----------------:|
-| 33-3012.00      | Correctional Officers and Jailers                              |             0   |             0.3 |                    0.5 |          2043.6 |             nan |
-| 33-3031.00      | Fish and Game Wardens                                          |             0   |             0.3 |                    0.5 |          2043.6 |             nan |
-| 47-2082.00      | Tapers                                                         |             0   |             0.4 |                    0.3 |          2042.1 |             nan |
-| 53-5022.00      | Motorboat Operators                                            |             0   |             0.3 |                    0.3 |          2039.8 |             nan |
-| 39-5012.00      | Hairdressers, Hairstylists, and Cosmetologists                 |             0   |             0.3 |                    0.5 |          2039.5 |             nan |
-| 29-1299.02      | Orthoptists                                                    |             0.1 |             0.5 |                    0.5 |          2039.4 |             nan |
-| 31-1121.00      | Home Health Aides                                              |             0   |             0.2 |                    0.5 |          2039.4 |             nan |
-| 45-2093.00      | Farmworkers, Farm, Ranch, and Aquacultural Animals             |             0   |             0.2 |                    0.4 |          2038.8 |             nan |
-| 27-2042.00      | Musicians and Singers                                          |             0   |             0.5 |                    0.5 |          2038.7 |             nan |
-| 19-4092.00      | Forensic Science Technicians                                   |             0   |             0.3 |                    0.4 |          2038.6 |             nan |
-| 29-9091.00      | Athletic Trainers                                              |             0   |             0.4 |                    0.4 |          2038.6 |             nan |
-| 29-2099.05      | Ophthalmic Medical Technologists                               |             0   |             0.2 |                    0.3 |          2038.5 |             nan |
-| 47-5013.00      | Service Unit Operators, Oil and Gas                            |             0   |             0.3 |                    0.4 |          2038.4 |             nan |
-| 47-2073.00      | Operating Engineers and Other Construction Equipment Operators |             0   |             0.2 |                    0.1 |          2038.4 |             nan |
-| 29-2057.00      | Ophthalmic Medical Technicians                                 |             0   |             0.2 |                    0.3 |          2038.4 |             nan |
+| 33-3012.00      | Correctional Officers and Jailers                              |               0 |             0.3 |                    0.5 |          2043.4 |             nan |
+| 33-3031.00      | Fish and Game Wardens                                          |               0 |             0.3 |                    0.5 |          2043.3 |             nan |
+| 47-2082.00      | Tapers                                                         |               0 |             0.4 |                    0.3 |          2042.2 |             nan |
+| 53-5022.00      | Motorboat Operators                                            |               0 |             0.3 |                    0.3 |          2039.9 |             nan |
+| 39-5012.00      | Hairdressers, Hairstylists, and Cosmetologists                 |               0 |             0.3 |                    0.5 |          2039.6 |             nan |
+| 47-5013.00      | Service Unit Operators, Oil and Gas                            |               0 |             0.2 |                    0.4 |          2039.2 |             nan |
+| 47-2073.00      | Operating Engineers and Other Construction Equipment Operators |               0 |             0.1 |                    0.1 |          2039.2 |             nan |
+| 31-1121.00      | Home Health Aides                                              |               0 |             0.3 |                    0.5 |          2039   |             nan |
+| 53-3053.00      | Shuttle Drivers and Chauffeurs                                 |               0 |             0.4 |                    0.2 |          2038.9 |             nan |
+| 53-7041.00      | Hoist and Winch Operators                                      |               0 |             0.1 |                    0.1 |          2038.9 |             nan |
+| 47-5012.00      | Rotary Drill Operators, Oil and Gas                            |               0 |             0.2 |                    0.1 |          2038.6 |             nan |
+| 47-4091.00      | Segmental Pavers                                               |               0 |             0.1 |                    0.4 |          2038.6 |             nan |
+| 53-7051.00      | Industrial Truck and Tractor Operators                         |               0 |             0   |                    0   |          2038.5 |             nan |
+| 39-6011.00      | Baggage Porters and Bellhops                                   |               0 |             0.3 |                    0.3 |          2038.5 |             nan |
+| 53-3033.00      | Light Truck Drivers                                            |               0 |             0.4 |                    0.1 |          2038.5 |             nan |
 
 ### Singapore SSOC 2024: earliest half-way years
 
-|   ssoc_code | ssoc_title                                                   |   share_by_2028 |   share_by_2030 |   share_by_2035 |   half_year_p10 |   half_year_p50 |   half_year_p90 |
-|------------:|:-------------------------------------------------------------|----------------:|----------------:|----------------:|----------------:|----------------:|----------------:|
-|       21110 | Physicist/Astronomer                                         |               0 |             0.5 |             1   |          2028   |          2030   |          2034.1 |
-|       21211 | Mathematician                                                |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
-|       21212 | Operations research analyst                                  |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
-|       21213 | Actuary                                                      |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
-|       21221 | Statistician                                                 |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
-|       21222 | Data scientist                                               |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
-|       21120 | Meteorologist                                                |               0 |             0.1 |             0.9 |          2028   |          2030.1 |          2034.1 |
-|       21231 | Statistical officer/Data analyst                             |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
-|       21239 | Other statistical/mathematical/actuarial professional n.e.c. |               0 |             0.4 |             1   |          2028   |          2030.1 |          2034.1 |
-|       26310 | Economist                                                    |               0 |             0.3 |             1   |          2028   |          2030.1 |          2034.1 |
-|       25122 | Web/Mobile applications developer                            |               0 |             0.3 |             1   |          2028   |          2030.2 |          2034.2 |
-|       25220 | Network/Server/Applications/Computer systems administrator   |               0 |             0.2 |             1   |          2028   |          2030.2 |          2034.2 |
-|       35140 | Website administrator/Webmaster                              |               0 |             0.1 |             1   |          2028   |          2030.2 |          2034.3 |
-|       35110 | Computer systems operator                                    |               0 |             0.1 |             0.9 |          2028   |          2030.2 |          2034.3 |
-|       26321 | Sociologist/Anthropologist                                   |               0 |             0.3 |             0.9 |          2028.1 |          2030.2 |          2034.3 |
-|       26322 | Social science researcher                                    |               0 |             0.3 |             0.9 |          2028.1 |          2030.2 |          2034.3 |
-|       41320 | Data entry clerk                                             |               0 |             0.4 |             1   |          2028   |          2030.2 |          2034.2 |
-|       25125 | DevOps engineer                                              |               0 |             0.3 |             1   |          2028   |          2030.2 |          2034.2 |
-|       25142 | Artificial intelligence applied researcher                   |               0 |             0.3 |             1   |          2028   |          2030.2 |          2034.3 |
-|       25151 | ICT quality assurance specialist                             |               0 |             0.3 |             1   |          2028   |          2030.2 |          2034.3 |
+|   ssoc_code | ssoc_title                                                 |   share_by_2028 |   share_by_2030 |   share_by_2035 |   half_year_p10 |   half_year_p50 |   half_year_p90 |
+|------------:|:-----------------------------------------------------------|----------------:|----------------:|----------------:|----------------:|----------------:|----------------:|
+|       25220 | Network/Server/Applications/Computer systems administrator |             0.5 |             0.9 |               1 |          2027.2 |          2028   |          2031   |
+|       25125 | DevOps engineer                                            |             0.4 |             1   |               1 |          2027.2 |          2028.1 |          2031.2 |
+|       25142 | Artificial intelligence applied researcher                 |             0.4 |             1   |               1 |          2027.2 |          2028.1 |          2031.2 |
+|       25151 | ICT quality assurance specialist                           |             0.4 |             1   |               1 |          2027.2 |          2028.1 |          2031.2 |
+|       25152 | ICT auditor                                                |             0.4 |             1   |               1 |          2027.2 |          2028.1 |          2031.2 |
+|       21231 | Statistical officer/Data analyst                           |             0.4 |             0.9 |               1 |          2027.2 |          2028.1 |          2031.2 |
+|       25121 | Software developer                                         |             0.4 |             1   |               1 |          2027.2 |          2028.1 |          2031.2 |
+|       25212 | Data/Database architect                                    |             0.4 |             1   |               1 |          2027.2 |          2028.2 |          2031.2 |
+|       25213 | Data engineer                                              |             0.4 |             1   |               1 |          2027.2 |          2028.2 |          2031.2 |
+|       25123 | Multimedia-games developer/designer                        |             0.4 |             0.9 |               1 |          2027.2 |          2028.2 |          2031.2 |
+|       25143 | Artificial intelligence/Machine learning engineer          |             0.4 |             0.9 |               1 |          2027.2 |          2028.2 |          2031.3 |
+|       25124 | Interaction designer                                       |             0.3 |             0.9 |               1 |          2027.2 |          2028.3 |          2031.4 |
+|       25242 | Penetration testing specialist                             |             0.3 |             0.9 |               1 |          2027.2 |          2028.3 |          2031.5 |
+|       25243 | Security operations specialist                             |             0.3 |             0.9 |               1 |          2027.2 |          2028.3 |          2031.5 |
+|       25245 | Cybersecurity architect                                    |             0.3 |             0.9 |               1 |          2027.2 |          2028.3 |          2031.5 |
+|       25246 | Cyber incident investigation specialist                    |             0.3 |             0.9 |               1 |          2027.2 |          2028.3 |          2031.5 |
+|       25247 | Threat analysis specialist                                 |             0.3 |             0.9 |               1 |          2027.2 |          2028.3 |          2031.5 |
+|       25291 | Data centre engineer                                       |             0.3 |             0.9 |               1 |          2027.2 |          2028.3 |          2031.5 |
+|       21213 | Actuary                                                    |             0.3 |             0.9 |               1 |          2027.2 |          2028.4 |          2031.7 |
+|       21222 | Data scientist                                             |             0.3 |             0.9 |               1 |          2027.2 |          2028.4 |          2031.7 |
 
 ### Skills Framework roles: earliest half-way years (via key tasks)
 
-| sector              | job_role                                           |   n_tasks |   share_by_2028 |   share_by_2030 |   half_year_p10 |   half_year_p50 |   half_year_p90 |
-|:--------------------|:---------------------------------------------------|----------:|----------------:|----------------:|----------------:|----------------:|----------------:|
-| Infocomm Technology | Data Analyst / Associate Data Engineer             |        13 |               0 |             0.7 |          2027.7 |          2029.8 |          2033.9 |
-| Infocomm Technology | Associate Embedded Systems Engineer                |        15 |               0 |             0.5 |          2027.9 |          2029.9 |          2033.8 |
-| Social Service      | Chief Research Psychologist                        |        16 |               0 |             0.5 |          2027.9 |          2030   |          2033.9 |
-| Social Service      | Senior Principal Researcher / Principal Researcher |        19 |               0 |             0.5 |          2027.9 |          2030   |          2033.9 |
-| Financial Services  | Economist                                          |         4 |               0 |             0.4 |          2027.9 |          2030   |          2034   |
-| Financial Services  | Senior Economist                                   |         4 |               0 |             0.4 |          2027.9 |          2030   |          2034   |
-| Media               | Quality Assurance Tester                           |        12 |               0 |             0.3 |          2028   |          2030.1 |          2034.1 |
-| Media               | Senior Level Designer                              |        15 |               0 |             0.2 |          2027.9 |          2030.1 |          2034   |
-| Media               | Junior Designer                                    |        10 |               0 |             0.2 |          2028   |          2030.1 |          2034.1 |
-| Energy and Power    | Product and Pricing Senior Executive               |         5 |               0 |             0.2 |          2028   |          2030.1 |          2034.2 |
-| Design              | Lead Design Researcher                             |        11 |               0 |             0.4 |          2028.1 |          2030.1 |          2034.3 |
-| Media               | Senior Game Sound Designer                         |        15 |               0 |             0   |          2028   |          2030.1 |          2034.2 |
-| Social Service      | Principal Research Counsellor                      |        18 |               0 |             0.5 |          2028   |          2030.1 |          2034.2 |
-| Media               | Senior Game Programmer                             |        14 |               0 |             0.3 |          2028   |          2030.1 |          2034.2 |
-| Media               | Senior Game Designer                               |        20 |               0 |             0.2 |          2028   |          2030.1 |          2034.2 |
-| Media               | Game Technical Director                            |        20 |               0 |             0.3 |          2028   |          2030.1 |          2034.2 |
-| Media               | Lead Game Programmer                               |        26 |               0 |             0.3 |          2028   |          2030.1 |          2034.2 |
-| Infocomm Technology | Lead Product Analyst                               |        21 |               0 |             0.2 |          2028   |          2030.1 |          2034.2 |
-| Design              | Principal Design Researcher                        |        16 |               0 |             0.3 |          2028.1 |          2030.1 |          2034.3 |
-| Media               | Digital Asset Librarian                            |        13 |               0 |             0.2 |          2028   |          2030.1 |          2034.1 |
+| sector              | job_role                                            |   n_tasks |   share_by_2028 |   share_by_2030 |   half_year_p10 |   half_year_p50 |   half_year_p90 |
+|:--------------------|:----------------------------------------------------|----------:|----------------:|----------------:|----------------:|----------------:|----------------:|
+| Infocomm Technology | Artificial Intelligence Applied Researcher          |        17 |             0.8 |             1   |          2027.2 |          2027.2 |          2029.4 |
+| Infocomm Technology | Associate Embedded Systems Engineer                 |        15 |             0.7 |             0.8 |          2027.2 |          2027.2 |          2029.5 |
+| Infocomm Technology | Data Analyst / Associate Data Engineer              |        13 |             0.9 |             1   |          2027.2 |          2027.2 |          2029.6 |
+| Media               | Analyst - Analytics and Customer Insights           |        11 |             0.7 |             0.8 |          2027.2 |          2027.2 |          2029.7 |
+| Infocomm Technology | Artificial Intelligence / Machine Learning Engineer |        13 |             0.7 |             1   |          2027.2 |          2027.2 |          2029.7 |
+| Media               | Digital Asset Librarian                             |        13 |             0.9 |             0.9 |          2027.2 |          2027.2 |          2029.8 |
+| Financial Services  | Client Investment Performance and Reporting Analyst |         2 |             0.8 |             1   |          2027.2 |          2027.2 |          2030   |
+| Financial Services  | Head of Client Investment Performance and Reporting |         2 |             1   |             1   |          2027.2 |          2027.2 |          2030   |
+| Financial Services  | Head of Strategy / Head of Investment Strategy      |         1 |             1   |             1   |          2027.2 |          2027.2 |          2030   |
+| Financial Services  | Product Analyst                                     |         6 |             0.6 |             0.9 |          2027.2 |          2027.2 |          2030   |
+| Financial Services  | Research Analyst                                    |         2 |             0.8 |             1   |          2027.2 |          2027.2 |          2030   |
+| Financial Services  | Reserving Actuarial Executive                       |         4 |             0.5 |             1   |          2027.2 |          2027.2 |          2030   |
+| Financial Services  | Trust Manager                                       |         3 |             0.7 |             1   |          2027.2 |          2027.2 |          2030   |
+| Financial Services  | Data Analyst                                        |        12 |             0.6 |             1   |          2027.2 |          2027.2 |          2030   |
+| Financial Services  | Data Scientist                                      |        11 |             0.6 |             1   |          2027.2 |          2027.2 |          2030   |
+| Financial Services  | Head of Data Analytics                              |        12 |             0.6 |             1   |          2027.2 |          2027.2 |          2030   |
+| Media               | Manager - Content Acquisition                       |        14 |             0.7 |             0.9 |          2027.2 |          2027.2 |          2030.1 |
+| Media               | Senior Level Designer                               |        15 |             0.7 |             1   |          2027.2 |          2027.3 |          2029.7 |
+| Media               | Lead Quality Assurance Tester                       |        20 |             0.6 |             0.9 |          2027.2 |          2027.3 |          2029.8 |
+| Infocomm Technology | Data Scientist / Artificial Intelligence Scientist  |        15 |             0.9 |             1   |          2027.2 |          2027.3 |          2029.9 |
 
 ### O*NET skills: half-way years
 
 | element_name                      |   n_occupations |   share_by_2028 |   share_by_2030 |   share_by_2035 |   half_year_p50 |   half_year_p90 |
 |:----------------------------------|----------------:|----------------:|----------------:|----------------:|----------------:|----------------:|
-| Programming                       |              26 |               0 |             0.3 |             1   |          2030.1 |          2034.2 |
-| Technology Design                 |              19 |               0 |             0.2 |             1   |          2030.5 |          2034.7 |
-| Operations Analysis               |              90 |               0 |             0.1 |             0.9 |          2030.9 |          2035.3 |
-| Mathematics                       |             237 |               0 |             0.1 |             0.9 |          2031.3 |          2036.1 |
-| Systems Evaluation                |             326 |               0 |             0.1 |             0.9 |          2031.5 |          2036.1 |
-| Negotiation                       |             257 |               0 |             0   |             0.9 |          2031.6 |          2036.2 |
-| Systems Analysis                  |             369 |               0 |             0.1 |             0.9 |          2031.7 |          2036.4 |
-| Management of Financial Resources |              41 |               0 |             0   |             0.9 |          2031.7 |          2036.2 |
-| Management of Personnel Resources |             192 |               0 |             0   |             0.9 |          2031.9 |          2036.6 |
-| Persuasion                        |             329 |               0 |             0   |             0.8 |          2031.9 |          2036.6 |
-| Learning Strategies               |             356 |               0 |             0.1 |             0.8 |          2032   |          2036.6 |
-| Writing                           |             588 |               0 |             0.1 |             0.8 |          2032.1 |          2037   |
-| Management of Material Resources  |              29 |               0 |             0   |             0.9 |          2032.1 |          2036.8 |
-| Science                           |             150 |               0 |             0.1 |             0.8 |          2032.2 |          2037   |
-| Instructing                       |             397 |               0 |             0.1 |             0.8 |          2032.3 |          2037.1 |
-| Active Learning                   |             581 |               0 |             0.1 |             0.8 |          2032.5 |          2037.4 |
-| Reading Comprehension             |             729 |               0 |             0.1 |             0.8 |          2032.7 |          2037.9 |
-| Social Perceptiveness             |             576 |               0 |             0   |             0.8 |          2032.7 |          2037.7 |
-| Complex Problem Solving           |             644 |               0 |             0.1 |             0.8 |          2032.7 |          2037.8 |
-| Judgment and Decision Making      |             682 |               0 |             0.1 |             0.8 |          2032.8 |          2038   |
+| Programming                       |              26 |             0.3 |             0.9 |             1   |          2028.6 |          2032.1 |
+| Technology Design                 |              19 |             0.1 |             0.7 |             1   |          2029.5 |          2033.6 |
+| Operations Analysis               |              90 |             0.1 |             0.5 |             0.9 |          2030.1 |          2034.4 |
+| Mathematics                       |             237 |             0   |             0.5 |             0.9 |          2030.6 |          2035.3 |
+| Systems Evaluation                |             326 |             0   |             0.4 |             0.9 |          2030.8 |          2035.4 |
+| Systems Analysis                  |             369 |             0   |             0.4 |             0.9 |          2031   |          2035.8 |
+| Negotiation                       |             257 |             0   |             0.3 |             0.9 |          2031   |          2035.8 |
+| Management of Financial Resources |              41 |             0   |             0.3 |             0.9 |          2031.1 |          2035.7 |
+| Learning Strategies               |             356 |             0   |             0.4 |             0.8 |          2031.3 |          2036.1 |
+| Persuasion                        |             329 |             0   |             0.3 |             0.8 |          2031.4 |          2036.2 |
+| Writing                           |             588 |             0   |             0.4 |             0.8 |          2031.5 |          2036.4 |
+| Management of Personnel Resources |             192 |             0   |             0.3 |             0.8 |          2031.5 |          2036.4 |
+| Science                           |             150 |             0   |             0.4 |             0.8 |          2031.5 |          2036.3 |
+| Instructing                       |             397 |             0   |             0.4 |             0.8 |          2031.7 |          2036.6 |
+| Management of Material Resources  |              29 |             0   |             0.2 |             0.9 |          2031.8 |          2036.6 |
+| Active Learning                   |             581 |             0   |             0.4 |             0.8 |          2031.9 |          2036.9 |
+| Complex Problem Solving           |             644 |             0   |             0.3 |             0.8 |          2032.2 |          2037.4 |
+| Reading Comprehension             |             729 |             0   |             0.3 |             0.8 |          2032.2 |          2037.5 |
+| Social Perceptiveness             |             576 |             0   |             0.3 |             0.8 |          2032.2 |          2037.4 |
+| Judgment and Decision Making      |             682 |             0   |             0.3 |             0.8 |          2032.3 |          2037.6 |
 
 ## 6. Read this before using the numbers
 

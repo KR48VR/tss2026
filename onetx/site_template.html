@@ -74,6 +74,11 @@ td.num,th.num{text-align:right}
 svg text{fill:var(--fg);font-family:var(--font-body);font-size:12px}
 svg .axis{stroke:var(--line)} svg .grid{stroke:var(--line);stroke-dasharray:2 3}
 .range{font-family:var(--font-mono);font-size:.85rem;color:var(--muted)}
+.pill.s4{background:transparent;border-color:var(--accent);color:var(--accent)} .pill.s5{background:transparent;border-color:var(--helping);color:var(--helping)} .pill.s6{background:transparent;border-color:var(--muted);border-style:dashed;color:var(--muted)} .pill.s7{background:transparent;border-color:var(--warn);color:var(--warn)}
+.scn{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden} .scn button{font:inherit;font-size:.85rem;background:var(--panel);border:0;color:var(--muted);padding:5px 10px;cursor:pointer} .scn button[aria-pressed="true"]{background:var(--accent);color:var(--bg);font-weight:600} .scn button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.evbar{display:flex;height:14px;border-radius:4px;overflow:hidden;border:1px solid var(--line);background:var(--line)} .evbar i{display:block;height:100%} .ev-seen{background:var(--doing)} .ev-rated{background:var(--accent-soft)} .ev-newly{background:var(--helping)} .ev-mixed{background:var(--notseen)} .ev-unproven{background:var(--warn)} .ev-physical{background:var(--physical)}
+.evlegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.8rem;color:var(--muted);margin-top:6px} .evlegend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle;border:1px solid var(--line)}
+.stale{border-left:3px solid var(--warn);padding:8px 12px;background:var(--panel);font-size:.92rem;margin:8px 0 0}
 details{border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--panel)}
 details summary{cursor:pointer;font-weight:600}
 .note{border-left:3px solid var(--helping);padding:8px 12px;background:var(--panel);font-size:.92rem}
@@ -91,6 +96,7 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
 
 <header class="top"><div class="wrap">
   <h1 class="brand">Singapore Work and AI Map</h1>
+  <div class="flexrow small" style="margin:2px 0 6px"><span id="scn-label">Scenario</span><div class="scn" role="group" aria-labelledby="scn-label"><button type="button" data-scn="0" aria-pressed="false">Fast</button><button type="button" data-scn="1" aria-pressed="true">Central</button><button type="button" data-scn="2" aria-pressed="false">Slow</button></div><span class="muted">changes every year and curve on this page</span></div>
   <nav class="tabs" role="tablist" aria-label="Views">
     <button role="tab" data-view="overview" aria-selected="true" aria-controls="view-overview" id="tab-overview">Overview</button>
     <button role="tab" data-view="jobs" aria-selected="false" aria-controls="view-jobs" id="tab-jobs">Find a job</button>
@@ -166,11 +172,11 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
 <section class="view" id="view-method" role="tabpanel" aria-labelledby="tab-method" hidden>
   <div class="lede">
     <h2>How to read this page</h2>
-    <p><strong>Four labels for a task.</strong> <span class="pill s0">AI doing it</span> means the task shows up in AI usage data and, when it does, the AI mostly completes it rather than assisting. <span class="pill s1">AI helping</span> means it shows up but people mostly use AI to help. <span class="pill s2">Physical</span> means the task is hands-on and the relevant question is robotics, not chatbots. <span class="pill s3">Not seen yet</span> means it has not appeared in published usage data, which can mean AI cannot do it or that the people who do it are not using these tools.</p>
+    <p><strong>Labels for a task.</strong> <span class="pill s0">AI doing it</span> means the task shows up in AI usage data (any release since December 2024) and, when it does, the AI mostly completes it rather than assisting. <span class="pill s1">AI helping</span> means it shows up but people mostly use AI to help. <span class="pill s2">Physical</span> means the task is hands-on and the relevant question is robotics, not chatbots. For tasks nobody has yet been seen handing to AI, the page shows the strongest remaining evidence: <span class="pill s4">Rated doable</span> (the 2023 human and GPT-4 raters in OpenAI's study said AI could halve the time, and so does Claude's October 2026 rating of every task on the same scale), <span class="pill s5">Newly rated</span> (the 2023 raters said no, only the 2026 rating says yes), <span class="pill s6">Raters disagree</span>, and <span class="pill s7">Unproven</span> (every rater said no and nothing has been seen). "Unproven" never means "AI cannot"; it means nobody has shown it yet. Unproven, disputed and newly rated tasks wait a measured lag before they count as capable (<span id="m-lag-unproven"></span>, <span id="m-lag-mixed"></span> and <span id="m-lag-newly"></span> years in the central case), measured from how far behind rated tasks each group is in actually being seen in use. A fresh "yes" from one model alone has so far been the weakest predictor of actual use, which is why it waits longest.</p>
     <p><strong>"Half-way year".</strong> For a job, the year by which half of its task weight is "disruptable": AI can do the task at workplace reliability <em>and</em> typical organisations have had time to adopt it. Three numbers are always given: fast, central, slow. The honest statement is the range.</p>
-    <p><strong>What drives the timing.</strong> An adoption anchor fitted to the US Census survey of firms using AI (half of firms by <span id="m-anchor"></span> in the central case), brought forward by about <span id="m-lead"></span> year for Singapore because its people use AI more than Americans do; a capability delay for long tasks, using the measured doubling of AI task length every <span id="m-doubling"></span> days; robot-readiness tiers for physical tasks; and a barrier delay for work that is interpersonal, in person, carries accountability, or that people keep for themselves even with AI around.</p>
-    <p><strong>Where the numbers come from.</strong> Anthropic's Economic Index (seven monthly snapshots, December 2024 to May 2026) is the only source that publishes usage by task. Microsoft's Copilot study gives a second opinion at the activity level. OpenAI and Google publish occupation-level ratings and lists; where they agree with the task data, the page says so. Singapore employment is from MOM's Labour Force in Singapore 2025 and wages from MOM's Occupational Wage Survey, June 2025.</p>
-    <p><strong>What to be careful about.</strong> The usage data reflect who uses Claude, which skews to office and software work, so "not seen yet" is weaker evidence for hands-on and frontline jobs. Within each 2-digit occupation group, employment is split evenly across surveyed occupations because no finer official count exists; group totals are solid, single-occupation wage figures are not. Links between Singapore roles and O*NET are official where SingStat coded them and text-matched elsewhere; each match shows its score.</p>
+    <p><strong>What drives the timing.</strong> Adoption: a curve fitted to the US Census survey of firms using AI, refreshed from the Census on every rebuild (latest reading <span id="m-btos-date"></span>, <span id="m-btos-pct"></span> of firms); half of US firms by <span id="m-anchor"></span> in the central case, <span id="m-anchor-fast"></span> fast and <span id="m-anchor-slow"></span> slow. Singapore firms run about <span id="m-lead"></span> years ahead, measured by comparing IMDA's enterprise survey with the US series at matched adoption levels, so half of Singapore firms by <span id="m-sg-anchor"></span>. Each job's industries move its date: from the Census sector series, information and communications firms run about <span id="m-shift-early"></span> years ahead of the Singapore average and accommodation and food services about <span id="m-shift-late"></span> years behind; an occupation takes the employment mix of its industries, and a Skills Framework role takes its sector. Then the capability term: the evidence lags above, a delay for long tasks using the measured doubling of AI task length every <span id="m-doubling"></span> days, and robot-readiness tiers for physical tasks. Then a barrier delay for work that is interpersonal, in person, carries accountability, or that people keep for themselves even with AI around. The fast and slow cases change the adoption speed, the lags and the barrier delay together.</p>
+    <p><strong>Where the numbers come from.</strong> Anthropic's Economic Index (seven snapshots, December 2024 to May 2026) is the only source that publishes usage by task. Microsoft's Copilot study gives a second opinion at the activity level. OpenAI's 2023 study rated every task twice (human raters and GPT-4); Claude rated every task again in October 2026 on the same scale, through a re-runnable command in the open-source pipeline, and agrees with each 2023 rater about as often as they agreed with each other. OpenAI and Google also publish occupation-level ratings and lists. Firm adoption comes from the US Census Business Trends and Outlook Survey (national and by sector) and IMDA's Singapore Digital Economy Reports. Singapore employment is from MOM's Labour Force in Singapore 2025 and wages from MOM's Occupational Wage Survey, June 2025.</p>
+    <p><strong>What to be careful about.</strong> The usage data reflect who uses Claude, which skews to office and software work, so "unproven" is weaker evidence for hands-on and frontline jobs. The Census reworded its question in late 2025 and the level jumped; the curve carries a step for it, and the old-wording curve would put the US half-way point at <span id="m-anchor-old"></span>. The 2023 ratings are old: a "yes" from then still stands, a "no" is only a flag to look again, which is what the 2026 rating and the usage data do. Within each 2-digit occupation group, employment is split evenly across surveyed occupations because no finer official count exists; group totals are solid, single-occupation wage figures are not. Links between Singapore roles and O*NET are official where SingStat coded them and text-matched elsewhere; each match shows its score.</p>
     <p><strong>Reading the years.</strong> Tables show half-way years to one decimal place because many jobs sit within a year of each other; 2031.6 means around mid-2031. The headline tiles round to the year.</p>
     <p class="small muted">Built from the open-source <code>onetx</code> pipeline. Anyone can rebuild the page or change the assumptions by running the Python code; this page is the no-code way in. <span id="companion-link"></span></p>
   </div>
@@ -185,6 +191,13 @@ const D = JSON.parse(document.getElementById('data').textContent);
 const Y = D.meta.years;
 const STATUS = [["AI doing it","s0"],["AI helping","s1"],["Physical","s2"],["Not seen yet","s3"]];
 const BARRIER = ["no strong barrier","interpersonal work","in-person work","accountability","people keep it themselves","physical"];
+const TIER = [["Seen in AI use","s1"],["Rated doable","s4"],["Newly rated","s5"],["Raters disagree","s6"],["Unproven","s7"],["Physical","s2"]];
+const AUTON = ["AI cannot do it end to end","AI does part of it, a person does an essential part","AI can do it end to end with a person checking","AI can do it end to end unsupervised"];
+const RBARR = ["no strong barrier","physical","in-person","relationship","accountability","system access","judgement","information not written down"];
+const SCN_NAMES = ["fast","central","slow"];
+let SCN = 1; try{ const v=localStorage.getItem('scn'); if(v==='0'||v==='1'||v==='2') SCN=+v; }catch(e){}
+const sbOf = e => !e ? null : (SCN===0 ? (e.sb10||e.sb) : SCN===2 ? (e.sb90||e.sb) : e.sb);
+const hOf = e => { if(!e) return null; const h=e.h||e.half; return h ? h[SCN] : null; };
 const fmt = (v, d=0) => (v==null||Number.isNaN(v)) ? "\u2013" : Number(v).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
 const pct = v => v==null ? "\u2013" : fmt(v)+"%";
 const yr = v => v==null ? "beyond 2045" : String(Math.round(v));           // whole year, no thousands separator
@@ -202,33 +215,45 @@ const tabButtons = Array.from(document.querySelectorAll('nav.tabs button'));
 tabButtons.forEach((b,i)=>{ b.addEventListener('click',()=>show(b.dataset.view)); b.addEventListener('keydown',e=>{ if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault(); const j=(i+(e.key==='ArrowRight'?1:-1)+tabButtons.length)%tabButtons.length; tabButtons[j].focus(); show(tabButtons[j].dataset.view); } }); });
 let start = (location.hash||"").replace('#',''); if(!views.includes(start)){ try{ start = localStorage.getItem('view')||'overview'; }catch(e){ start='overview'; } if(!views.includes(start)) start='overview'; }
 show(start);
+const scnButtons = Array.from(document.querySelectorAll('.scn button'));
+function paintScn(){ scnButtons.forEach(b=>b.setAttribute('aria-pressed', +b.dataset.scn===SCN?'true':'false')); }
+function setScn(v){ SCN=v; try{localStorage.setItem('scn',String(v));}catch(e){} paintScn(); rerender(); }
+scnButtons.forEach(b=>b.addEventListener('click',()=>setScn(+b.dataset.scn)));
+paintScn();
 
 // ---------- overview
 const m = D.meta;
-document.getElementById('meta-line').textContent = `Usage data through May 2026; MOM employment 2025 and wages June 2025; timing computed with "today" = ${m.now}. Page built ${m.built}.`;
+const da = m.data_as_of||{};
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const dfmt = v => { if(!v) return ''; const p=String(v).split('-'); if(p.length===3) return `${+p[2]} ${MON[+p[1]-1]} ${p[0]}`; if(p.length===2) return `${MON[+p[1]-1]} ${p[0]}`; return String(v); };
+document.getElementById('meta-line').textContent = `Evidence as of: AI usage data to ${dfmt(da.aei_latest_vintage)||'May 2026'}; US firm adoption to ${dfmt(da.btos_latest_reading)||'the last Census reading'}; Singapore firm adoption ${da.imda_latest_year||''}; task ratings 2023 and ${dfmt(da.ratings_2026)||'2026'}; MOM employment 2025, wages June 2025. Timing computed with "today" = ${dfmt(m.now)}. Page built ${dfmt(m.built)}.`;
+(function(){ const b=Date.parse(m.built); if(isNaN(b)) return; const days=(Date.now()-b)/86400000; if(days>90){ const p=document.createElement('p'); p.className='stale'; p.setAttribute('role','status'); p.textContent=`This page was built about ${Math.round(days/30)} months ago. AI evidence moves fast and the adoption curve and usage data are refreshed on every rebuild, so treat these years as dated.`; document.getElementById('meta-line').after(p); } })();
 const ecoE = D.economy.find(e=>e.scope==='economy'&&e.w==='emp'), ecoW = D.economy.find(e=>e.scope==='economy'&&e.w==='wage');
-const tiles = [
-  ["Work that already shows up in AI use", pct(ecoE.so), `share of the work of ${fmt(ecoE.total,0)} thousand employed residents (task weight) that appears in AI usage data`],
-  ["Of the wage bill, AI already doing the work", pct(ecoW.oa), "share of resident wage value in tasks where observed AI use is mostly the AI completing the task"],
-  ["Physical work", pct(ecoW.sp), "share of the wage bill in hands-on tasks, where robotics, not chatbots, sets the pace"],
-  ["Half the wage bill disruptable by", yr(ecoW.half[1]), `fast ${yr(ecoW.half[0])} ${MID} slow ${yr(ecoW.half[2])}; by 2035 the central case reaches ${pct(ecoW.sb[Y.indexOf(2035)])}`],
-];
-document.getElementById('econ-tiles').innerHTML = tiles.map(t=>`<div class="panel tile"><div class="lbl">${esc(t[0])}</div><div class="num">${esc(t[1])}</div><div class="small muted">${esc(t[2])}</div></div>`).join('');
+function tilesRender(){
+  const tiles = [
+    ["Work that already shows up in AI use", pct(ecoE.so), `share of the work of ${fmt(ecoE.total,0)} thousand employed residents (task weight) seen in AI usage data in any release since December 2024`],
+    ["Of the wage bill, AI already doing the work", pct(ecoW.oa), "share of resident wage value in tasks where observed AI use is mostly the AI completing the task"],
+    ["Physical work", pct(ecoW.sp), "share of the wage bill in hands-on tasks, where robotics, not chatbots, sets the pace"],
+    [`Half the wage bill disruptable by (${SCN_NAMES[SCN]} case)`, yr(ecoW.half[SCN]), `fast ${yr(ecoW.half[0])} ${MID} central ${yr(ecoW.half[1])} ${MID} slow ${yr(ecoW.half[2])}; by 2035 the ${SCN_NAMES[SCN]} case reaches ${pct((sbOf(ecoW)||ecoW.sb)[Y.indexOf(2035)])}`],
+  ];
+  document.getElementById('econ-tiles').innerHTML = tiles.map(t=>`<div class="panel tile"><div class="lbl">${esc(t[0])}</div><div class="num">${esc(t[1])}</div><div class="small muted">${esc(t[2])}</div></div>`).join('');
+}
+tilesRender();
 
 function majorChart(){
-  const rows = D.economy.filter(e=>e.level==='major_group'&&e.w==='wage').sort((a,b)=>(a.half[1]||9999)-(b.half[1]||9999));
+  const rows = D.economy.filter(e=>e.level==='major_group'&&e.w==='wage').sort((a,b)=>(a.half[SCN]||9999)-(b.half[SCN]||9999));
   const box = document.getElementById('major-chart');
   const W=Math.max(640, box.clientWidth||1000), rowH=36, nameW=Math.round(W*0.27), barX=nameW+14, barW=Math.round(W*0.11), left=barX+barW+60, right=70, H=rows.length*rowH+44;
   const x0=2026, x1=2045, xs = v => left + (Math.min(Math.max(v,x0),x1)-x0)/(x1-x0)*(W-left-right);
   const maxOa = Math.max(10, ...rows.map(r=>r.oa||0));
-  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Major occupational groups: share of wage bill where AI already does the work, and the fast, central and slow half-way years">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Major occupational groups: share of wage bill where AI already does the work, and the half-way year in the ${SCN_NAMES[SCN]} case with the fast-to-slow range">`;
   s+=`<text x="${barX}" y="16" font-size="11" fill="var(--muted)">${W>=900?'AI doing it (share of pay)':'AI doing it'}</text>`;
   for(let y=2026;y<=2045;y+=3){ s+=`<line class="grid" x1="${xs(y)}" x2="${xs(y)}" y1="26" y2="${H-14}"/><text x="${xs(y)}" y="16" font-size="11" text-anchor="middle">${y}</text>`; }
   rows.forEach((r,i)=>{ const y=40+i*rowH; const name=r.name.length>36?r.name.slice(0,35)+ELL:r.name;
     s+=`<text x="${nameW}" y="${y+5}" font-size="12" text-anchor="end">${esc(name)}</text>`;
     const bw = (r.oa||0)/maxOa*barW; s+=`<rect x="${barX}" y="${y-7}" width="${Math.max(2,bw)}" height="14" fill="var(--doing)" opacity=".85"/><text x="${barX+Math.max(2,bw)+5}" y="${y+5}" font-size="12" fill="var(--muted)">${pct(r.oa)}</text>`;
     if(r.half[0]!=null){ s+=`<line x1="${xs(r.half[0])}" x2="${xs(r.half[2]||2045)}" y1="${y}" y2="${y}" stroke="var(--accent)" stroke-width="3" opacity=".45"/>`; }
-    if(r.half[1]!=null){ s+=`<circle cx="${xs(r.half[1])}" cy="${y}" r="6" fill="var(--accent)"/><text x="${xs(r.half[1])+10}" y="${y+5}" font-size="12">${yr1(r.half[1])}</text>`; }
+    const hc=r.half[SCN]; if(hc!=null){ s+=`<circle cx="${xs(hc)}" cy="${y}" r="6" fill="var(--accent)"/><text x="${xs(hc)+10}" y="${y+5}" font-size="12">${yr1(hc)}</text>`; }
   });
   s+=`</svg>`;
   box.innerHTML = s;
@@ -250,11 +275,11 @@ function makeTable(el, cols, rows, defaultSort){
 const bar = v => `<div class="flexrow" style="gap:6px;flex-wrap:nowrap"><div class="bar" style="flex:1"><i style="width:${Math.min(100,v||0)}%"></i></div><span style="min-width:38px;text-align:right">${pct(v)}</span></div>`;
 function subTable(){
   const w = document.getElementById('sub-weight').value;
-  const rows = D.economy.filter(e=>e.level==='submajor_group'&&e.w===w).map(e=>({name:e.name, total:e.total, oa:e.oa, so:e.so, sp:e.sp, sb30:e.sb[Y.indexOf(2030)], sb32:e.sb[Y.indexOf(2032)], sb35:e.sb[Y.indexOf(2035)], h50:e.half[1]}));
+  const rows = D.economy.filter(e=>e.level==='submajor_group'&&e.w===w).map(e=>{ const sb=sbOf(e)||e.sb; return {name:e.name, total:e.total, oa:e.oa, so:e.so, sp:e.sp, sb30:sb[Y.indexOf(2030)], sb32:sb[Y.indexOf(2032)], sb35:sb[Y.indexOf(2035)], h50:e.half[SCN]}; });
   makeTable(document.getElementById('sub-table'), [
     {k:'name',label:'Sub-group'}, {k:'total',label:w==='wage'?'Wage bill (S$m / month)':'Employed (thousands)',num:true,fmt:v=>fmt(v,w==='wage'?0:1)},
     {k:'oa',label:'AI doing it',num:true,fmt:bar}, {k:'so',label:'Seen in AI use',num:true,fmt:pct}, {k:'sp',label:'Physical',num:true,fmt:pct},
-    {k:'sb30',label:'Disruptable by 2030',num:true,fmt:pct}, {k:'sb32',label:'by 2032',num:true,fmt:pct}, {k:'sb35',label:'by 2035',num:true,fmt:pct}, {k:'h50',label:'Half-way year',num:true,fmt:v=>yr1(v)}
+    {k:'sb30',label:`Disruptable by 2030 (${SCN_NAMES[SCN]})`,num:true,fmt:pct}, {k:'sb32',label:'by 2032',num:true,fmt:pct}, {k:'sb35',label:'by 2035',num:true,fmt:pct}, {k:'h50',label:`Half-way year (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)}
   ], rows, ['h50',1]);
 }
 document.getElementById('sub-weight').addEventListener('change', subTable); subTable();
@@ -268,7 +293,7 @@ D.ssoc.forEach((s,i)=>items.push({kind:'ssoc', i, title:s.t, sub:`SSOC ${s.c} ${
 D.roles.forEach((r,i)=>items.push({kind:'role', i, title:r.role, sub:`${r.sector}${r.track?' '+MID+' '+r.track:''}`, key:norm(r.role+' '+r.sector+' '+r.track), w:words(r.role+' '+r.sector+' '+r.track)}));
 let altLoaded=false, S=null, KT=null, taskIndex=null, loadingS=null;
 function loadSearchData(){ if(loadingS) return loadingS; loadingS=Promise.all([loadKT(), fetch('search.json').then(r=>r.json()).catch(()=>null)]).then(([k,sj])=>{ S=sj; KT=k; if(S&&!altLoaded){ S.alt.forEach((a,j)=>{ const si=a[0]; items.push({kind:'ssoc', i:si, alt:a[1], j, title:D.ssoc[si].t, sub:`also called "${a[1]}" ${MID} SSOC ${D.ssoc[si].c}`, key:norm(a[1]), w:words(a[1])}); }); altLoaded=true; }
-  if(S&&KT&&!taskIndex){ taskIndex=[]; KT.forEach((groups,ri)=>groups.forEach((g,gi)=>g[1].forEach((t,ti)=>taskIndex.push({kind:'kt', ri, gi, ti, text:t[0], key:norm(t[0]), st:t[1], yr:t[2]})))); S.onet.forEach((t,oi)=>taskIndex.push({kind:'onet', oi, text:t[0], key:norm(t[0]), st:t[1], yr:t[2], occ:t[3], ssoc:t[4]})); }
+  if(S&&KT&&!taskIndex){ taskIndex=[]; KT.forEach((groups,ri)=>groups.forEach((g,gi)=>g[1].forEach((t,ti)=>taskIndex.push({kind:'kt', ri, gi, ti, text:t[0], key:norm(t[0]), st:t[1], yr:t[2], tier:t[6]})))); S.onet.forEach((t,oi)=>taskIndex.push({kind:'onet', oi, text:t[0], key:norm(t[0]), st:t[1], yr:t[2], occ:t[3], ssoc:t[4], tier:t[5]})); }
   return true; }); return loadingS; }
 loadSearchData();   // alternative titles arrive a moment after load; the first search still works without them
 // bounded Damerau-Levenshtein for typo tolerance
@@ -293,7 +318,7 @@ function renderJobHits(list, scores){
 }
 function taskLine(t, score){ const yr = t.yr==null?'beyond 2045':yr1(t.yr); const target = t.kind==='kt' ? `data-kind="role" data-i="${t.ri}"` : (t.ssoc&&t.ssoc.length ? `data-kind="ssoc" data-i="${t.ssoc[0]}"` : '');
   const where = t.kind==='kt' ? `Key task of ${esc(D.roles[t.ri].role)} (${esc(D.roles[t.ri].sector)})` : `O*NET task of ${esc(t.occ)}${t.ssoc&&t.ssoc.length?' '+MID+' opens SSOC '+esc(D.ssoc[t.ssoc[0]].t):''}`;
-  return `<li><button ${target} ${target?'':'disabled'}><span class="kind">${t.kind==='kt'?'SFw':'O*NET'}</span><span>${esc(t.text)}<span class="sub">${where} ${MID} central year ${yr}</span></span><span class="pill ${STATUS[t.st][1]}">${STATUS[t.st][0]}</span>${score!=null?`<span class="score">${score.toFixed(2)}</span>`:''}</button></li>`; }
+  return `<li><button ${target} ${target?'':'disabled'}><span class="kind">${t.kind==='kt'?'SFw':'O*NET'}</span><span>${esc(t.text)}<span class="sub">${where} ${MID} central year ${yr}</span></span><span class="pill ${(t.st===3&&t.tier!=null?TIER[t.tier]:STATUS[t.st])[1]}">${(t.st===3&&t.tier!=null?TIER[t.tier]:STATUS[t.st])[0]}</span>${score!=null?`<span class="score">${score.toFixed(2)}</span>`:''}</button></li>`; }
 function renderTaskHits(list, scores){
   resEl.innerHTML = list.map((t,k)=>taskLine(t, scores?scores[k]:null)).join('') || '<li class="muted small" style="padding:8px">No task matches. Try fewer words, or turn on "Match by meaning".</li>';
   resEl.querySelectorAll('button[data-kind]').forEach(b=>b.addEventListener('click',()=>open(b.dataset.kind, +b.dataset.i)));
@@ -302,8 +327,8 @@ function refToItem(ref){ const t=ref[0];
   if(t===0) return {group:'job', it: items.find(x=>x.kind==='ssoc'&&x.i===ref[1]&&!x.alt)};
   if(t===1){ const a=S.alt[ref[1]]; return {group:'job', it: {kind:'ssoc', i:a[0], title:D.ssoc[a[0]].t, sub:`also called "${a[1]}" ${MID} SSOC ${D.ssoc[a[0]].c}`}}; }
   if(t===2) return {group:'job', it: {kind:'role', i:ref[1], title:D.roles[ref[1]].role, sub:`${D.roles[ref[1]].sector}${D.roles[ref[1]].track?' '+MID+' '+D.roles[ref[1]].track:''}`}};
-  if(t===3){ const k=KT[ref[1]][ref[2]][1][ref[3]]; return {group:'task', it:{kind:'kt', ri:ref[1], gi:ref[2], ti:ref[3], text:k[0], st:k[1], yr:k[2]}}; }
-  const o=S.onet[ref[1]]; return {group:'task', it:{kind:'onet', oi:ref[1], text:o[0], st:o[1], yr:o[2], occ:o[3], ssoc:o[4]}}; }
+  if(t===3){ const k=KT[ref[1]][ref[2]][1][ref[3]]; return {group:'task', it:{kind:'kt', ri:ref[1], gi:ref[2], ti:ref[3], text:k[0], st:k[1], yr:k[2], tier:k[6]}}; }
+  const o=S.onet[ref[1]]; return {group:'task', it:{kind:'onet', oi:ref[1], text:o[0], st:o[1], yr:o[2], occ:o[3], ssoc:o[4], tier:o[5]}}; }
 let searchSeq=0;
 async function search(){
   const q=inp.value.trim(); const seq=++searchSeq;
@@ -363,16 +388,29 @@ document.getElementById('examples').querySelectorAll('a').forEach(a=>a.addEventL
   });
 })();
 
-function timeline(sb, half, label){
-  if(!sb) return '<p class="muted small">No timing available (no O*NET tasks linked).</p>';
+function timeline(e, label){
+  const sb = sbOf(e); if(!sb) return '<p class="muted small">No timing available (no O*NET tasks linked).</p>';
+  const lo = e.sb10||sb, hi = e.sb90||sb, half = e.h||e.half||[null,null,null];
   const panel=document.getElementById('job-detail'); const W=Math.max(300, Math.min(760, (panel.clientWidth||640)-34)),H=Math.round(W*0.25)+40,l=36,r=12,t=14,b=28; const xs=i=>l+i/(Y.length-1)*(W-l-r), ys=v=>t+(1-v/100)*(H-t-b);
   let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(label)}">`;
   [0,50,100].forEach(v=>{ s+=`<line class="grid" x1="${l}" x2="${W-r}" y1="${ys(v)}" y2="${ys(v)}"/><text x="${l-6}" y="${ys(v)+4}" font-size="11" text-anchor="end">${v}%</text>`; });
   Y.forEach((y,i)=>{ if(y%2===0) s+=`<text x="${xs(i)}" y="${H-8}" font-size="11" text-anchor="middle">${y}</text>`; });
   const pts = sb.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' ');
-  s+=`<polygon points="${xs(0)},${ys(0)} ${pts} ${xs(Y.length-1)},${ys(0)}" fill="var(--accent)" opacity=".15"/><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`;
-  if(half && half[1]!=null){ const i=(half[1]-Y[0])/(Y[Y.length-1]-Y[0])*(Y.length-1); if(i>=0&&i<=Y.length-1){ s+=`<line x1="${xs(i)}" x2="${xs(i)}" y1="${t}" y2="${H-b}" stroke="var(--helping)" stroke-dasharray="4 3"/><text x="${xs(i)+4}" y="${t+10}" font-size="11" fill="var(--helping)">half-way ${yr1(half[1])}</text>`; } }
-  s+=`</svg>`; return `<div class="timeline">${s}</div>`;
+  if(lo!==hi){ const band = lo.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' ') + ' ' + hi.map((v,i)=>`${xs(Y.length-1-i)},${ys(hi[Y.length-1-i]||0)}`).join(' '); s+=`<polygon points="${band}" fill="var(--accent)" opacity=".12"/>`; }
+  s+=`<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`;
+  const hc = half[SCN];
+  if(hc!=null){ const i=(hc-Y[0])/(Y[Y.length-1]-Y[0])*(Y.length-1); if(i>=0&&i<=Y.length-1){ s+=`<line x1="${xs(i)}" x2="${xs(i)}" y1="${t}" y2="${H-b}" stroke="var(--helping)" stroke-dasharray="4 3"/><text x="${xs(i)+4}" y="${t+10}" font-size="11" fill="var(--helping)">half-way ${yr1(hc)} (${SCN_NAMES[SCN]})</text>`; } }
+  s+=`</svg>`; return `<div class="timeline">${s}</div><p class="small muted" style="margin:0 0 8px">Line: the ${SCN_NAMES[SCN]} case. Shaded band: from the fast to the slow case. Switch the scenario at the top of the page.</p>`;
+}
+function evidence(e, kind){
+  if(!e||!e.tiers) return '';
+  const names=['Seen in AI use','Rated doable','Newly rated','Raters disagree','Unproven','Physical'], cls=['ev-seen','ev-rated','ev-newly','ev-mixed','ev-unproven','ev-physical'];
+  const unit = kind==='role'?'key tasks':'task weight'; const ev=m.evidence||{};
+  const sh = e.shift==null?'':(Math.abs(e.shift)<0.05?'about when the Singapore average does':`about ${fmt(Math.abs(e.shift),1)} years ${e.shift<0?'earlier':'later'} than the Singapore average`);
+  return `<h3 class="sub">What the years rest on</h3>
+   <div class="evbar" role="img" aria-label="${esc(names.map((n,i)=>n+' '+pct(e.tiers[i])).join(', '))}">${e.tiers.map((v,i)=>`<i class="${cls[i]}" style="width:${v||0}%"></i>`).join('')}</div>
+   <div class="evlegend">${names.map((n,i)=>`<span><i class="${cls[i]}"></i>${n} ${pct(e.tiers[i])}</span>`).join('')}</div>
+   <p class="small muted">Capability is shown as evidence, not as a date. The bar splits this ${kind==='role'?"role's":"occupation's"} ${unit} by the strongest evidence that AI can do each task. Tasks rated unproven wait a measured ${fmt(ev.lag_unproven,1)} years before they count as capable, tasks the raters disagree on ${fmt(ev.lag_mixed,1)} years, and tasks only the 2026 rating calls doable ${fmt(ev.lag_newly,1)} years (so far the weakest predictor of actual use); "unproven" never means "AI cannot". The years then come from when employers in ${kind==='role'?"this sector":"this occupation's industries"} typically adopt AI${sh?' ('+sh+')':''}, plus the barrier delay.</p>`;
 }
 function headline(h, oa, so, sp, kind){
   const unit = kind==='role' ? 'key tasks' : 'task weight';
@@ -380,7 +418,7 @@ function headline(h, oa, so, sp, kind){
     <div class="tile"><div class="lbl">AI already doing it</div><div class="num">${pct(oa)}</div><div class="small muted">${kind==='role'?'average over the key tasks of how much observed AI use completes the task':'share of task weight where observed AI use mostly completes the task'}</div></div>
     <div class="tile"><div class="lbl">Seen in AI use</div><div class="num">${pct(so)}</div><div class="small muted">share of ${unit} that appears in usage data at all</div></div>
     <div class="tile"><div class="lbl">Physical work</div><div class="num">${pct(sp)}</div><div class="small muted">hands-on ${unit}; robotics sets the pace</div></div>
-    <div class="tile"><div class="lbl">Half the job disruptable by</div><div class="num">${yr1(h[1])}</div><div class="small muted">fast ${yr1(h[0])} ${MID} slow ${yr1(h[2])}</div></div></div>`;
+    <div class="tile"><div class="lbl">Half the job disruptable by (${SCN_NAMES[SCN]})</div><div class="num">${yr1(h[SCN])}</div><div class="small muted">fast ${yr1(h[0])} ${MID} central ${yr1(h[1])} ${MID} slow ${yr1(h[2])}</div></div></div>`;
 }
 function open(kind,i){
   current={kind,i}; search();
@@ -390,7 +428,8 @@ function open(kind,i){
     const roles = (s.roles||[]).map(ri=>`<li><a href="#jobs" data-kind="role" data-i="${ri}">${esc(D.roles[ri].role)}</a> <span class="muted small">(${esc(D.roles[ri].sector)})</span></li>`).join('');
     el.innerHTML = `<div class="eyebrow">SSOC 2024 ${MID} ${esc(s.c)} ${MID} ${esc(s.smn||'')}</div><h2>${esc(s.t)}</h2>
       ${headline(s.h,s.oa,s.so,s.sp,'ssoc')}
-      ${timeline(s.sb,s.h,'Share of this occupation\'s task weight disruptable by year')}
+      ${timeline(s,'Share of this occupation\'s task weight disruptable by year')}
+      ${evidence(s,'ssoc')}
       <dl class="kv"><dt>Employed residents</dt><dd>${fmt(s.emp,1)} thousand <span class="muted small">(group total split evenly across surveyed occupations)</span></dd>
       <dt>Median gross wage</dt><dd>S$${fmt(s.wage)} / month <span class="muted small">(${s.ws==='ows_2025_coded'?'MOM wage survey, June 2025':s.ws==='ows_2024_title_match'?'MOM wage survey 2024, matched by title':'group median, no survey figure'})</span></dd>
       <dt>Barrier index</dt><dd>${s.bi==null?'\u2013':fmt(s.bi,2)} <span class="muted small">(0 = nothing but capability stands in the way, 1 = strongly interpersonal, in person or accountable work)</span></dd>
@@ -402,14 +441,15 @@ function open(kind,i){
     const r=D.roles[i];
     el.innerHTML = `<div class="eyebrow">Skills Framework ${MID} ${esc(r.sector)}${r.track?' '+MID+' '+esc(r.track):''}</div><h2>${esc(r.role)}</h2><p class="small muted">${esc(r.desc)}</p>
       ${headline(r.h,r.oat,r.sko,r.skp,'role')}
-      ${timeline(r.sb,r.h,'Share of this role\'s key tasks disruptable by year')}
+      ${timeline(r,'Share of this role\'s key tasks disruptable by year')}
+      ${evidence(r,'role')}
       <dl class="kv"><dt>Key tasks</dt><dd>${fmt(r.nk)} <span class="muted small">(each matched to its closest O*NET task; average match score ${r.ms==null?'\u2013':fmt(r.ms,2)} out of 1)</span></dd>
       <dt>Via the SSOC code</dt><dd>AI doing it ${pct(r.oas)} <span class="muted small">(the same job seen through its occupation code rather than its listed tasks)</span></dd>
       <dt>SSOC code</dt><dd>${r.ssoc.length?r.ssoc.map(x=>`<a href="#jobs" data-ssoc="${esc(x[0])}">${esc(x[0])} ${esc(x[3])}</a> <span class="muted small">(${x[1]==='singstat_index'?'coded by SingStat':'text match, score '+fmt(x[2],0)+' of 100'})</span>`).join('<br>'):'<span class="muted">none</span>'}</dd></dl>
-      <h3 class="sub">The role's key tasks, earliest first</h3><p class="small muted">Status and year come from the closest O*NET task. The grey line under each says why a task may be late even if AI could do it.</p>
+      <h3 class="sub">The role's key tasks, earliest first</h3><p class="small muted">Label and year come from the closest O*NET task; years follow the ${SCN_NAMES[SCN]} case. The grey line under each gives the 2026 rating and why a task may be late even if AI could do it.</p>
       <div id="kt-list"><p class="muted small">Loading key tasks\u2026</p></div>`;
     loadKT().then(k=>{ const box=document.getElementById('kt-list'); if(!box||!current||current.kind!=='role'||current.i!==i) return; if(!k){ box.innerHTML='<p class="muted small">Key task detail could not be loaded.</p>'; return; }
-      const groups=k[i]||[]; box.innerHTML = groups.map(g=>`<div class="cwf">${esc(g[0])}</div><ul class="kt">${g[1].map(t=>`<li><span>${esc(t[0])}</span><span class="pill ${STATUS[t[1]][1]}">${STATUS[t[1]][0]}</span><span class="range">${yr1(t[2])}</span><span class="why">${t[3]?'why late: '+BARRIER[t[3]]+' '+MID+' ':''}matched to O*NET: "${esc(t[5]||'')}" (score ${fmt(t[4],2)})</span></li>`).join('')}</ul>`).join('') || '<p class="muted small">No key tasks listed.</p>'; });
+      const groups=k[i]||[]; box.innerHTML = groups.map(g=>`<div class="cwf">${esc(g[0])}</div><ul class="kt">${g[1].map(t=>`<li><span>${esc(t[0])}</span><span class="pill ${(t[1]===3&&t[6]!=null?TIER[t[6]]:STATUS[t[1]])[1]}">${(t[1]===3&&t[6]!=null?TIER[t[6]]:STATUS[t[1]])[0]}</span><span class="range">${yr1(t[2])}</span><span class="why">${t[7]!=null?'2026 rating: '+AUTON[t[7]]+(t[8]?' (main barrier: '+RBARR[t[8]]+')':'')+' '+MID+' ':''}${t[3]?'why late: '+BARRIER[t[3]]+' '+MID+' ':''}matched to O*NET: "${esc(t[5]||'')}" (score ${fmt(t[4],2)})</span></li>`).join('')}</ul>`).join('') || '<p class="muted small">No key tasks listed.</p>'; });
   }
   el.querySelectorAll('a[data-kind]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); open(a.dataset.kind,+a.dataset.i); el.scrollIntoView({behavior:'smooth',block:'start'});}));
   el.querySelectorAll('a[data-ssoc]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); const j=D.ssoc.findIndex(s=>s.c===a.dataset.ssoc); if(j>=0){ open('ssoc',j); el.scrollIntoView({behavior:'smooth',block:'start'}); }}));
@@ -418,27 +458,39 @@ function open(kind,i){
 let rsz; window.addEventListener('resize',()=>{ clearTimeout(rsz); rsz=setTimeout(()=>{ majorChart(); if(current) open(current.kind,current.i); },200); });
 
 // ---------- sectors
-makeTable(document.getElementById('sector-table'), [
-  {k:'sector',label:'Sector'},{k:'n',label:'Roles',num:true,fmt:v=>fmt(v)},{k:'sko',label:'Key tasks seen in AI use',num:true,fmt:bar},{k:'oat',label:'AI doing it',num:true,fmt:pct},{k:'skp',label:'Physical',num:true,fmt:pct},{k:'sb30',label:'Disruptable by 2030',num:true,fmt:pct},{k:'sb35',label:'by 2035',num:true,fmt:pct},{k:'h50',label:'Typical role: half-way year',num:true,fmt:v=>yr1(v)},{k:'h90',label:'slow case',num:true,fmt:v=>yr1(v)}
-], D.sectors, ['h50',1]);
+function sectorTable(){
+  const rows = D.sectors.map(s=>({sector:s.sector, n:s.n, sko:s.sko, oat:s.oat, skp:s.skp, sb30:[s.sb30f,s.sb30,s.sb30s][SCN]??s.sb30, sb35:[s.sb35f,s.sb35,s.sb35s][SCN]??s.sb35, h:s.h[SCN], h10:s.h[0], h90:s.h[2]}));
+  makeTable(document.getElementById('sector-table'), [
+    {k:'sector',label:'Sector'},{k:'n',label:'Roles',num:true,fmt:v=>fmt(v)},{k:'sko',label:'Key tasks seen in AI use',num:true,fmt:bar},{k:'oat',label:'AI doing it',num:true,fmt:pct},{k:'skp',label:'Physical',num:true,fmt:pct},{k:'sb30',label:`Disruptable by 2030 (${SCN_NAMES[SCN]})`,num:true,fmt:pct},{k:'sb35',label:'by 2035',num:true,fmt:pct},{k:'h',label:`Typical role: half-way year (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)},{k:'h10',label:'fast case',num:true,fmt:v=>yr1(v)},{k:'h90',label:'slow case',num:true,fmt:v=>yr1(v)}
+  ], rows, ['h',1]);
+}
+sectorTable();
 
 // ---------- skills
 function skillTable(){
   const fam=document.getElementById('skill-family').value;
-  const rows=D.skills.filter(s=>s.f===fam).map(s=>({name:s.name,n:s.n,oa:s.oa,oaa:s.oaa,sb30:s.sb?s.sb[Y.indexOf(2030)]:null,sb35:s.sb?s.sb[Y.indexOf(2035)]:null,h50:s.h[1],h90:s.h[2]}));
+  const rows=D.skills.filter(s=>s.f===fam).map(s=>{ const sb=sbOf(s); return {name:s.name,n:s.n,oa:s.oa,oaa:s.oaa,sb30:sb?sb[Y.indexOf(2030)]:null,sb35:sb?sb[Y.indexOf(2035)]:null,h:s.h[SCN],h10:s.h[0],h90:s.h[2]}; });
   makeTable(document.getElementById('skill-table'), [
-    {k:'name',label:fam==='knowledge'?'Knowledge area':fam==='ability'?'Ability':fam==='work_activity'?'Work activity':'Skill'},{k:'n',label:'Jobs needing it',num:true,fmt:v=>fmt(v)},{k:'oa',label:'AI doing it, in those jobs',num:true,fmt:bar},{k:'oaa',label:'via linked activities',num:true,fmt:pct},{k:'sb30',label:'Disruptable by 2030',num:true,fmt:pct},{k:'sb35',label:'by 2035',num:true,fmt:pct},{k:'h50',label:'Half-way year',num:true,fmt:v=>yr1(v)},{k:'h90',label:'slow case',num:true,fmt:v=>yr1(v)}
+    {k:'name',label:fam==='knowledge'?'Knowledge area':fam==='ability'?'Ability':fam==='work_activity'?'Work activity':'Skill'},{k:'n',label:'Jobs needing it',num:true,fmt:v=>fmt(v)},{k:'oa',label:'AI doing it, in those jobs',num:true,fmt:bar},{k:'oaa',label:'via linked activities',num:true,fmt:pct},{k:'sb30',label:`Disruptable by 2030 (${SCN_NAMES[SCN]})`,num:true,fmt:pct},{k:'sb35',label:'by 2035',num:true,fmt:pct},{k:'h',label:`Half-way year (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)},{k:'h10',label:'fast case',num:true,fmt:v=>yr1(v)},{k:'h90',label:'slow case',num:true,fmt:v=>yr1(v)}
   ], rows, ['oa',-1]);
 }
 document.getElementById('skill-family').addEventListener('change', skillTable); skillTable();
-makeTable(document.getElementById('gwa-table'), [
-  {k:'name',label:'Activity'},{k:'n',label:'Tasks',num:true,fmt:v=>fmt(v)},{k:'so',label:'Tasks seen in AI use',num:true,fmt:bar},{k:'oa',label:'AI doing it',num:true,fmt:pct},{k:'ms',label:'Copilot share (%)',num:true,fmt:v=>v==null?'\u2013':fmt(v,1)},{k:'h50',label:'Half-way year',num:true,fmt:v=>yr1(v)}
-], D.gwa.map(g=>({name:g.name,n:g.n,so:g.so,oa:g.oa,ms:g.ms,h50:g.h[1]})), ['oa',-1]);
+function gwaTable(){
+  makeTable(document.getElementById('gwa-table'), [
+    {k:'name',label:'Activity'},{k:'n',label:'Tasks',num:true,fmt:v=>fmt(v)},{k:'so',label:'Tasks seen in AI use',num:true,fmt:bar},{k:'oa',label:'AI doing it',num:true,fmt:pct},{k:'ms',label:'Copilot share (%)',num:true,fmt:v=>v==null?'\u2013':fmt(v,1)},{k:'h',label:`Half-way year (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)}
+  ], D.gwa.map(g=>({name:g.name,n:g.n,so:g.so,oa:g.oa,ms:g.ms,h:g.h[SCN]})), ['oa',-1]);
+}
+gwaTable();
+function rerender(){ tilesRender(); majorChart(); subTable(); sectorTable(); skillTable(); gwaTable(); if(current) open(current.kind,current.i); }
 
 // ---------- method
-document.getElementById('m-anchor').textContent = yr(m.adoption_anchor.central);
-document.getElementById('m-lead').textContent = fmt(m.geo_lead,1);
-document.getElementById('m-doubling').textContent = fmt(m.doubling_days,0);
+const ad=m.adoption||{}, ev=m.evidence||{}, ss=m.sector_shift||{};
+const setT=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+setT('m-anchor', yr1(m.adoption_anchor.central)); setT('m-anchor-fast', yr1(m.adoption_anchor.fast)); setT('m-anchor-slow', yr1(m.adoption_anchor.slow));
+setT('m-lead', fmt(m.geo_lead,1)); setT('m-sg-anchor', yr1((ad.sg_half||{}).central)); setT('m-doubling', fmt(m.doubling_days,0));
+setT('m-btos-date', dfmt(ad.btos_last_date)); setT('m-btos-pct', ad.btos_last_pct==null?'':fmt(ad.btos_last_pct,1)+'%'); setT('m-anchor-old', yr1(ad.half_old_wording));
+setT('m-lag-unproven', fmt(ev.lag_unproven,1)); setT('m-lag-mixed', fmt(ev.lag_mixed,1)); setT('m-lag-newly', fmt(ev.lag_newly,1));
+setT('m-shift-early', fmt(Math.abs(ss.J||0),1)); setT('m-shift-late', fmt(Math.abs(ss.I||0),1));
 const ts=m.task_status, cw=m.crosswalk, sw=m.sg_weights;
 document.getElementById('method-counts').innerHTML = `<div class="eyebrow">What is in the build</div><dl class="kv" style="margin-top:8px">
  <dt>O*NET tasks</dt><dd>${fmt(ts.observed_automation+ts.observed_augmentation+ts.physical_robotics+ts.not_observed)} ${MID} AI doing it ${fmt(ts.observed_automation)} ${MID} AI helping ${fmt(ts.observed_augmentation)} ${MID} physical ${fmt(ts.physical_robotics)} ${MID} not seen yet ${fmt(ts.not_observed)}</dd>
@@ -446,7 +498,9 @@ document.getElementById('method-counts').innerHTML = `<div class="eyebrow">What 
  <dt>Skills Framework roles</dt><dd>${fmt(cw.sfw_roles)} roles, ${fmt(cw.sfw_roles_from_singstat)} with SingStat's own SSOC code, the rest matched by description</dd>
  <dt>Wages</dt><dd>${fmt((sw.wage_sources||{}).ows_2025_coded||0)} occupations with June 2025 survey wages (official SSOC codes), ${fmt((sw.wage_sources||{}).ows_2024_title_match||0)} from the 2024 survey by title, the rest group medians</dd>
  <dt>Employment</dt><dd>${fmt(sw.employment_thousands_total,1)} thousand employed residents across 43 sub-groups (MOM Labour Force in Singapore 2025, Table D8)</dd>
- <dt>Singapore vs US usage</dt><dd>${fmt((m.usage_ratio||{}).microsoft_ratio,2)}\u00d7 (Microsoft) and ${fmt((m.usage_ratio||{}).anthropic_ratio,2)}\u00d7 (Anthropic per-capita index)</dd></dl>`;
+ <dt>Evidence tiers</dt><dd>${['seen','rated','newly_rated','mixed','unproven','physical'].map((k,i)=>`${TIER[i][0].toLowerCase()} ${fmt((ev.tiers||{})[k]||0)}`).join(' '+MID+' ')}${ev.ratings_2026_used?'':' (2026 ratings not yet complete in this build)'}</dd>
+ <dt>Industry adoption shifts</dt><dd>${Object.entries(ss).sort((a,b)=>a[1]-b[1]).map(([k,v])=>`${(m.sector_labels||{})[k]||k} ${v>0?'+':''}${fmt(v,1)}`).join(' '+MID+' ')} years against the Singapore average</dd>
+ <dt>Singapore vs US individual usage</dt><dd>${fmt((m.usage_ratio||{}).microsoft_ratio,2)}\u00d7 (Microsoft) and ${fmt((m.usage_ratio||{}).anthropic_ratio,2)}\u00d7 (Anthropic per-capita index); the firm-level lead above is the one used</dd></dl>`;
 if(m.companion_url){ document.getElementById('companion-link').innerHTML = `Read <a href="${esc(m.companion_url)}">how this was built, the QA log, and how King and Claude worked together</a>.`; }
 })();
 </script>

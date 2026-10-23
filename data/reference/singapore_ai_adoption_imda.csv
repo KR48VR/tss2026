@@ -1,0 +1,29 @@
+year,group,pct,source,note
+2018,sme,3.5,IMDA Singapore Digital Economy Report 2024 Fig 13,Annual Survey on Infocomm Usage by Enterprises; AI = tools that let computers perform tasks which typically require human intelligence; adoption rate = share of firms which used AI
+2018,non_sme,16.7,IMDA Singapore Digital Economy Report 2024 Fig 13,
+2019,non_sme,26.1,IMDA Singapore Digital Economy Report 2024 Fig 13,
+2020,non_sme,33.9,IMDA Singapore Digital Economy Report 2024 Fig 13,
+2021,non_sme,39.8,IMDA Singapore Digital Economy Report 2024 Fig 13,
+2022,non_sme,45.4,IMDA Singapore Digital Economy Report 2024 Fig 13,
+2023,sme,4.2,IMDA Singapore Digital Economy Report 2024 Fig 13,
+2023,non_sme,44.0,IMDA Singapore Digital Economy Report 2024 Fig 13,
+2023,all,4.6,derived,SMEs are about 99% of enterprises: 0.99 x 4.2 + 0.01 x 44.0
+2023,sector:information_communications,12.1,IMDA Singapore Digital Economy Report 2024 Fig 14,all enterprises
+2023,sector:finance_insurance,11.0,IMDA Singapore Digital Economy Report 2024 Fig 14,all enterprises
+2023,sector:professional_services,5.1,IMDA Singapore Digital Economy Report 2024 Fig 14,all enterprises
+2023,sector:real_estate_admin_support,4.7,IMDA Singapore Digital Economy Report 2024 Fig 14,all enterprises
+2023,sector:retail_trade,4.4,IMDA Singapore Digital Economy Report 2024 Fig 14,all enterprises
+2023,sector:construction,2.5,IMDA Singapore Digital Economy Report 2024 Fig 14,all enterprises
+2023,sector:wholesale_trade,2.4,IMDA Singapore Digital Economy Report 2024 Fig 14,all enterprises
+2023,sector:manufacturing,2.3,IMDA Singapore Digital Economy Report 2024 Fig 14,all enterprises
+2023,sector:transport_storage,2.3,IMDA Singapore Digital Economy Report 2024 Fig 14,all enterprises
+2023,sector:accommodation_food,1.8,IMDA Singapore Digital Economy Report 2024 Fig 14,all enterprises
+2024,sme,14.5,IMDA Singapore Digital Economy Report 2025 Fig 7,
+2024,non_sme,62.5,IMDA Singapore Digital Economy Report 2025 Fig 7,
+2024,all,14.7,IMDA Singapore Digital Economy Report 2026 (5 Oct 2026) as reported by People Matters and Techgoondu,all enterprises
+2024,sector:information_communications,35.9,IMDA Singapore Digital Economy Report 2025 Fig 8,all enterprises
+2024,sector:professional_services,25.7,IMDA Singapore Digital Economy Report 2025 Fig 8,all enterprises
+2024,sector:finance_insurance,22.6,IMDA Singapore Digital Economy Report 2025 Fig 8,all enterprises
+2025,sme,23.4,IMDA Singapore Digital Economy Report 2026 (5 Oct 2026) as reported by People Matters and Techgoondu,
+2025,non_sme,70.4,IMDA Singapore Digital Economy Report 2026 (5 Oct 2026) as reported by People Matters and Techgoondu,large local enterprises
+2025,all,23.5,IMDA Singapore Digital Economy Report 2026 (5 Oct 2026) as reported by People Matters and Techgoondu,all enterprises

@@ -319,39 +319,184 @@ def load_microsoft_diffusion_countries() -> pd.DataFrame:
     return pd.read_csv(RAW / "microsoft" / "ai_diffusion_2026_q2_countries.csv")
 
 
-def load_btos_ai_adoption() -> pd.DataFrame:
-    """US Census Business Trends and Outlook Survey: share of firms using AI in producing goods or
-    services in the last two weeks (biweekly, Sept 2023 onwards), as shipped in AEI release 2025-09-15."""
+def _btos_ref_dates(wb) -> dict:
+    """Sample-period code (e.g. '202621') -> reference-period end date, for either layout of the
+    'Collection and Reference Dates' sheet (the Census download or the copy shipped in the AEI release)."""
+    rows = list(wb["Collection and Reference Dates"].iter_rows(values_only=True))
+    code_col = end_col = None
+    hdr_i = None
+    for i, r in enumerate(rows[:6]):
+        cells = [str(c).strip().lower() if c is not None else "" for c in r]
+        if any(c in ("smpdt", "sample date") for c in cells):
+            hdr_i = i
+            code_col = next(j for j, c in enumerate(cells) if c in ("smpdt", "sample date"))
+            end_col = next((j for j, c in enumerate(cells) if c in ("ref end", "reference period end", "reference end")), None)
+            break
+    out = {}
+    if hdr_i is not None and end_col is not None:
+        for r in rows[hdr_i + 1:]:
+            if r[code_col] is not None and str(r[code_col]).strip().isdigit():
+                out[str(r[code_col]).strip()] = pd.to_datetime(str(r[end_col]), errors="coerce")
+    else:  # AEI copy: code in column 0, reference-period end in column 4
+        for r in rows:
+            if r[0] is not None and str(r[0]).strip().isdigit():
+                out[str(r[0]).strip()] = pd.to_datetime(str(r[4]), errors="coerce")
+    return out
+
+
+def _btos_series(path: Path, wording: str) -> pd.DataFrame:
+    """Rows (question, sample_period, ref_end, pct, wording[, sector]) for the 'Yes' answers to the
+    AI questions: 7 = used AI in the last two weeks, 24 = expects to in the next six months."""
     import openpyxl
 
-    wb = openpyxl.load_workbook(AEI / "release_2025_09_15" / "data" / "input" / "BTOS_National.xlsx", read_only=True)
-    dates = {}
-    for r in wb["Collection and Reference Dates"].iter_rows(values_only=True):
-        if r[0] and str(r[0]).strip().isdigit():
-            dates[str(r[0]).strip()] = pd.to_datetime(str(r[4]), errors="coerce")
-    ws = wb["Response Estimates"]
-    rows = list(ws.iter_rows(values_only=True))
-    hdr = [str(h) for h in rows[0]]
+    wb = openpyxl.load_workbook(path, read_only=True)
+    dates = _btos_ref_dates(wb)
+    rows = list(wb["Response Estimates"].iter_rows(values_only=True))
+    hdr = [str(h).strip() if h is not None else "" for h in rows[0]]
+    low = [h.lower() for h in hdr]
+    qid = low.index("question id")
+    ans = low.index("answer")
+    by_sector = low[0] == "sector"
     out = []
     for r in rows[1:]:
-        if str(r[0]) in ("7", "24") and r[3] == "Yes":
-            q = "current_use" if str(r[0]) == "7" else "expected_use_6m"
-            for i in range(4, len(r)):
-                if r[i] in (None, ""):
+        if str(r[qid]).strip() in ("7", "24") and str(r[ans]).strip() == "Yes":
+            q = "current_use" if str(r[qid]).strip() == "7" else "expected_use_6m"
+            for i in range(ans + 1, len(r)):
+                v = r[i]
+                if v in (None, "", ".") or hdr[i] not in dates:
                     continue
-                out.append({"question": q, "sample_period": hdr[i], "ref_end": dates.get(hdr[i]), "pct": float(str(r[i]).rstrip("%"))})
-    df = pd.DataFrame(out).dropna(subset=["ref_end"]).sort_values(["question", "ref_end"]).reset_index(drop=True)
+                try:
+                    pct = float(str(v).rstrip("%"))
+                except ValueError:
+                    continue
+                row = {"question": q, "sample_period": hdr[i], "ref_end": dates[hdr[i]], "pct": pct, "wording": wording}
+                if by_sector:
+                    row["sector"] = str(r[0]).strip()
+                out.append(row)
+    return pd.DataFrame(out)
+
+
+BTOS_AEI_COPY = AEI / "release_2025_09_15" / "data" / "input" / "BTOS_National.xlsx"
+BTOS_NATIONAL = RAW / "census" / "btos_national.xlsx"
+BTOS_SECTOR = RAW / "census" / "btos_sector.xlsx"
+
+
+def load_btos_ai_adoption() -> pd.DataFrame:
+    """US Census Business Trends and Outlook Survey: share of firms that used AI in producing goods or
+    services in the last two weeks, biweekly since Sept 2023. Two wordings are spliced: 'ai_2023'
+    ("Artificial Intelligence (AI)", Sept 2023 - Aug 2025, from the copy in the AEI release) and
+    'si_2025' ("Super Intelligence or SI (formerly referred to as Artificial Intelligence or AI)",
+    Nov 2025 onward, from the Census download refreshed on every fetch). The level jumped at the
+    rewording, so the fit carries a step for it (see fit_adoption_logistic)."""
+    frames = [_btos_series(BTOS_AEI_COPY, "ai_2023")]
+    if BTOS_NATIONAL.exists():
+        new = _btos_series(BTOS_NATIONAL, "si_2025")
+        frames.append(new[new.ref_end > frames[0].ref_end.max()])
+    df = pd.concat(frames, ignore_index=True).dropna(subset=["ref_end"]).sort_values(["question", "ref_end"]).reset_index(drop=True)
     return df
 
 
+def load_btos_sector_adoption() -> pd.DataFrame:
+    """The same 'used AI in the last two weeks' share by NAICS sector (2-digit; 'XX' = multi-sector firms)."""
+    if not BTOS_SECTOR.exists():
+        return pd.DataFrame(columns=["sector", "question", "sample_period", "ref_end", "pct", "wording"])
+    df = _btos_series(BTOS_SECTOR, "si_2025")
+    return df[df.question == "current_use"].sort_values(["sector", "ref_end"]).reset_index(drop=True)
+
+
+def _logit(p: np.ndarray, K: float) -> np.ndarray:
+    return np.log(p / (K - p))
+
+
 def fit_adoption_logistic(series: pd.DataFrame, saturation: float = 0.9) -> dict:
-    """Fit log(p/(K-p)) = a + b*t on the BTOS 'current use' series (K = saturation share) and return the
-    growth rate and the dates at which the fitted curve crosses 25%, 50% and 75% of firms."""
+    """Fit log(p/(K-p)) = a + b*t + c*[new wording] on the 'current use' series (K = saturation share,
+    t = years since 2024-01-01). The growth rate b uses every reading; the step c absorbs the level
+    change at the Nov 2025 rewording. The curve used downstream runs at the current (new-wording)
+    level a + c; the old-wording level is returned for sensitivity."""
     d = series[series.question == "current_use"].copy()
     d["t"] = (d.ref_end - pd.Timestamp("2024-01-01")).dt.days / 365.25
-    p = d.pct.values / 100.0
-    y = np.log(p / (saturation - p))
-    b, a = np.polyfit(d.t.values, y, 1)
-    def cross(level):
-        return 2024.0 + (np.log(level / (saturation - level)) - a) / b
-    return {"saturation": saturation, "growth_per_year": float(b), "intercept": float(a), "n_points": int(len(d)), "last_ref_end": str(d.ref_end.max().date()), "last_pct": float(d.pct.iloc[-1]), "year_cross_25pct": float(cross(0.25)), "year_cross_50pct": float(cross(0.50)), "year_cross_75pct": float(cross(0.75))}
+    y = _logit(d.pct.values / 100.0, saturation)
+    new = (d.wording != "ai_2023").values.astype(float) if "wording" in d else np.zeros(len(d))
+    if new.any() and (new == 0).any():
+        X = np.column_stack([np.ones(len(d)), d.t.values, new])
+        (a, b, c), *_ = np.linalg.lstsq(X, y, rcond=None)
+    else:
+        b, a = np.polyfit(d.t.values, y, 1)
+        c = 0.0
+    a, b, c = float(a), float(b), float(c)
+    level = a + c
+
+    def cross(lvl, intercept):
+        return 2024.0 + (float(_logit(np.array(lvl), saturation)) - intercept) / b
+
+    return {"saturation": saturation, "growth_per_year": b, "intercept": level, "intercept_old_wording": a, "wording_step": c,
+            "n_points": int(len(d)), "n_points_new_wording": int(new.sum()), "first_ref_end": str(d.ref_end.min().date()), "last_ref_end": str(d.ref_end.max().date()), "last_pct": float(d.pct.iloc[-1]),
+            "year_cross_25pct": cross(0.25, level), "year_cross_50pct": cross(0.50, level), "year_cross_75pct": cross(0.75, level), "year_cross_50pct_old_wording": cross(0.50, a)}
+
+
+def fit_sector_levels(sector_series: pd.DataFrame, fit: dict) -> pd.DataFrame:
+    """Each NAICS sector's adoption level relative to the national curve, holding the national growth
+    rate: offset_s = mean(logit(p_s/K) - (a + b t)); the sector's 50%-crossing year is the national one
+    shifted by -offset_s / b years (negative = earlier)."""
+    K, a, b = fit["saturation"], fit["intercept"], fit["growth_per_year"]
+    d = sector_series.copy()
+    if d.empty:
+        return pd.DataFrame(columns=["sector", "n_points", "latest_ref_end", "latest_pct", "level_offset", "anchor_shift_years", "year_cross_50pct"])
+    d["t"] = (d.ref_end - pd.Timestamp("2024-01-01")).dt.days / 365.25
+    d["resid"] = _logit(d.pct.values / 100.0, K) - (a + b * d.t.values)
+    g = d.sort_values("ref_end").groupby("sector")
+    out = pd.DataFrame({"n_points": g.size(), "latest_ref_end": g.ref_end.last(), "latest_pct": g.pct.last(), "level_offset": g.resid.mean()}).reset_index()
+    out["anchor_shift_years"] = -out.level_offset / b
+    out["year_cross_50pct"] = fit["year_cross_50pct"] + out.anchor_shift_years
+    return out.sort_values("anchor_shift_years").reset_index(drop=True)
+
+
+def load_singapore_firm_adoption() -> pd.DataFrame:
+    """IMDA's annual AI adoption rate of enterprises (share of firms that used AI in the year), hand-
+    transcribed from the Singapore Digital Economy Reports with sources per row."""
+    return pd.read_csv(REFERENCE / "singapore_ai_adoption_imda.csv")
+
+
+def singapore_firm_lead(fit: dict, sg: pd.DataFrame, min_year: int = 2024) -> dict:
+    """How many years Singapore firms run ahead of US firms at matched adoption levels. IMDA's annual
+    figures (a firm that used AI at any time in the year counts) are dated at year end, which is the
+    conservative choice against the Census question (use in the last two weeks). For each Singapore
+    all-enterprise point the date at which the fitted US curve reaches the same share is read off; the
+    lead is the mean gap over the generative-AI years (>= min_year). Singapore's own curve is fitted on
+    the same points as a cross-check (growth and 50% crossing)."""
+    K, a, b = fit["saturation"], fit["intercept"], fit["growth_per_year"]
+    pts = sg[sg.group == "all"].sort_values("year")
+    rows = []
+    for r in pts.itertuples():
+        p = r.pct / 100.0
+        us_year = 2024.0 + (float(_logit(np.array(p), K)) - a) / b
+        sg_date = float(r.year) + 1.0
+        rows.append({"year": int(r.year), "sg_pct": float(r.pct), "sg_date": sg_date, "us_curve_reaches_same_share": us_year, "lead_years": us_year - sg_date, "derived": str(r.source).strip().lower() == "derived"})
+    use = [x for x in rows if x["year"] >= min_year and not x["derived"]]
+    lead = float(np.mean([x["lead_years"] for x in use])) if use else None
+    own = {}
+    if len(pts) >= 2:
+        t = pts.year.values.astype(float) + 1.0 - 2024.0
+        yy = _logit(pts.pct.values / 100.0, K)
+        bs, as_ = np.polyfit(t, yy, 1)
+        own = {"sg_growth_per_year": float(bs), "sg_year_cross_50pct": float(2024.0 + (float(_logit(np.array(0.5), K)) - as_) / bs), "sg_n_points": int(len(pts))}
+    return {"points": rows, "lead_years": lead, "years_used": [x["year"] for x in use], **own}
+
+
+def load_openai_task_labels() -> pd.DataFrame:
+    """Task-level exposure labels from 'GPTs are GPTs' (Eloundou et al., 2023): human raters and GPT-4
+    rated every O*NET task E0 (no exposure), E1 (a language model alone halves the time) or E2 (only
+    with extra software); gpt4_automation is the T0-T4 scale. 2023 vintage: a 'yes' still stands, a 'no'
+    is a flag to re-check, never a verdict."""
+    p = RAW / "openai" / "gpts_are_gpts_full_labelset.tsv"
+    df = pd.read_csv(p, sep="\t", dtype=str)
+    out = pd.DataFrame({
+        "task_id": pd.to_numeric(df["Task ID"], errors="coerce").astype("Int64").astype(str),
+        "onet_soc_code_2023": df["O*NET-SOC Code"],
+        "exposure_human_2023": df["human_labels"],
+        "exposure_gpt4_2023": df["gpt4_exposure"],
+        "automation_gpt4_2023": df["gpt4_automation"],
+        "beta_2023": pd.to_numeric(df["beta"], errors="coerce"),
+    })
+    out = out[out.task_id != "<NA>"].drop_duplicates("task_id").reset_index(drop=True)
+    return out

@@ -16,7 +16,7 @@ from . import onet
 from . import singapore as sg
 from . import singapore_economy as se
 from . import singapore_labour as sl
-from .config import PROCESSED, ensure_dirs
+from .config import AEI_VINTAGES, PROCESSED, ensure_dirs
 from .io import register_duckdb, save, write_json
 
 
@@ -102,6 +102,9 @@ def build(forecast_params: fcm.ForecastParams | None = None, now: str = "2026-10
     save(ai.load_microsoft_diffusion_countries(), "ai_microsoft_diffusion_countries")
     btos = ai.load_btos_ai_adoption(); save(btos, "ai_btos_firm_adoption")
     stats["btos_adoption_fit"] = ai.fit_adoption_logistic(btos)
+    save(ai.load_btos_sector_adoption(), "ai_btos_sector_adoption")
+    save(ai.load_singapore_firm_adoption(), "sg_firm_adoption_imda")
+    save(ai.load_openai_task_labels(), "ai_openai_task_labels")
     _log("AI signals", t0)
 
     # ---- Singapore wages and employment
@@ -148,17 +151,35 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
         metr_trend = ai.metr_frontier_trend(load("ai_metr_horizons"))
     params = forecast_params or fcm.ForecastParams(doubling_days_central=round(metr_trend["doubling_days"]), log2_h50_at_anchor=round(metr_trend["log2_horizon_at_2024_01_01"], 3))
     params = fcm.calibrate(params, tf)
-    btos_fit = ai.fit_adoption_logistic(ai.load_btos_ai_adoption())
+    btos = ai.load_btos_ai_adoption()
+    btos_fit = ai.fit_adoption_logistic(btos)
     ratio = fcm.singapore_usage_ratio()
-    params = fcm.calibrate_adoption(params, btos_fit, ratio.get("geometric_mean"))
-    fc = fcm.forecast_tasks(tf, barriers, params, now=now); save(fc, "forecast_tasks")
-    stats = {"forecast_params": {k: (v if not isinstance(v, dict) else {str(a): b for a, b in v.items()}) for k, v in fcm.asdict(params).items()}, "adoption_anchor_years": {"fast": fcm.adoption_cross_year(params, 0.5, params.adoption_growth_mult[0]), "central": fcm.adoption_cross_year(params, 0.5, 1.0), "slow": fcm.adoption_cross_year(params, 0.5, params.adoption_growth_mult[2])}, "geo_lead_years_central": fcm.geo_lead_years(params), "singapore_usage_ratio": ratio}
+    sg_lead = ai.singapore_firm_lead(btos_fit, ai.load_singapore_firm_adoption())
+    params = fcm.calibrate_adoption(params, btos_fit, ratio.get("geometric_mean"), sg_lead.get("lead_years"))
+    sector_levels = ai.fit_sector_levels(ai.load_btos_sector_adoption(), btos_fit); save(sector_levels, "ai_btos_sector_levels")
+    # capability evidence tiers: 2023 task ratings (human + GPT-4) and the 2026 Claude ratings when the run is at least 90% complete
+    from . import rate as rt
+    labels = load("ai_openai_task_labels") if (PROCESSED / "ai_openai_task_labels.parquet").exists() else None
+    ratings = rt.load_ratings()
+    ratings = ratings if len(ratings) >= 0.9 * len(tf) else None
+    tiers = fcm.evidence_tiers(tf, labels, ratings); save(tiers, "frontier_task_evidence")
+    params, ev_stats = fcm.calibrate_evidence(params, load("ai_aei_task_metrics_long"), tiers, tf)
+    # sector-specific adoption: industry shifts from the Census sector series, carried to SSOC codes, O*NET occupations and roles
+    from . import sector_adoption as sa
+    shifts = sa.build_shifts(sector_levels)
+    save(shifts["industry"], "ai_adoption_shift_industry"); save(shifts["ssoc"], "sg_adoption_shift_ssoc2024"); save(shifts["onet"], "sg_adoption_shift_onet"); save(shifts["role"], "sg_adoption_shift_sfw_roles"); save(shifts["mix"], "sg_ssoc2024_industry_mix")
+    fc = fcm.forecast_tasks(tf, barriers, params, now=now, tiers=tiers, occ_shift=shifts["onet"]); save(fc, "forecast_tasks")
+    now_y = fcm._frac_year(pd.Timestamp(now))
+    stats = {"forecast_params": {k: (v if not isinstance(v, dict) else {str(a): b for a, b in v.items()}) for k, v in fcm.asdict(params).items()}, "adoption_anchor_years": {"fast": fcm.adoption_cross_year(params, 0.5, params.adoption_growth_mult[0]), "central": fcm.adoption_cross_year(params, 0.5, 1.0), "slow": fcm.adoption_cross_year(params, 0.5, params.adoption_growth_mult[2])}, "geo_lead_years_central": fcm.geo_lead_years(params), "singapore_usage_ratio": ratio, "singapore_firm_lead": sg_lead, "btos_adoption_fit": btos_fit, "sector_adoption": {"industry_shift_years": {r.industry: round(float(r.anchor_shift_years), 2) for r in shifts["industry"].itertuples()}, "ssoc_shift_range": [float(shifts["ssoc"].adoption_shift_years.min()), float(shifts["ssoc"].adoption_shift_years.max())], "imda_check": sa.check_against_imda(shifts["industry"], ai.load_singapore_firm_adoption())}, "evidence": {**ev_stats, "tiers": tiers.evidence_tier.value_counts().to_dict(), "ratings_2026_used": ratings is not None, "ratings_2026_rows": int(len(rt.load_ratings()))},
+             "data_as_of": {"aei_latest_vintage": max(v["vintage"] for v in AEI_VINTAGES) if AEI_VINTAGES and isinstance(AEI_VINTAGES[0], dict) else str(tf.date.max())[:10] if "date" in tf else None, "btos_latest_reading": btos_fit["last_ref_end"], "imda_latest_year": int(ai.load_singapore_firm_adoption().year.max()), "ratings_2023": "2023", "ratings_2026": (str(rt.load_ratings().rated_at.max())[:10] if len(rt.load_ratings()) else None), "now": now, "build_date": pd.Timestamp.today().strftime("%Y-%m-%d")}}
     occ_curve = fcm.disruption_curve(fc, "onet_soc_code").merge(occ[["onet_soc_code", "title"]], on="onet_soc_code", how="left"); save(occ_curve, "forecast_occupations")
     f2s = fc.merge(o2s[["onet_soc_code", "ssoc_code", "ssoc_title", "weight_rev"]], on="onet_soc_code")
     f2s["w"] = f2s.task_weight * f2s.weight_rev
+    f2s = fcm.reshift_years(f2s, f2s.ssoc_code.map(shifts["ssoc"].set_index("ssoc_code").adoption_shift_years), params, now_y)
     ssoc_curve = fcm.disruption_curve(f2s, "ssoc_code", weight="w").merge(f2s[["ssoc_code", "ssoc_title"]].drop_duplicates("ssoc_code"), on="ssoc_code", how="left"); save(ssoc_curve, "forecast_ssoc2024")
     k1 = kt_links[kt_links["rank"] == 1][["key_task_id", "task_id", "score"]].merge(kt[["key_task_id", "role_id"]], on="key_task_id").merge(fc.drop(columns=["task_weight"]), on="task_id")
     k1["task_weight"] = 1.0
+    k1 = fcm.reshift_years(k1, k1.role_id.map(shifts["role"].set_index("role_id").adoption_shift_years), params, now_y)
     role_curve = fcm.disruption_curve(k1, "role_id").merge(sg.load_sfw_roles()[["role_id", "sector", "track", "job_role"]], on="role_id", how="left"); save(role_curve, "forecast_sfw_roles")
     td = onet.load_task_dwa()[["task_id", "dwa_id"]].merge(onet.load_dwa_hierarchy()[["dwa_id", "iwa_id", "gwa_id"]], on="dwa_id")
     fa = fc.merge(td, on="task_id")

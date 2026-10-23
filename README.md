@@ -34,7 +34,7 @@ Everything is a planning signal with a range. Nothing here forecasts job loss.
 
 ## Two ways in
 
-**No code.** The web page built from this pipeline lets anyone search a Singapore job title or Skills Framework role and see which of its tasks AI already does, which stay human, and the range of years by which half the job could be disruptable, with sector, skill and whole-economy views. Published copies: [the map](https://claude.ai/artifact/FC2mCKb7exU2u9jmVbFNPS) and its [companion page](https://claude.ai/artifact/Pxd31ubFiwTQjdTSBsu7qZ) (how it was built, the QA log, and how King and Claude worked together; source in `site/companion.html`). Rebuild the map with `python -m onetx site`, which writes `site/index.html` plus the files it loads on demand: `kt.json` (key tasks per role), `search.json` (alternative titles and the O*NET task index) and the meaning-search model and vectors (`model.*`, `emb.*`, from `onetx/site_search.py`). The page's "Ask Claude" button uses the artifact `sample` capability and only appears inside a Claude viewer.
+**No code.** The web page built from this pipeline lets anyone search a Singapore job title or Skills Framework role and see which of its tasks AI already does, which stay human, and the range of years by which half the job could be disruptable, with sector, skill and whole-economy views. Published copies: [the map](https://claude.ai/artifact/FC2mCKb7exU2u9jmVbFNPS) and its [companion page](https://claude.ai/artifact/Pxd31ubFiwTQjdTSBsu7qZ) (how it was built, the QA log, and how King and Claude worked together; source in `site/companion.html`). Rebuild the map with `python -m onetx site`, which writes `site/index.html` plus the files it loads on demand: `kt.json` (key tasks per role), `search.json` (alternative titles and the O*NET task index) and the meaning-search model and vectors (`model.*`, `emb.*`, from `onetx/site_search.py`). The page's "Ask Claude" button uses the artifact `sample` capability and only appears inside a Claude viewer. A scenario switch (fast, central, slow) at the top changes every year and curve on the page; each job shows what its years rest on (seen in AI use, rated doable, newly doable, raters disagree, unproven, physical) and an "evidence as of" line gives the date of every input.
 
 **Code.** Run the pipeline to rebuild every table, change the assumptions, or query the DuckDB file.
 
@@ -45,6 +45,8 @@ pip install -e .            # Python 3.11+
 python -m onetx fetch       # ~700 MB of public files into data/raw (see docs/DATA_SOURCES.md)
 python -m onetx build       # ~5 minutes on a laptop; writes data/processed/*.parquet + onetx.duckdb + docs/REPORT.md
 python -m onetx query "select ssoc_code, ssoc_title, half_year_p50 from forecast_ssoc2024 order by 3 limit 10"
+python -m onetx rate        # (optional, ~25 min, ~US$15 of Claude use) re-rate every task on onetx/rubric_2026.md; cached in data/reference
+python -m onetx forecast    # re-run only the timing model (fast); use after `rate` or to try parameters
 python -m onetx site        # the browsable page, from the processed tables
 ```
 

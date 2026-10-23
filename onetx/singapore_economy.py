@@ -84,7 +84,10 @@ def economy_exposure(t: pd.DataFrame) -> pd.DataFrame:
 
 def sector_view(role_scores: pd.DataFrame, role_curves: pd.DataFrame) -> pd.DataFrame:
     """Skills Framework sectors: unweighted mean over roles (no employment by SFw sector is published)."""
-    r = role_scores.merge(role_curves[["role_id", "share_by_2028", "share_by_2030", "share_by_2035", "half_year_p10", "half_year_p50", "half_year_p90"]], on="role_id", how="left")
+    extra = [c for c in ["share_by_2030_p10", "share_by_2030_p90", "share_by_2035_p10", "share_by_2035_p90"] if c in role_curves.columns]
+    r = role_scores.merge(role_curves[["role_id", "share_by_2028", "share_by_2030", "share_by_2035", "half_year_p10", "half_year_p50", "half_year_p90"] + extra], on="role_id", how="left")
     g = r.groupby("sector")
-    out = pd.DataFrame({"n_roles": g.role_id.nunique(), "observed_automation_via_tasks": g.observed_automation_via_tasks.mean(), "observed_automation_via_ssoc": g.observed_automation_via_ssoc.mean(), "share_key_tasks_observed": g.share_key_tasks_observed.mean(), "share_key_tasks_physical": g.share_key_tasks_physical.mean(), "share_by_2028": g.share_by_2028.mean(), "share_by_2030": g.share_by_2030.mean(), "share_by_2035": g.share_by_2035.mean(), "half_year_p50_median_role": g.half_year_p50.median(), "half_year_p90_median_role": g.half_year_p90.median()})
+    out = pd.DataFrame({"n_roles": g.role_id.nunique(), "observed_automation_via_tasks": g.observed_automation_via_tasks.mean(), "observed_automation_via_ssoc": g.observed_automation_via_ssoc.mean(), "share_key_tasks_observed": g.share_key_tasks_observed.mean(), "share_key_tasks_physical": g.share_key_tasks_physical.mean(), "share_by_2028": g.share_by_2028.mean(), "share_by_2030": g.share_by_2030.mean(), "share_by_2035": g.share_by_2035.mean(), "half_year_p10_median_role": g.half_year_p10.median(), "half_year_p50_median_role": g.half_year_p50.median(), "half_year_p90_median_role": g.half_year_p90.median()})
+    for c in extra:
+        out[c] = g[c].mean()
     return out.reset_index().sort_values("half_year_p50_median_role")

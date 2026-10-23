@@ -2,7 +2,7 @@
 
 The unit of analysis is the O*NET task (18,796 of them). For each task we assemble:
 
-usage_latest          share (%) of Claude.ai conversations mapped to the task, mean of the two latest
+usage_latest          share (%) of Claude.ai conversations mapped to the task, mean of the task's two most recent releases with usage (usage_last_vintage says which)
                       monthly vintages. 0 = not observed in the published data.
 usage_index           percentile rank of usage_latest among tasks with any usage (0 for none).
 usage_trend           yearly change in log usage share, fitted across vintages (>= 3 points).
@@ -59,18 +59,24 @@ def _usage_trend(wide: pd.DataFrame, source: str = "claude_ai", min_points: int 
     return pd.Series(out, name="usage_trend")
 
 
-def build_task_frontier(latest_vintages=("2026-04", "2026-05")) -> pd.DataFrame:
+def build_task_frontier() -> pd.DataFrame:
     tasks = onet.load_tasks()
     td = onet.load_task_dwa()
     h = onet.load_dwa_hierarchy()
     long = ai.load_aei_task_metrics(tasks)
     wide = ai.aei_task_wide(long)
 
-    latest = wide[(wide.source == "claude_ai") & wide.vintage.isin(latest_vintages)].groupby("task_id").agg(
+    # Each task's own two most recent releases with published usage. The monthly releases from 2026
+    # list far fewer tasks (about 1,100 against 3,600 in the first release), so taking only the newest
+    # releases would turn thousands of tasks that were seen in use into "not observed".
+    seen = wide[(wide.source == "claude_ai") & (wide.usage_pct > 0)].sort_values("mid_date")
+    latest = seen.groupby("task_id").tail(2).groupby("task_id").agg(
         usage_latest=("usage_pct", "mean"), automation_share=("automation_share", "mean"), ai_autonomy=("ai_autonomy_mean", "mean"),
         human_only_hours=("human_only_time_mean", "mean"), human_with_ai_minutes=("human_with_ai_time_mean", "mean"),
-        task_success_pct=("task_success_pct", "mean"), human_only_ability_pct=("human_only_ability_pct", "mean"), use_case_work_pct=("use_case_work_pct", "mean"))
-    latest_api = wide[(wide.source == "1p_api") & wide.vintage.isin(latest_vintages)].groupby("task_id").agg(usage_latest_api=("usage_pct", "mean"), automation_share_api=("automation_share", "mean"))
+        task_success_pct=("task_success_pct", "mean"), human_only_ability_pct=("human_only_ability_pct", "mean"), use_case_work_pct=("use_case_work_pct", "mean"),
+        usage_last_vintage=("vintage", "last"))
+    seen_api = wide[(wide.source == "1p_api") & (wide.usage_pct > 0)].sort_values("mid_date")
+    latest_api = seen_api.groupby("task_id").tail(2).groupby("task_id").agg(usage_latest_api=("usage_pct", "mean"), automation_share_api=("automation_share", "mean"))
     first = wide[(wide.source == "claude_ai") & (wide.vintage == "2024-12")].groupby("task_id").usage_pct.mean().rename("usage_first")
     nv = wide[(wide.source == "claude_ai") & (wide.usage_pct > 0)].groupby("task_id").vintage.nunique().rename("usage_n_vintages")
     # fall back to earlier vintages for the time estimate when the latest months do not carry it
