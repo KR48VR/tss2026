@@ -12,3 +12,5 @@ __pycache__/
 build/
 dist/
 .ipynb_checkpoints/
+site/index.html
+site/kt.json

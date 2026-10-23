@@ -32,6 +32,12 @@ From that it produces, for every task, activity, skill, occupation, SSOC code an
 
 Everything is a planning signal with a range. Nothing here forecasts job loss.
 
+## Two ways in
+
+**No code.** The web page built from this pipeline lets anyone search a Singapore job title or Skills Framework role and see which of its tasks AI already does, which stay human, and the range of years by which half the job could be disruptable, with sector, skill and whole-economy views. Rebuild it with `python -m onetx site` (writes `site/index.html` plus `site/kt.json`) and publish or open it anywhere.
+
+**Code.** Run the pipeline to rebuild every table, change the assumptions, or query the DuckDB file.
+
 ## Quick start
 
 ```bash
@@ -39,6 +45,7 @@ pip install -e .            # Python 3.11+
 python -m onetx fetch       # ~700 MB of public files into data/raw (see docs/DATA_SOURCES.md)
 python -m onetx build       # ~5 minutes on a laptop; writes data/processed/*.parquet + onetx.duckdb + docs/REPORT.md
 python -m onetx query "select ssoc_code, ssoc_title, half_year_p50 from forecast_ssoc2024 order by 3 limit 10"
+python -m onetx site        # the browsable page, from the processed tables
 ```
 
 Or open `data/processed/onetx.duckdb` in any DuckDB client; every processed table is a view.

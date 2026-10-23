@@ -15,6 +15,7 @@ def main(argv=None):
     sub.add_parser("report", help="write docs/REPORT.md from the processed tables")
     f = sub.add_parser("forecast", help="re-run only the timing model (fast) and the report")
     f.add_argument("--now", default="2026-10-01")
+    sub.add_parser("site", help="build the self-contained web page (site/index.html + site/kt.json)")
     q = sub.add_parser("query", help="run SQL against the DuckDB file")
     q.add_argument("sql")
     args = ap.parse_args(argv)
@@ -45,6 +46,10 @@ def main(argv=None):
         from .report import write_report
 
         write_report()
+    elif args.cmd == "site":
+        from .site import build_site
+
+        print(build_site())
     elif args.cmd == "query":
         import duckdb
 
