@@ -106,9 +106,11 @@ def build(forecast_params: fcm.ForecastParams | None = None, now: str = "2026-10
 
     # ---- Singapore wages and employment
     save(sl.match_ows_to_ssoc(2024), "sg_ows_wages_ssoc2024")
+    save(sl.load_ows2025_wages(), "sg_ows2025_wages")
     save(sl.load_lfs_employment_major(), "sg_lfs_employment_major")
+    d8 = sl.load_lfs_employment_submajor(2025); d8["submajor_members"] = d8.submajor_members.map(",".join); save(d8, "sg_lfs_employment_submajor")
     ssoc_w = sl.build_ssoc_weights(2024); save(ssoc_w, "sg_ssoc2024_weights")
-    stats["sg_weights"] = {"ssoc_with_ows_wage": int(ssoc_w.in_ows.sum()), "employment_thousands_total": float(ssoc_w.employment_thousands.sum()), "employment_method": str(ssoc_w.employment_method.iloc[0])}
+    stats["sg_weights"] = {"ssoc_with_ows_wage": int(ssoc_w.in_ows.sum()), "wage_sources": ssoc_w.wage_source.value_counts().to_dict(), "employment_thousands_total": float(ssoc_w.employment_thousands.sum()), "employment_method": str(ssoc_w.employment_method.iloc[0])}
     _log("Singapore labour tables", t0)
 
     # ---- frontier + roll-ups

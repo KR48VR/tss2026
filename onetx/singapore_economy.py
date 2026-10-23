@@ -22,6 +22,9 @@ def ssoc_weighted_table(frontier_ssoc: pd.DataFrame, forecast_ssoc: pd.DataFrame
     t = w.merge(frontier_ssoc[["ssoc_code", "observed_automation", "usage_index", "automation_share", "share_weight_observed", "share_weight_physical", "ai_applicability_score"]], on="ssoc_code", how="left")
     t = t.merge(forecast_ssoc[["ssoc_code", *share_cols]], on="ssoc_code", how="left")
     t["major_group_name"] = t.major_group.map(MAJOR_GROUP_NAMES)
+    if "submajor_label" in t.columns:
+        d8 = sl.load_lfs_employment_submajor(2025).set_index("submajor_label").group_name
+        t["submajor_name"] = t.submajor_label.map(d8)
     t["has_scores"] = t.observed_automation.notna()
     return t
 
@@ -35,9 +38,19 @@ def economy_exposure(t: pd.DataFrame) -> pd.DataFrame:
     """One row per (scope, weighting). Scopes: whole economy and each major group."""
     rows = []
     scopes = [("economy", t)] + [(f"major_{mg}", g) for mg, g in t.groupby("major_group") if g.employment_thousands.sum() > 0]
+    if "submajor_label" in t.columns:
+        scopes += [(f"submajor_{lbl}", g) for lbl, g in t.groupby("submajor_label") if g.employment_thousands.sum() > 0]
     for scope, d in scopes:
+        if not d.has_scores.any():
+            continue  # e.g. the X1-X5 'not elsewhere classified' codes carry employment but no O*NET link
         for wname in ["employment_thousands", "wage_value"]:
-            row = {"scope": scope, "scope_name": "Whole economy (residents)" if scope == "economy" else MAJOR_GROUP_NAMES.get(scope[-1], scope), "weighting": "employment" if wname.startswith("emp") else "wage_value", "n_ssoc": int(len(d)), "n_ssoc_scored": int(d.has_scores.sum()), "weight_total": float(d[wname].sum()), "weight_scored_share": float(d.loc[d.has_scores, wname].sum() / d[wname].sum()) if d[wname].sum() else np.nan}
+            if scope == "economy":
+                scope_name, level = "Whole economy (residents)", "economy"
+            elif scope.startswith("major_"):
+                scope_name, level = MAJOR_GROUP_NAMES.get(scope[-1], scope), "major_group"
+            else:
+                scope_name, level = f"{scope.split('_', 1)[1]} {d.submajor_name.iloc[0] if 'submajor_name' in d else ''}".strip(), "submajor_group"
+            row = {"scope": scope, "level": level, "scope_name": scope_name, "weighting": "employment" if wname.startswith("emp") else "wage_value", "n_ssoc": int(len(d)), "n_ssoc_scored": int(d.has_scores.sum()), "weight_total": float(d[wname].sum()), "weight_scored_share": float(d.loc[d.has_scores, wname].sum() / d[wname].sum()) if d[wname].sum() else np.nan}
             for c in ["observed_automation", "usage_index", "automation_share", "share_weight_observed", "share_weight_physical", "ai_applicability_score"]:
                 row[c] = _wavg(d, c, wname)
             for y in YEARS:

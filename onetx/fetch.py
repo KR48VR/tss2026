@@ -124,9 +124,16 @@ DATAGOV_RESOURCES = {
     "lfs_employed_by_occupation_age": "d_1d7ab908d16d7b9ddf6f2c2985894119",
 }
 SINGSTAT_TABLES = ["M182081", "M920131", "M182171"]
+# stats.mom.gov.sg sits behind a web-application firewall that returns 403 for some exact file paths
+# but serves the same file when the path's case differs (the server is case-insensitive). The variants
+# below are the spellings that worked; the fetcher tries each in turn.
 MOM_LFS_FILES = {
-    "LFR2025_SectionC.xlsx": "https://stats.mom.gov.sg/iMAS_Tables1/LabourForce/LabourForce_2025/LFR2025_SectionC.xlsx",
-    "LFR2025_SectionD.xlsx": "https://stats.mom.gov.sg/iMAS_Tables1/LabourForce/LabourForce_2025/LFR2025_SectionD.xlsx",
+    "LFR2025_SectionC.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/LabourForce/LabourForce_2025/LFR2025_SectionC.xlsx", "https://stats.mom.gov.sg/iMAS_Tables1/LabourForce/LabourForce_2025/LFR2025_SectionC.XLSX"],
+    "LFR2025_SectionD.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/LabourForce/LabourForce_2025/LFR2025_SectionD.XLSX", "https://stats.mom.gov.sg/iMAS_Tables1/LabourForce/LabourForce_2025/LFR2025_SectionD.xlsx"],
+    "LFR2024_SectionD.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/LabourForce/LabourForce_2024/LFR2024_SectionD.XLSX", "https://stats.mom.gov.sg/iMAS_Tables1/LabourForce/LabourForce_2024/LFR2024_SectionD.xlsx"],
+    "ows2025/mrsd_2025Wages_table4.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/Wages/Wages_2025/mrsd_2025Wages_table4.XLSX", "https://stats.mom.gov.sg/iMAS_Tables1/Wages/Wages_2025/mrsd_2025Wages_table4.xlsx"],
+    "ows2025/mrsd_2025wages_table1.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/Wages/Wages_2025/MRSD_2025Wages_table1.xlsx", "https://stats.mom.gov.sg/iMAS_Tables1/Wages/Wages_2025/mrsd_2025Wages_table1.xlsx"],
+    "ows2025/mrsd_2025Wages_table5.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/Wages/Wages_2025/mrsd_2025Wages_table5.xlsx", "https://stats.mom.gov.sg/iMAS_Tables1/Wages/Wages_2025/mrsd_2025Wages_table5.XLSX"],
 }
 
 
@@ -156,19 +163,21 @@ def fetch_singapore_labour(force: bool = False) -> dict:
         with urllib.request.urlopen(urllib.request.Request(url, headers={**UA, "Accept": "application/json"}), timeout=120) as r:
             dest.write_bytes(r.read())
         out[t] = "ok"
-    for name, url in MOM_LFS_FILES.items():
+    browser = {**UA, "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"}
+    for name, urls in MOM_LFS_FILES.items():
         dest = dest_dir / name
+        dest.parent.mkdir(parents=True, exist_ok=True)
         if dest.exists() and dest.stat().st_size > 20000 and not force:
             out[name] = "exists"; continue
-        try:
-            with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=120) as r:
-                data = r.read()
-            if data[:2] == b"PK":
-                dest.write_bytes(data); out[name] = "ok"
-            else:
-                out[name] = "blocked (HTML returned); download by hand from stats.mom.gov.sg"
-        except Exception as e:
-            out[name] = f"blocked: {e}"
+        out[name] = "blocked on every spelling; download by hand from stats.mom.gov.sg"
+        for url in urls:
+            try:
+                with urllib.request.urlopen(urllib.request.Request(url, headers=browser), timeout=120) as r:
+                    data = r.read()
+                if data[:2] == b"PK":
+                    dest.write_bytes(data); out[name] = f"ok ({url.rsplit('/', 1)[-1]})"; break
+            except Exception as e:  # 403 from the firewall: try the next spelling
+                out[name] = f"blocked: {e}"
     return out
 
 

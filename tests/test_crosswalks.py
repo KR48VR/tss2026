@@ -46,12 +46,14 @@ def test_singapore_links_cover_most_roles():
 
 
 def test_singapore_weights_match_lfs_totals():
+    from onetx import singapore_labour as sl
+
     w = load("sg_ssoc2024_weights")
-    lfs = load("sg_lfs_employment_major")
-    tot = lfs.employed_thousands.sum()
-    assert abs(w.employment_thousands.sum() - tot) < 1e-6
+    d8 = sl.load_lfs_employment_submajor(2025)
+    covered = d8[d8.submajor_members.apply(lambda m: any(x in set(w.ssoc_code.str[:2]) for x in m))]
+    assert abs(w.employment_thousands.sum() - covered.employed_thousands.sum()) < 1e-6
     assert (w.wage_median > 0).all()
-    assert w.in_ows.sum() >= 500
+    assert (w.wage_source == "ows_2025_coded").sum() >= 500
 
 
 def test_barriers_and_forecast_components():

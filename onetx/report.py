@@ -59,8 +59,12 @@ def write_report(path=None) -> str:
     L.append("\n### O*NET skills ranked by observed automation of the occupations that need them\n")
     L.append(_md(sk[sk.family == "skill"].sort_values("via_occupations_observed_automation", ascending=False), ["element_name", "n_occupations", "via_occupations_observed_automation", "via_activities_observed_automation"], n=15))
     L.append("\n## 4. Singapore, weighted by employment and wages\n")
-    L.append("Resident employment by major occupational group (MOM Labour Force Survey 2025) and median wages by occupation (MOM Occupational Wage Survey 2024) matched to SSOC codes. Within a major group, employment is split evenly across the surveyed occupations because no finer official count is published.\n")
-    L.append(_md(econ, ["scope_name", "weighting", "weight_scored_share", "observed_automation", "share_weight_observed", "share_weight_physical", "share_by_2030", "share_by_2035", "half_year_central_from_curve"], n=22))
+    L.append("Resident employment by SSOC sub-major group (MOM Labour Force in Singapore 2025, Table D8) and median gross wages by SSOC code (MOM Occupational Wage Survey, June 2025). Below the 2-digit group, employment is split evenly across the surveyed occupations because no finer official count is published.\n")
+    L.append(_md(econ[econ.level != "submajor_group"], ["scope_name", "weighting", "weight_scored_share", "observed_automation", "share_weight_observed", "share_weight_physical", "share_by_2030", "share_by_2035", "half_year_central_from_curve"], n=22))
+    L.append("\n### Sub-major groups (2-digit SSOC), wage-weighted, earliest half-way year first\n")
+    sub = econ[(econ.level == "submajor_group") & (econ.weighting == "wage_value")].copy()
+    sub["wage_bill_sgd_m_per_month"] = sub.weight_total / 1000.0
+    L.append(_md(sub.sort_values(["half_year_central_from_curve", "share_by_2032"], ascending=[True, False]), ["scope_name", "wage_bill_sgd_m_per_month", "observed_automation", "share_weight_observed", "share_weight_physical", "share_by_2030", "share_by_2032", "share_by_2035", "half_year_central_from_curve"], n=45, floatfmt=2))
     L.append("\n### Skills Framework sectors (unweighted mean over roles)\n")
     L.append(_md(sectors, ["sector", "n_roles", "share_key_tasks_observed", "observed_automation_via_tasks", "share_key_tasks_physical", "share_by_2030", "share_by_2035", "half_year_p50_median_role"], n=40))
     L.append("\n## 5. Timing (central estimate = year by which half of a job's task weight is 'disruptable')\n")
@@ -81,7 +85,7 @@ def write_report(path=None) -> str:
     L.append("- Usage data come from one provider (Anthropic) and reflect who uses Claude, not the whole economy. Microsoft's Copilot figures are a second opinion at the activity level.")
     L.append("- 'Observed automation' means that when the task shows up in AI usage, the AI is mostly doing it rather than helping. It says nothing about how many of the task's real-world instances involve AI.")
     L.append("- Timing = adoption anchor (US firm adoption curve, Singapore lead applied) + capability delay (METR trend, robot tiers) + barrier delay (interpersonal, in-person, accountability, hand-over). Every parameter is in `onetx.forecast.ForecastParams`; `python -m onetx forecast` re-runs timing in under a minute. The ranges (p10/p90) are the honest output.")
-    L.append("- Employment within a major group is allocated evenly across surveyed occupations; the economy-wide figures are robust to that, the per-occupation wage-value figures are not.")
+    L.append("- Employment is official down to the 2-digit SSOC group (43 groups) and split evenly across surveyed occupations below that; economy and group figures are robust to the split, single-occupation wage values are not.")
     L.append("- Singapore links are official where SingStat coded them (SSOC-ISCO tables, SFw role tags) and text-matched elsewhere; every text match carries a score you can filter on.")
     text = "\n".join(L) + "\n"
     path.write_text(text)

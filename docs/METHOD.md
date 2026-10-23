@@ -64,7 +64,7 @@ Per task: `capable_year_{fast,central,slow}`, `barrier_years_{fast,central,slow}
 
 ### 2e. Singapore, weighted by people and pay
 
-`sg_ssoc2024_weights` gives every SSOC 2024 code a wage (MOM Occupational Wage Survey 2024, 535 of 1,006 codes matched by title; the rest take the major-group median) and an employment figure (MOM Labour Force Survey 2025 resident employment by major group, split evenly across the surveyed occupations within the group because no finer official count is published). `sg_economy_exposure` then reports observed automation and the share of work disruptable by year for the whole resident workforce and each major group, weighted by employment and by wage value (employment × wage). The economy-wide figures are robust to the even split; per-occupation wage values are not.
+`sg_ssoc2024_weights` gives every SSOC 2024 code a wage and an employment figure. Wages: MOM Occupational Wage Survey June 2025, which carries official SSOC codes for 523 occupations (no title matching needed); codes it lacks take the 2024 survey matched by title, then the 2-digit group median, then the major-group median income (`wage_source` says which). Employment: MOM Labour Force in Singapore 2025, Table D8, resident employment for 43 SSOC sub-major groups (2-digit), split evenly across the surveyed occupations within each group because no finer official count is published. `sg_economy_exposure` then reports observed automation and the share of work disruptable by year for the whole resident workforce, each major group and each sub-major group, weighted by employment and by wage value (employment × wage). Economy and group figures are robust to the even split; single-occupation wage values are not.
 
 ### 2f. How to read it
 
@@ -78,6 +78,6 @@ Per task: `capable_year_{fast,central,slow}`, `barrier_years_{fast,central,slow}
 2. **Relative, not absolute, usage.** Usage shares sum to 100% within a vintage; a falling share can still be rising use. Treat `usage_trend` as where the frontier is moving, not as adoption.
 3. **Barriers are proxies.** The barrier index uses O*NET's occupation-level work context and activity links; it cannot see regulation or liability for a specific task. Where you know better (a licensed act, a statutory sign-off), override `barrier_index` for those tasks.
 4. **Adoption is a US firm curve.** Singapore's lead is inferred from individual usage, not from a Singapore firm-adoption series. IMDA's business surveys would be the right replacement when a time series is available.
-5. **Employment detail.** MOM publishes resident employment by major group only (the Labour Force report's finer Section D table is behind a bot check). The even split within groups is the weakest link in the wage-value view.
+5. **Employment detail.** Official resident employment stops at the 2-digit SSOC group (43 groups). Below that, the even split across surveyed occupations is the weakest link in the wage-value view; the Occupational Employment Dataset that would fix it is not published.
 6. **Text matches are approximate.** Filter on `score` / `in_mapped_occ`; hand-check the roles that matter to you.
 7. **Capability calibration.** The 50% automation-share point is a proxy for "AI can do it". Real-world agent benchmarks (Remote Labor Index, GDPval win rates) would be a better anchor when task-level files are published.

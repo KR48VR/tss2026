@@ -20,7 +20,7 @@ O*NET occupations ──► SOC 2018 ──► ISCO-08 ──► SSOC 2024 (Sing
 | Labour-market exposure | Anthropic "Labor market impacts" | task and SOC | task penetration, observed job exposure |
 | Other providers' views | OpenAI "GPTs are GPTs" (2023) and "How People Use ChatGPT" (2025); Google AI & Economy ATLAS (2026) | occupation / GWA | exposure ratings, message shares by work activity, over- and under-represented occupations; combined into a provider-consensus count |
 | How fast adoption moves | US Census BTOS firm survey; Microsoft Global AI Diffusion (147 economies) | firms / people | the adoption curve the timing model rides, and Singapore's lead on it |
-| Singapore people and pay | MOM Occupational Wage Survey 2024; MOM Labour Force Survey 2025 | SSOC occupation / major group | employment- and wage-weighted exposure for the resident workforce |
+| Singapore people and pay | MOM Occupational Wage Survey June 2025 (with SSOC codes); MOM Labour Force in Singapore 2025, Table D8 | SSOC occupation / 2-digit group | employment- and wage-weighted exposure for the resident workforce |
 | Physical work | Anthropic "What work can robots do?" | O*NET task | physical flag and robot-exposure tier E0–E3 |
 | What the labs benchmark | OpenAI GDPval | occupation | 220 expert tasks across 44 occupations |
 | How fast capability moves | METR time horizons (re-fitted here) | model / date | task length an agent completes at 50% / 80% reliability; doubling time |
@@ -66,4 +66,4 @@ Or open `data/processed/onetx.duckdb` in any DuckDB client; every processed tabl
 
 ## Status
 
-Second version. Compared with the first: four providers instead of one at occupation level (Anthropic, Microsoft, OpenAI, Google) with a consensus count; a per-task barrier index (interpersonal, in-person, accountability, hand-over) in place of a flat lag; an adoption anchor fitted to the US Census firm-adoption series with Singapore's lead applied; and MOM wages and employment so Singapore results can be read as shares of people and pay. Known gaps are listed at the end of `docs/METHOD.md`.
+Second version. Compared with the first: four providers instead of one at occupation level (Anthropic, Microsoft, OpenAI, Google) with a consensus count; a per-task barrier index (interpersonal, in-person, accountability, hand-over) in place of a flat lag; an adoption anchor fitted to the US Census firm-adoption series with Singapore's lead applied; and MOM wages (June 2025, coded to SSOC) and employment (2-digit groups) so Singapore results can be read as shares of people and pay. Known gaps are listed at the end of `docs/METHOD.md`.

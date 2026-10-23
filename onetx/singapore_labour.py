@@ -1,20 +1,22 @@
 """Singapore wages and employment, matched to SSOC codes.
 
 Sources (all public, see docs/DATA_SOURCES.md):
-* MOM Occupational Wage Survey, June 2024 (data.gov.sg): median/quartile gross monthly wages for 562
-  occupations, by occupation title only. We match titles to SSOC 2024 5-digit codes through SingStat's
-  classification titles and alphabetical index (exact, then fuzzy >= 90).
-* MOM Labour Force Survey (data.gov.sg / SingStat Table Builder): employed residents by major
-  occupational group (1-digit, SSOC 2024), by year; median income by major group.
-* MOM Labour Force in Singapore 2025, Section D (XLSX from stats.mom.gov.sg) when reachable: finer
-  occupation breakdowns. The site blocks some automated downloads; drop the file into
-  data/raw/singapore/mom/ if the fetcher could not get it.
+* MOM Occupational Wage Survey, June 2025 (stats.mom.gov.sg, Table 4): median and quartile basic and
+  gross monthly wages for 523 occupations **with official SSOC 2024 codes**. Primary wage source.
+* MOM Occupational Wage Survey, June 2024 (data.gov.sg): 562 occupations by title only; matched to
+  SSOC codes by title (exact, then fuzzy >= 90) and used only for codes the 2025 table lacks.
+* MOM Labour Force in Singapore 2025, Section D, Table D8 (stats.mom.gov.sg): employed residents by
+  SSOC 2024 sub-major group (2-digit, 43 groups). Primary employment source.
+* MOM Labour Force Survey (data.gov.sg / SingStat): employment and median income by major group
+  (1-digit); used for checks and as the last-resort wage.
 
 Weights produced per SSOC 5-digit code:
-    employment  resident employment allocated from the major group total; within a group the
-                allocation is proportional to the number of wage-survey occupations only if no finer
-                table exists (uniform within group), and the method is recorded in `employment_method`.
-    wage        median gross monthly wage (S$) from the OWS where matched, else the group median.
+    employment  resident employment allocated from the 2-digit sub-major group total; within a group
+                the allocation is uniform across the codes that appear in the wage survey (the
+                occupations large enough to be surveyed), with a quarter-weight for the rest, because
+                no official count below the 2-digit level is published. `employment_method` says so.
+    wage        median gross monthly wage (S$): OWS 2025 by code, else OWS 2024 by title, else the
+                sub-major group median, else the major group median income.
     wage_value  employment x wage: the "wage bill" weight Project Iceberg uses.
 """
 from __future__ import annotations
@@ -22,6 +24,7 @@ from __future__ import annotations
 import json
 import re
 
+import numpy as np
 import pandas as pd
 from rapidfuzz import fuzz, process
 
@@ -159,34 +162,106 @@ def load_lfs_median_income_major() -> pd.DataFrame:
     return both
 
 
+def _xl_rows(path, sheet):
+    import openpyxl
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        wb = openpyxl.load_workbook(path, read_only=True)
+        return list(wb[sheet].iter_rows(values_only=True))
+
+
+def load_ows2025_wages(sheet: str = "T4") -> pd.DataFrame:
+    """OWS June 2025 Table 4 (all industries): one row per SSOC 2024 code with wage percentiles."""
+    rows = _xl_rows(MOM / "ows2025" / "mrsd_2025Wages_table4.xlsx", sheet)
+    out = []
+    for r in rows:
+        if r is None or len(r) < 9 or r[1] is None:
+            continue
+        code = str(r[1]).strip()
+        if not re.fullmatch(r"\d{5}", code):
+            continue
+        vals = [pd.to_numeric(str(v).replace(",", ""), errors="coerce") if v not in (None, "", "s", "-") else None for v in r[3:9]]
+        out.append({"ssoc_code": code, "ows_occupation": str(r[2]).strip(), "basic_p25": vals[0], "basic_median": vals[1], "basic_p75": vals[2], "wage_p25": vals[3], "wage_median": vals[4], "wage_p75": vals[5]})
+    df = pd.DataFrame(out)
+    df["year"] = 2025
+    df["source"] = "ows_2025_table4"
+    return df
+
+
+def load_lfs_employment_submajor(edition: int = 2025) -> pd.DataFrame:
+    """Table D8 of the Labour Force in Singapore report: employed residents (thousands) by SSOC 2024
+    sub-major group (2-digit). Combined rows such as '61-62' and 'X1-X5' are kept with their label."""
+    rows = _xl_rows(MOM / f"LFR{edition}_SectionD.xlsx", "D8")
+    out = []
+    for r in rows:
+        if not r or r[0] is None:
+            continue
+        m = re.match(r"^\s*([0-9X][0-9X]?(?:-[0-9X]{1,2})?)\s+(.*)$", str(r[0]))
+        if not m:
+            continue
+        codes = m.group(1)
+        total = pd.to_numeric(r[1], errors="coerce")
+        if pd.isna(total):
+            continue
+        # expand '61-62' -> ['61','62'], 'X1-X5' -> ['X1'..'X5']
+        if "-" in codes:
+            a, b = codes.split("-")
+            if a[0].isdigit():
+                members = [str(x) for x in range(int(a), int(b) + 1)]
+            else:
+                members = [f"{a[0]}{i}" for i in range(int(a[1:]), int(b[1:]) + 1)]
+        else:
+            members = [codes]
+        out.append({"submajor_label": codes, "submajor_members": members, "group_name": m.group(2).strip(), "employed_thousands": float(total), "male_thousands": pd.to_numeric(r[2], errors="coerce"), "female_thousands": pd.to_numeric(r[3], errors="coerce"), "year": edition})
+    return pd.DataFrame(out)
+
+
 def build_ssoc_weights(edition: int = 2024) -> pd.DataFrame:
-    """Per SSOC 5-digit code: employment (allocated), wage, wage_value, with method flags."""
+    """Per SSOC 5-digit code: employment (allocated from the 2-digit group), wage, wage_value, with flags."""
     struct = sg.load_ssoc_structure(edition)
     five = struct[struct.level == 5][["ssoc_code", "ssoc_title"]].copy()
     five["major_group"] = five.ssoc_code.str[0]
-    ows = match_ows_to_ssoc(edition)
-    wage = ows.dropna(subset=["ssoc_code"]).groupby("ssoc_code").wage_median.mean()
-    five["wage_median"] = five.ssoc_code.map(wage)
-    five["wage_source"] = five.wage_median.notna().map({True: "ows_2024", False: "major_group_median"})
+    five["submajor"] = five.ssoc_code.str[:2]
+    # wages: 2025 coded table first, then 2024 by title, then group medians
+    w25 = load_ows2025_wages().dropna(subset=["wage_median"]).groupby("ssoc_code").wage_median.mean()
+    w24 = match_ows_to_ssoc(edition).dropna(subset=["ssoc_code"]).groupby("ssoc_code").wage_median.mean()
+    five["wage_median"] = five.ssoc_code.map(w25)
+    five["wage_source"] = np.where(five.wage_median.notna(), "ows_2025_coded", None)
+    m = five.wage_median.isna()
+    five.loc[m, "wage_median"] = five.loc[m, "ssoc_code"].map(w24)
+    five.loc[m & five.wage_median.notna(), "wage_source"] = "ows_2024_title_match"
+    sub_med = five.dropna(subset=["wage_median"]).groupby("submajor").wage_median.median()
+    m = five.wage_median.isna()
+    five.loc[m, "wage_median"] = five.loc[m, "submajor"].map(sub_med)
+    five.loc[m & five.wage_median.notna(), "wage_source"] = "submajor_median"
     inc = load_lfs_median_income_major().set_index("major_group").median_income_major
-    five["wage_median"] = five.wage_median.fillna(five.major_group.map(inc))
-    five.loc[five.wage_median.isna(), "wage_source"] = "overall_median"
-    five["wage_median"] = five.wage_median.fillna(float(five.wage_median.median()))
-    emp = load_lfs_employment_major().set_index("major_group").employed_thousands
-    # within a major group we have no official count per 5-digit code: allocate uniformly across the
-    # codes that appear in the wage survey (they are the occupations with enough employees to be
-    # surveyed), and give the remaining codes a small share.
-    five["in_ows"] = five.ssoc_code.isin(set(ows.ssoc_code.dropna()))
+    m = five.wage_median.isna()
+    five.loc[m, "wage_median"] = five.loc[m, "major_group"].map(inc)
+    five.loc[m & five.wage_median.notna(), "wage_source"] = "major_group_median_income"
+    m = five.wage_median.isna()
+    five.loc[m, "wage_median"] = float(five.wage_median.median())
+    five.loc[m, "wage_source"] = "overall_median"
+    five["in_ows"] = five.wage_source.isin(["ows_2025_coded", "ows_2024_title_match"])
+    # employment: 2-digit sub-major totals (Table D8), split within the group
+    d8 = load_lfs_employment_submajor(2025)
+    sub_total = {}
+    for _, r in d8.iterrows():
+        for mem in r.submajor_members:
+            sub_total[mem] = (r.employed_thousands, r.submajor_label)
+    five["submajor_label"] = five.submajor.map(lambda c: sub_total.get(c, (np.nan, None))[1])
     alloc = []
-    for mg, g in five.groupby("major_group"):
-        total = float(emp.get(mg, 0.0))
+    for lbl, g in five.groupby("submajor_label", dropna=False):
+        # members of a combined label such as '61-62' share one published total
+        total = float(next((v[0] for k, v in sub_total.items() if v[1] == lbl), 0.0)) if lbl else 0.0
         n_in = int(g.in_ows.sum()); n_out = int((~g.in_ows).sum())
         w_in, w_out = (1.0, 0.25) if n_in else (0.0, 1.0)
         denom = n_in * w_in + n_out * w_out
-        for _, r in g.iterrows():
-            alloc.append(total * (w_in if r.in_ows else w_out) / denom if denom else 0.0)
-    five["employment_thousands"] = alloc
-    five["employment_method"] = "major_group_total_uniform_within_group"
+        for idx, r in g.iterrows():
+            alloc.append((idx, total * (w_in if r.in_ows else w_out) / denom if denom else 0.0))
+    five["employment_thousands"] = pd.Series(dict(alloc))
+    five["employment_method"] = "submajor_group_total_uniform_within_group"
     five["wage_value"] = five.employment_thousands * five.wage_median
     five["edition"] = edition
-    return five.reset_index(drop=True)
+    return five.drop(columns=["submajor"]).reset_index(drop=True)
