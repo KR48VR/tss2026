@@ -14,3 +14,11 @@ dist/
 .ipynb_checkpoints/
 site/index.html
 site/kt.json
+site/search.json
+site/search_stats.json
+site/model.json
+site/model.bin.txt
+site/model_scales.bin.txt
+site/emb.json
+site/emb.bin.txt
+site/emb_scales.bin.txt

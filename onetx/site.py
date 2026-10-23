@@ -124,8 +124,13 @@ def build_site(companion_url: str | None = None) -> Path:
     data = build_data(companion_url)
     key_tasks = data.pop("_key_tasks")
     js = json.dumps(data, ensure_ascii=True, separators=(",", ":")).replace("</", "<\\/")
-    html = TEMPLATE.read_text().replace("__DATA__", js)
+    meaning_js = Path(__file__).with_name("site_meaning.js").read_text().replace("if(typeof module!=='undefined') module.exports=Meaning;", "")
+    html = TEMPLATE.read_text().replace("__DATA__", js).replace("__MEANING_JS__", meaning_js)
     out = SITE / "index.html"
     out.write_text(html)
-    (SITE / "kt.json").write_text(json.dumps(key_tasks, ensure_ascii=False, separators=(",", ":")))
+    (SITE / "kt.json").write_text(json.dumps(key_tasks, ensure_ascii=True, separators=(",", ":")))
+    from .site_search import build_search_assets
+
+    stats = build_search_assets([s["c"] for s in data["ssoc"]], load("frontier_sfw_roles").role_id.tolist(), key_tasks)
+    (SITE / "search_stats.json").write_text(json.dumps(stats))
     return out

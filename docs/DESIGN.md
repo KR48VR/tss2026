@@ -73,4 +73,6 @@ onetx/frontier.py    per-task frontier scores and roll-ups
 onetx/forecast.py    timing model
 onetx/build.py       the pipeline; onetx/report.py the summary
 onetx/site.py        the self-contained web page (template in onetx/site_template.html)
+onetx/site_search.py search assets: alternative titles, task index, in-browser embedding model and item vectors
+onetx/site_meaning.js the WordPiece tokenizer and mean-pooled embedding in plain JS (inlined into the page)
 ```

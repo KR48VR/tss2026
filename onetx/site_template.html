@@ -46,6 +46,11 @@ input[type="search"]:focus-visible,select:focus-visible,button:focus-visible{out
 .results button{width:100%;text-align:left;background:none;border:0;color:var(--fg);font:inherit;padding:9px 6px;cursor:pointer;display:flex;gap:10px;align-items:baseline}
 .results button:hover,.results button[aria-current="true"]{background:var(--accent-soft)}
 .results .kind{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);flex:0 0 58px}
+.results .pill{margin-left:auto;align-self:center}
+.results .score{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);margin-left:auto;align-self:center}
+#ask-out{border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-top:8px;background:var(--panel)}
+#ask-out ol{margin:6px 0 0;padding-left:20px} #ask-out li{margin-bottom:4px}
+.btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
 .results .sub{display:block;font-size:.8rem;color:var(--muted)}
 .pill{display:inline-block;font-size:.75rem;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
 .pill.s0{background:var(--doing);color:var(--bg)} .pill.s1{background:var(--helping);color:var(--bg)} .pill.s2{background:var(--physical);color:var(--bg)} .pill.s3{background:transparent;border-color:var(--notseen);color:var(--muted)}
@@ -120,9 +125,14 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
 <section class="view" id="view-jobs" role="tabpanel" aria-labelledby="tab-jobs" hidden>
   <div class="split">
     <div class="panel">
-      <label for="job-search" class="eyebrow">Search a job title</label>
+      <div class="flexrow small" role="group" aria-label="What to search" style="margin-bottom:8px"><button class="btn active" id="m-jobs" aria-pressed="true">Job titles</button><button class="btn" id="m-tasks" aria-pressed="false">Tasks (what you do)</button></div>
+      <label for="job-search" class="eyebrow" id="search-label">Search a job title</label>
       <input type="search" id="job-search" placeholder="e.g. accountant, nurse, software, chef" autocomplete="off">
-      <div class="flexrow small" style="margin-top:8px"><button class="btn active" id="f-all">All</button><button class="btn" id="f-ssoc">SSOC occupations</button><button class="btn" id="f-roles">Skills Framework roles</button></div>
+      <div class="flexrow small" style="margin-top:8px" id="job-filters"><button class="btn active" id="f-all">All</button><button class="btn" id="f-ssoc">SSOC occupations</button><button class="btn" id="f-roles">Skills Framework roles</button></div>
+      <div class="flexrow small" style="margin-top:8px"><label class="flexrow" style="gap:6px"><input type="checkbox" id="meaning-toggle"> Match by meaning</label><span class="muted" id="meaning-note">(loads a 14 MB model once; understands paraphrases)</span></div>
+      <div class="flexrow small" style="margin-top:8px" id="ask-row" hidden><button class="btn" id="ask-claude">Ask Claude to interpret this search</button><button class="btn" id="ask-stop" hidden>Stop</button></div>
+      <div id="ask-out" class="small" hidden></div>
+      <p class="small muted" id="search-help" style="margin:8px 0 0">Also searches 6,755 alternative job titles from SingStat (so "CEO" works) and forgives small typos.</p>
       <ul class="results" id="job-results"></ul>
     </div>
     <div id="job-detail" class="panel"><p class="muted">Type a job title on the left, or pick one of the examples: <span id="examples"></span></p></div>
@@ -249,25 +259,109 @@ function subTable(){
 }
 document.getElementById('sub-weight').addEventListener('change', subTable); subTable();
 
-// ---------- jobs
-const items = [];
-D.ssoc.forEach((s,i)=>items.push({kind:'ssoc', i, title:s.t, sub:`SSOC ${s.c} ${MID} ${s.smn||''}`, key:(s.t+' '+(s.smn||'')).toLowerCase()}));
-D.roles.forEach((r,i)=>items.push({kind:'role', i, title:r.role, sub:`${r.sector}${r.track?' '+MID+' '+r.track:''}`, key:(r.role+' '+r.sector+' '+r.track).toLowerCase()}));
-let filter='all', current=null;
+// ---------- jobs: keyword search with alternative titles and typo tolerance, task search, meaning search, Ask Claude
+__MEANING_JS__
+const norm = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const words = t => norm(t).split(/[^a-z0-9+#]+/).filter(Boolean);
+const items = [];   // job-title index
+D.ssoc.forEach((s,i)=>items.push({kind:'ssoc', i, title:s.t, sub:`SSOC ${s.c} ${MID} ${s.smn||''}`, key:norm(s.t+' '+(s.smn||'')), w:words(s.t+' '+(s.smn||''))}));
+D.roles.forEach((r,i)=>items.push({kind:'role', i, title:r.role, sub:`${r.sector}${r.track?' '+MID+' '+r.track:''}`, key:norm(r.role+' '+r.sector+' '+r.track), w:words(r.role+' '+r.sector+' '+r.track)}));
+let altLoaded=false, S=null, KT=null, taskIndex=null, loadingS=null;
+function loadSearchData(){ if(loadingS) return loadingS; loadingS=Promise.all([loadKT(), fetch('search.json').then(r=>r.json()).catch(()=>null)]).then(([k,sj])=>{ S=sj; KT=k; if(S&&!altLoaded){ S.alt.forEach((a,j)=>{ const si=a[0]; items.push({kind:'ssoc', i:si, alt:a[1], j, title:D.ssoc[si].t, sub:`also called "${a[1]}" ${MID} SSOC ${D.ssoc[si].c}`, key:norm(a[1]), w:words(a[1])}); }); altLoaded=true; }
+  if(S&&KT&&!taskIndex){ taskIndex=[]; KT.forEach((groups,ri)=>groups.forEach((g,gi)=>g[1].forEach((t,ti)=>taskIndex.push({kind:'kt', ri, gi, ti, text:t[0], key:norm(t[0]), st:t[1], yr:t[2]})))); S.onet.forEach((t,oi)=>taskIndex.push({kind:'onet', oi, text:t[0], key:norm(t[0]), st:t[1], yr:t[2], occ:t[3], ssoc:t[4]})); }
+  return true; }); return loadingS; }
+loadSearchData();   // alternative titles arrive a moment after load; the first search still works without them
+// bounded Damerau-Levenshtein for typo tolerance
+function editDistance(a,b,max){ if(Math.abs(a.length-b.length)>max) return max+1; const m=a.length,n=b.length; let prev=new Array(n+1), cur=new Array(n+1), prev2=null; for(let j=0;j<=n;j++) prev[j]=j;
+  for(let i=1;i<=m;i++){ cur[0]=i; let rowMin=cur[0]; for(let j=1;j<=n;j++){ const cost=a[i-1]===b[j-1]?0:1; cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+cost); if(prev2&&i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1]) cur[j]=Math.min(cur[j],prev2[j-2]+1); rowMin=Math.min(rowMin,cur[j]); } if(rowMin>max) return max+1; prev2=prev; prev=cur; cur=new Array(n+1); }
+  return prev[n]; }
+function termMatch(term, it){ if(term.length<=3){ return it.w.some(w=>w===term)?2:(it.w.some(w=>w.startsWith(term))?1:0); } if(it.key.includes(term)) return 2; const max = term.length>=8?2:term.length>=5?1:0; if(!max) return 0; for(const w of it.w){ if(editDistance(term,w,max)<=max) return 1; } return 0; }
+function trigrams(s){ const t=new Set(); const p='  '+s+' '; for(let i=0;i<p.length-2;i++) t.add(p.slice(i,i+3)); return t; }
+let mode='jobs', filter='all', current=null;
 const resEl = document.getElementById('job-results'), inp = document.getElementById('job-search');
-function search(){
-  const q = inp.value.trim().toLowerCase(); const terms = q.split(/\s+/).filter(Boolean);
-  let hits = items.filter(it => (filter==='all'||it.kind===filter) && (terms.length? terms.every(t=>it.key.includes(t)) : false));
-  hits.sort((a,b)=>{ const sa=a.title.toLowerCase().startsWith(q)?0:1, sb=b.title.toLowerCase().startsWith(q)?0:1; return sa-sb || a.title.length-b.title.length; });
-  hits = hits.slice(0,60);
-  resEl.innerHTML = hits.map(h=>`<li><button data-kind="${h.kind}" data-i="${h.i}" aria-current="${current&&current.kind===h.kind&&current.i===h.i}"><span class="kind">${h.kind==='ssoc'?'SSOC':'Role'}</span><span>${esc(h.title)}<span class="sub">${esc(h.sub)}</span></span></button></li>`).join('') || (q?'<li class="muted small" style="padding:8px">No match. Try a shorter word.</li>':'');
+function keywordJobs(q){ const terms=words(q); if(!terms.length) return [];
+  const hits=[]; for(const it of items){ if(filter!=='all'&&it.kind!==filter) continue; let score=0, ok=true; for(const t of terms){ const m=termMatch(t,it); if(!m){ok=false;break;} score+=m; } if(!ok) continue; if(it.key.startsWith(norm(q))) score+=3; hits.push({it,score}); }
+  hits.sort((a,b)=>b.score-a.score || a.it.title.length-b.it.title.length);
+  const seen=new Set(); const out=[]; for(const h of hits){ const id=h.it.kind+':'+h.it.i; if(seen.has(id)) continue; seen.add(id); out.push(h.it); if(out.length>=60) break; } return out; }
+function keywordTasks(q){ if(!taskIndex) return null; const terms=words(q); if(!terms.length) return [];
+  let hits=taskIndex.filter(t=>terms.every(x=>t.key.includes(x)));
+  if(hits.length<5){ const qt=trigrams(norm(q)); const scored=[]; for(const t of taskIndex){ const tt=trigrams(t.key); let c=0; for(const g of qt) if(tt.has(g)) c++; const sim=c/Math.max(qt.size,1); if(sim>=0.45) scored.push({t,sim}); } scored.sort((a,b)=>b.sim-a.sim); hits=hits.concat(scored.map(x=>x.t).filter(t=>!hits.includes(t))); }
+  return hits.slice(0,80); }
+function renderJobHits(list, scores){
+  resEl.innerHTML = list.map((h,k)=>`<li><button data-kind="${h.kind}" data-i="${h.i}" aria-current="${current&&current.kind===h.kind&&current.i===h.i}"><span class="kind">${h.kind==='ssoc'?'SSOC':'Role'}</span><span>${esc(h.title)}<span class="sub">${esc(h.sub)}</span></span>${scores?`<span class="score">${scores[k].toFixed(2)}</span>`:''}</button></li>`).join('') || '<li class="muted small" style="padding:8px">No match. Try a shorter word, or turn on "Match by meaning".</li>';
   resEl.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>open(b.dataset.kind, +b.dataset.i)));
 }
-inp.addEventListener('input', search);
-[['f-all','all'],['f-ssoc','ssoc'],['f-roles','role']].forEach(([id,f])=>document.getElementById(id).addEventListener('click',e=>{ filter=f; document.querySelectorAll('#view-jobs .btn').forEach(b=>b.classList.remove('active')); e.target.classList.add('active'); search(); }));
+function taskLine(t, score){ const yr = t.yr==null?'beyond 2045':yr1(t.yr); const target = t.kind==='kt' ? `data-kind="role" data-i="${t.ri}"` : (t.ssoc&&t.ssoc.length ? `data-kind="ssoc" data-i="${t.ssoc[0]}"` : '');
+  const where = t.kind==='kt' ? `Key task of ${esc(D.roles[t.ri].role)} (${esc(D.roles[t.ri].sector)})` : `O*NET task of ${esc(t.occ)}${t.ssoc&&t.ssoc.length?' '+MID+' opens SSOC '+esc(D.ssoc[t.ssoc[0]].t):''}`;
+  return `<li><button ${target} ${target?'':'disabled'}><span class="kind">${t.kind==='kt'?'SFw':'O*NET'}</span><span>${esc(t.text)}<span class="sub">${where} ${MID} central year ${yr}</span></span><span class="pill ${STATUS[t.st][1]}">${STATUS[t.st][0]}</span>${score!=null?`<span class="score">${score.toFixed(2)}</span>`:''}</button></li>`; }
+function renderTaskHits(list, scores){
+  resEl.innerHTML = list.map((t,k)=>taskLine(t, scores?scores[k]:null)).join('') || '<li class="muted small" style="padding:8px">No task matches. Try fewer words, or turn on "Match by meaning".</li>';
+  resEl.querySelectorAll('button[data-kind]').forEach(b=>b.addEventListener('click',()=>open(b.dataset.kind, +b.dataset.i)));
+}
+function refToItem(ref){ const t=ref[0];
+  if(t===0) return {group:'job', it: items.find(x=>x.kind==='ssoc'&&x.i===ref[1]&&!x.alt)};
+  if(t===1){ const a=S.alt[ref[1]]; return {group:'job', it: {kind:'ssoc', i:a[0], title:D.ssoc[a[0]].t, sub:`also called "${a[1]}" ${MID} SSOC ${D.ssoc[a[0]].c}`}}; }
+  if(t===2) return {group:'job', it: {kind:'role', i:ref[1], title:D.roles[ref[1]].role, sub:`${D.roles[ref[1]].sector}${D.roles[ref[1]].track?' '+MID+' '+D.roles[ref[1]].track:''}`}};
+  if(t===3){ const k=KT[ref[1]][ref[2]][1][ref[3]]; return {group:'task', it:{kind:'kt', ri:ref[1], gi:ref[2], ti:ref[3], text:k[0], st:k[1], yr:k[2]}}; }
+  const o=S.onet[ref[1]]; return {group:'task', it:{kind:'onet', oi:ref[1], text:o[0], st:o[1], yr:o[2], occ:o[3], ssoc:o[4]}}; }
+let searchSeq=0;
+async function search(){
+  const q=inp.value.trim(); const seq=++searchSeq;
+  if(!q){ resEl.innerHTML=''; return; }
+  const meaning=document.getElementById('meaning-toggle').checked;
+  if(meaning){
+    if(!Meaning.ready()){ resEl.innerHTML='<li class="muted small" style="padding:8px">Loading the meaning-search model (about 14 MB, once)\u2026</li>'; const ok=await Meaning.load(); if(!ok){ resEl.innerHTML='<li class="muted small" style="padding:8px">The meaning-search model could not be loaded. Keyword search still works.</li>'; return; } await loadSearchData(); if(seq!==searchSeq) return; }
+    const hits=Meaning.search(q, 400); const seen=new Set(); const jobs=[], tasks=[], js=[], ts=[];
+    for(const h of hits){ const r=refToItem(h.ref); if(!r.it) continue; const id=r.group==='job'?(r.it.kind+':'+r.it.i):(r.it.kind+':'+(r.it.oi!=null?r.it.oi:(r.it.ri+':'+r.it.gi+':'+r.it.ti))); if(seen.has(id)) continue; seen.add(id);
+      if(r.group==='job'){ if(filter!=='all'&&r.it.kind!==filter) continue; if(mode==='jobs'&&jobs.length<40){jobs.push(r.it);js.push(h.score);} } else { if(mode==='tasks'&&tasks.length<60){tasks.push(r.it);ts.push(h.score);} } }
+    if(mode==='jobs') renderJobHits(jobs, js); else renderTaskHits(tasks, ts);
+    return;
+  }
+  if(mode==='jobs'){ renderJobHits(keywordJobs(q)); }
+  else { if(!taskIndex){ resEl.innerHTML='<li class="muted small" style="padding:8px">Loading the task index\u2026</li>'; await loadSearchData(); if(seq!==searchSeq) return; } renderTaskHits(keywordTasks(q)||[]); }
+}
+let searchTimer; inp.addEventListener('input', ()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(search, 120); });
+document.getElementById('meaning-toggle').addEventListener('change', search);
+[['f-all','all'],['f-ssoc','ssoc'],['f-roles','role']].forEach(([id,f])=>document.getElementById(id).addEventListener('click',e=>{ filter=f; document.querySelectorAll('#job-filters .btn').forEach(b=>b.classList.remove('active')); e.target.classList.add('active'); search(); }));
+function setMode(m){ mode=m; document.getElementById('m-jobs').classList.toggle('active',m==='jobs'); document.getElementById('m-jobs').setAttribute('aria-pressed', m==='jobs'); document.getElementById('m-tasks').classList.toggle('active',m==='tasks'); document.getElementById('m-tasks').setAttribute('aria-pressed', m==='tasks');
+  document.getElementById('job-filters').hidden = (m!=='jobs'); document.getElementById('search-label').textContent = m==='jobs'?'Search a job title':'Describe a task you do';
+  inp.placeholder = m==='jobs'?'e.g. accountant, nurse, software, chef':'e.g. file tax returns, draft contracts, serve customers';
+  document.getElementById('search-help').textContent = m==='jobs' ? 'Also searches 6,755 alternative job titles from SingStat (so "CEO" works) and forgives small typos.' : 'Searches 40,367 Skills Framework key tasks and 18,796 O*NET tasks. Each result opens the role or occupation it belongs to.';
+  if(m==='tasks') loadSearchData(); search(); }
+document.getElementById('m-jobs').addEventListener('click',()=>setMode('jobs')); document.getElementById('m-tasks').addEventListener('click',()=>setMode('tasks'));
 const ex = [["ssoc","Accountant"],["ssoc","Registered nurse"],["role","Software Engineer"],["ssoc","Chef"],["ssoc","Lawyer"],["role","Customer Service"]];
 document.getElementById('examples').innerHTML = ex.map(([k,t])=>{ const it = items.find(x=>x.kind===k && x.title.toLowerCase().includes(t.toLowerCase())); return it?`<a href="#jobs" data-kind="${it.kind}" data-i="${it.i}">${esc(it.title)}</a>`:''; }).filter(Boolean).join(', ');
 document.getElementById('examples').querySelectorAll('a').forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); inp.value=a.textContent; search(); open(a.dataset.kind,+a.dataset.i);}));
+
+// ---------- Ask Claude (the viewer's own Claude account; appears only where the viewer can run it)
+(async()=>{
+  const sample = window.claude && window.claude.use ? await window.claude.use('sample').catch(()=>null) : null;
+  if(!sample) return;
+  const row=document.getElementById('ask-row'), btn=document.getElementById('ask-claude'), stop=document.getElementById('ask-stop'), out=document.getElementById('ask-out');
+  row.hidden=false; let ctl=null;
+  stop.addEventListener('click',()=>ctl&&ctl.abort());
+  btn.addEventListener('click', async()=>{
+    const q=inp.value.trim(); if(!q){ out.hidden=false; out.textContent='Type something first.'; return; }
+    btn.disabled=true; stop.hidden=false; out.hidden=false; out.textContent='Thinking\u2026 (the first time, Claude asks for your permission)';
+    try{
+      if(!Meaning.ready()){ await Meaning.load(); } await loadSearchData();
+      const cands=[]; const seen=new Set();
+      const add=(id,label)=>{ if(seen.has(id)||cands.length>=60) return; seen.add(id); cands.push({id,label}); };
+      keywordJobs(q).slice(0,20).forEach(it=>add(it.kind+':'+it.i, (it.kind==='ssoc'?'SSOC occupation: ':'Skills Framework role: ')+it.title+' ('+it.sub+')'));
+      (keywordTasks(q)||[]).slice(0,10).forEach(t=>add(t.kind==='kt'?('kt:'+t.ri+':'+t.gi+':'+t.ti):('onet:'+t.oi), (t.kind==='kt'?'Key task: ':'O*NET task: ')+t.text+(t.kind==='kt'?' (role: '+D.roles[t.ri].role+')':' (occupation: '+t.occ+')')));
+      if(Meaning.ready()) Meaning.search(q,80).forEach(h=>{ const r=refToItem(h.ref); if(!r.it) return; if(r.group==='job') add(r.it.kind+':'+r.it.i,(r.it.kind==='ssoc'?'SSOC occupation: ':'Skills Framework role: ')+r.it.title+' ('+r.it.sub+')'); else add(r.it.kind==='kt'?('kt:'+r.it.ri+':'+r.it.gi+':'+r.it.ti):('onet:'+r.it.oi),(r.it.kind==='kt'?'Key task: ':'O*NET task: ')+r.it.text+(r.it.kind==='kt'?' (role: '+D.roles[r.it.ri].role+')':' (occupation: '+r.it.occ+')')); });
+      const prompt = `A person using a Singapore jobs-and-AI map typed this search: "${q}"\n\nBelow are candidate items found by keyword and meaning search, each with an id. Pick the items that best match what the person most likely means (Singapore context; jobs and tasks). Reply with only JSON of the form {"interpretation": "one sentence on what they probably mean", "matches": [{"id": "...", "why": "short reason"}]} with up to 8 matches, best first. Use only ids from the list.\n\n` + cands.map(c=>`${c.id} | ${c.label}`).join('\n');
+      ctl=new AbortController();
+      const res = await sample.json(prompt, {modelTier:'quick', signal: ctl.signal});
+      const byId=Object.fromEntries(cands.map(c=>[c.id,c.label]));
+      const matches=(res&&Array.isArray(res.matches)?res.matches:[]).filter(m=>m&&byId[String(m.id)]);
+      out.innerHTML = `<div><strong>Claude's reading:</strong> ${esc(res&&res.interpretation?res.interpretation:'')}</div>` + (matches.length?`<ol>${matches.map(m=>{ const id=String(m.id); const [k,...rest]=id.split(':'); const target = k==='ssoc'||k==='role' ? `data-kind="${k}" data-i="${rest[0]}"` : k==='kt' ? `data-kind="role" data-i="${rest[0]}"` : (S.onet[+rest[0]]&&S.onet[+rest[0]][4].length ? `data-kind="ssoc" data-i="${S.onet[+rest[0]][4][0]}"` : ''); return `<li>${target?`<a href="#jobs" ${target}>`:''}${esc(byId[id])}${target?'</a>':''}<span class="muted"> ${MID} ${esc(m.why||'')}</span></li>`; }).join('')}</ol>`:'<p class="muted">No confident match among the candidates.</p>');
+      out.querySelectorAll('a[data-kind]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); open(a.dataset.kind,+a.dataset.i);}));
+    }catch(e){ const code=e&&e.code; const msg={not_granted:'You have not allowed this page to use Claude, so this button is unavailable.', sampling_disabled:'Claude is not available on this account.', rate_limited:'Too many requests for now. Try again in a little while.', cancelled:'Stopped.', invalid_json:'Claude did not answer in the expected format. Try again or rephrase.', refused:'Claude declined this request. Try rephrasing.'}[code] || 'Something went wrong. Keyword and meaning search still work.';
+      out.textContent=msg; if(code==='not_granted'||code==='sampling_disabled'||code==='not_declared'||code==='capability_disabled') row.hidden=true; }
+    finally{ btn.disabled=false; stop.hidden=true; ctl=null; }
+  });
+})();
 
 function timeline(sb, half, label){
   if(!sb) return '<p class="muted small">No timing available (no O*NET tasks linked).</p>';
@@ -313,7 +407,7 @@ function open(kind,i){
       <dt>Via the SSOC code</dt><dd>AI doing it ${pct(r.oas)} <span class="muted small">(the same job seen through its occupation code rather than its listed tasks)</span></dd>
       <dt>SSOC code</dt><dd>${r.ssoc.length?r.ssoc.map(x=>`<a href="#jobs" data-ssoc="${esc(x[0])}">${esc(x[0])} ${esc(x[3])}</a> <span class="muted small">(${x[1]==='singstat_index'?'coded by SingStat':'text match, score '+fmt(x[2],0)+' of 100'})</span>`).join('<br>'):'<span class="muted">none</span>'}</dd></dl>
       <h3 class="sub">The role's key tasks, earliest first</h3><p class="small muted">Status and year come from the closest O*NET task. The grey line under each says why a task may be late even if AI could do it.</p>
-      <div id="kt-list"><p class="muted small">Loading key tasks…</p></div>`;
+      <div id="kt-list"><p class="muted small">Loading key tasks\u2026</p></div>`;
     loadKT().then(k=>{ const box=document.getElementById('kt-list'); if(!box||!current||current.kind!=='role'||current.i!==i) return; if(!k){ box.innerHTML='<p class="muted small">Key task detail could not be loaded.</p>'; return; }
       const groups=k[i]||[]; box.innerHTML = groups.map(g=>`<div class="cwf">${esc(g[0])}</div><ul class="kt">${g[1].map(t=>`<li><span>${esc(t[0])}</span><span class="pill ${STATUS[t[1]][1]}">${STATUS[t[1]][0]}</span><span class="range">${yr1(t[2])}</span><span class="why">${t[3]?'why late: '+BARRIER[t[3]]+' '+MID+' ':''}matched to O*NET: "${esc(t[5]||'')}" (score ${fmt(t[4],2)})</span></li>`).join('')}</ul>`).join('') || '<p class="muted small">No key tasks listed.</p>'; });
   }
