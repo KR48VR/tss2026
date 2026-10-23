@@ -1,0 +1,14 @@
+# raw and processed data are rebuilt by the pipeline; never committed
+data/raw/
+data/processed/
+data/cache/
+*.duckdb
+*.duckdb.wal
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+*.egg-info/
+build/
+dist/
+.ipynb_checkpoints/
