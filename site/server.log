@@ -1,13 +1,32 @@
 Serving HTTP on 127.0.0.1 port 8765 (http://127.0.0.1:8765/) ...
-127.0.0.1 - - [24/Oct/2026 03:37:43] "GET /index.html HTTP/1.1" 200 -
-127.0.0.1 - - [24/Oct/2026 03:37:44] "GET /kt.json HTTP/1.1" 200 -
-127.0.0.1 - - [24/Oct/2026 03:37:44] "GET /search.json HTTP/1.1" 200 -
-127.0.0.1 - - [24/Oct/2026 03:37:44] code 404, message File not found
-127.0.0.1 - - [24/Oct/2026 03:37:44] "GET /favicon.ico HTTP/1.1" 404 -
-127.0.0.1 - - [24/Oct/2026 03:37:55] "GET /index.html HTTP/1.1" 200 -
-127.0.0.1 - - [24/Oct/2026 03:37:55] "GET /search.json HTTP/1.1" 200 -
-127.0.0.1 - - [24/Oct/2026 03:37:55] "GET /kt.json HTTP/1.1" 200 -
-127.0.0.1 - - [24/Oct/2026 03:39:49] "GET /companion.html HTTP/1.1" 200 -
-127.0.0.1 - - [24/Oct/2026 03:39:50] code 404, message File not found
-127.0.0.1 - - [24/Oct/2026 03:39:50] "GET /favicon.ico HTTP/1.1" 404 -
-127.0.0.1 - - [24/Oct/2026 03:39:52] "GET /companion.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:06] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:07] "GET /kt.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:07] "GET /search.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:08] code 404, message File not found
+127.0.0.1 - - [24/Oct/2026 04:18:08] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [24/Oct/2026 04:18:23] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:24] "GET /search.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:24] "GET /kt.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:34] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:34] "GET /kt.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:34] "GET /search.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:34] code 404, message File not found
+127.0.0.1 - - [24/Oct/2026 04:18:34] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [24/Oct/2026 04:18:43] "GET /model.bin.txt HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:43] "GET /model_scales.bin.txt HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:43] "GET /emb.bin.txt HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:43] "GET /emb.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:43] "GET /model.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:43] "GET /emb_scales.bin.txt HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:47] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:47] "GET /kt.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:47] "GET /search.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:48] code 404, message File not found
+127.0.0.1 - - [24/Oct/2026 04:18:48] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [24/Oct/2026 04:18:52] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:53] "GET /kt.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:18:53] "GET /search.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:21:15] "GET /companion.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:21:16] code 404, message File not found
+127.0.0.1 - - [24/Oct/2026 04:21:16] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [24/Oct/2026 04:21:18] "GET /companion.html HTTP/1.1" 200 -

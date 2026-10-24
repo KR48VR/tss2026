@@ -109,3 +109,31 @@ Every claim about AI and work sits on one rung of a ladder: (1) someone rated th
 Agreement on yes/no: human vs GPT-4 (2023) 82% (kappa 0.64); Claude 2026 vs human 80% (kappa 0.60); Claude 2026 vs GPT-4 84% (kappa 0.69). Repeat run of 300 tasks: same yes/no 89%, same autonomy level 78% (99.7% within one), same barrier 77%. How the 2023 "no" aged: of 1,376 desk tasks both raters called not doable, 26% had been seen in use by 2026 and 25% were rated doable in 2026.
 
 Ladder conversions used by the translator: of desk tasks rated doable in 2023 (either rater), 42% were seen in use by May 2026 (26% of those rated not doable); of seen desk tasks, AI mostly does the work in 41% (mean automation share 48%); the share of Singapore firms using AI is read from IMDA's latest year and the central half-way year from the adoption curve; a "jobs" claim is first scaled by the median share of an occupation's task weight that is seen, among occupations with any seen task (27%). The translator multiplies a claim's number down the ladder from the rung the report is on; it is a historical conversion, not a forecast for that report. The scorecard on the same view lists every source behind the map with its rung, date and track record here.
+
+## 5. Rung five: what has happened to jobs so far (`outcomes.py`)
+
+The ladder's last rung is the job market itself. MOM publishes, by occupation, the things a disruption would eventually show up in, and the build now loads them (`python -m onetx fetch` downloads them; the MOM server needs the same case-variant retries as the wage files):
+
+| What | Source | Detail | Period |
+|---|---|---|---|
+| Job vacancies | `mrsd_<year>_jv_by_ssoc_ind_occ_edu.xlsx`, sheet "Occupational Group" | SSOC 5-digit (2023 and 2024 as the share of vacancies within each occupational group, SSOC 2020 codes; 2025 as numbers, SSOC 2024 codes) | September 2023, 2024, 2025 |
+| Employed residents | `mrsd_69_Emp_Res_DetailedOcc_Sex.xlsx` | SSOC sub-major group (2-digit), thousands | June, every year 2011 to 2025 |
+| Median gross monthly wage | OWS June 2024 (title-matched, exact matches only) and June 2025 (coded) | SSOC 5-digit | 2024, 2025 |
+| Retrenchments per 1,000 employees, job vacancy rate, resignation rate | `mrsd_33`, `mrsd_24`, `mrsd_26` time-series tables | three occupational groups (PMET; clerical, sales and service; production, transport, cleaners and labourers) | yearly to 2025 |
+
+`outcomes.build_outcomes` gives every SSOC 2024 code: vacancies in September 2025; its minor group's share of its occupational group's vacancies in 2023 and 2025 (2025 numbers are converted to shares among listed occupations, 2023 shares are carried from SSOC 2020 to 2024 minor groups through the correspondence table); the wage change 2024 to 2025; its sub-major group's employment change 2019 to 2025 and 2023 to 2025; and its occupational group's retrenchment and vacancy rates. The page shows these under "What has happened so far" on every job, with the sub-group's employment series as a sparkline.
+
+`outcomes.outcome_tests` then asks whether the map's signals relate to these outcomes yet, with rank correlations (a later quarter-done year means less exposed, so its sign is flipped):
+
+| Outcome | Signal | n | Spearman | Reading |
+|---|---|---|---|---|
+| wage growth, Jun 2024 to Jun 2025 | AI doing it today | 450 | 0.10 | no clear sign yet |
+| wage growth, Jun 2024 to Jun 2025 | AI doing by 2030 | 450 | 0.14 | no clear sign yet |
+| vacancy share within group, 2023 to 2025 | AI doing it today | 627 | -0.09 | no clear sign yet |
+| vacancy share within group, 2023 to 2025 | AI doing by 2030 | 627 | -0.10 | no clear sign yet |
+| sub-group employment, 2023 to 2025 | AI doing by 2030 | 41 | 0.33 | the opposite of what disruption would show: more exposed jobs are doing better so far |
+| sub-group employment, 2019 to 2025 | AI doing by 2030 | 41 | 0.52 | the opposite of what disruption would show: more exposed jobs are doing better so far |
+
+Readings: below 0.15 in absolute value is "no clear sign yet"; in the direction disruption would show (falling employment, wages or vacancies where exposure is high) it is an early or clear sign; the other way it is reported as the opposite of disruption. So far: nothing at the occupation level, and at the group level the more exposed groups have grown faster since 2019, which is the familiar pattern that AI exposure and employment growth both concentrate in office and professional work. Retrenchments per 1,000 PMETs rose from 6.1 in 2019 to 10.0 in 2025 while falling for the other two groups; vacancy rates fell for all groups from their 2022 peak. None of this is evidence for or against the forecast, whose central years mostly start in 2029; it is the baseline the next releases will be judged against, and the test re-runs on every build.
+
+Caveats: vacancy and wage surveys cover establishments with 25 or more employees; some detailed occupations are withheld for confidentiality, so within-group shares are among listed occupations; employment by detailed occupation is published only at the sub-major level; the 2024 wage match is by title and only exact matches are used.

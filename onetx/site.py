@@ -70,6 +70,19 @@ def _tiers(row):
     return [_pct(v) for v in vals] if any(pd.notna(v) for v in vals) else None
 
 
+def _outcomes_meta(stats, outsub):
+    o = stats.get("outcomes") or {}
+    if not o or "tests" not in o:
+        return None
+    years = [int(c.split("_")[1]) for c in (outsub.columns if outsub is not None else []) if c.startswith("emp_") and c.split("_")[1].isdigit()]
+    series = {}
+    if outsub is not None:
+        for _, r in outsub.iterrows():
+            series[str(r.submajor_label).replace(" ", "")] = [_r(r.get(f"emp_{y}"), 1) for y in years]
+    return {"tests": [{k: (round(v, 3) if isinstance(v, float) else v) for k, v in t.items()} for t in o["tests"]], "headline": o.get("headline"), "retrenchment": o.get("retrenchment"), "vacancy_rate": o.get("vacancy_rate"), "resignation_rate": o.get("resignation_rate"),
+            "n_wages": o.get("n_ssoc_with_wages_both_years"), "n_vacancies": o.get("n_ssoc_with_vacancies_2025"), "n_minor": o.get("n_minor_groups_with_vacancy_shares"), "emp_years": years, "emp_series": series}
+
+
 def fmt_int(v):
     try:
         return f"{int(round(float(v))):,}"
@@ -89,6 +102,25 @@ def fmt1(v):
         return f"{float(v):.1f}"
     except (TypeError, ValueError):
         return "\u2013"
+
+
+def _outcome(outc, code):
+    """[vacancies Sep 2025, share of group 2023, share 2025, wage Jun 2024, wage Jun 2025, wage change %, sub-group employment change 2023-25 %, 2019-25 %, occupational group key]"""
+    if outc is None or code not in outc.index:
+        return None
+    o = outc.loc[code]
+    return [_r(o.get("vacancies_2025")), _r(o.get("share_2023"), 1), _r(o.get("share_2025"), 1), _r(o.get("wage_2024")), _r(o.get("wage_2025")), _r(o.get("wage_change_pct"), 1), _r(o.get("emp_change_2023_2025_pct"), 1), _r(o.get("emp_change_2019_2025_pct"), 1), o.get("occ_group") if isinstance(o.get("occ_group"), str) else None, str(o.get("submajor_label")) if pd.notna(o.get("submajor_label")) else None]
+
+
+def _emp_change(outsub, scope):
+    if outsub is None or not str(scope).startswith("submajor_"):
+        return None
+    key = str(scope).replace("submajor_", "").replace(" ", "")
+    m = outsub[outsub.submajor_label.str.replace(" ", "") == key]
+    if m.empty:
+        return None
+    r = m.iloc[0]
+    return [_r(r.get("emp_change_2023_2025_pct"), 1), _r(r.get("emp_change_2019_2025_pct"), 1)]
 
 
 def _code(mapping, v):
@@ -113,6 +145,8 @@ def build_data(companion_url: str | None = None) -> dict:
     skills = load("frontier_skills").merge(load("forecast_skills").drop(columns=["family", "element_name", "n_occupations", "onet_version"]), on="element_id", how="left")
     act = load("frontier_activities").merge(load("forecast_activities").drop(columns=["name", "level", "n_tasks"]), on="activity_id", how="left")
     sectors = load("sg_sfw_sectors")
+    outc = load("sg_outcomes_ssoc2024").set_index("ssoc_code") if (PROCESSED / "sg_outcomes_ssoc2024.parquet").exists() else None
+    outsub = load("sg_outcomes_submajor") if (PROCESSED / "sg_outcomes_submajor.parquet").exists() else None
     sh_ssoc = load("sg_adoption_shift_ssoc2024").set_index("ssoc_code").adoption_shift_years if (PROCESSED / "sg_adoption_shift_ssoc2024.parquet").exists() else pd.Series(dtype=float)
     sh_role = load("sg_adoption_shift_sfw_roles").set_index("role_id").adoption_shift_years if (PROCESSED / "sg_adoption_shift_sfw_roles.parquet").exists() else pd.Series(dtype=float)
     sh_onet = load("sg_adoption_shift_onet").set_index("onet_soc_code").adoption_shift_years if (PROCESSED / "sg_adoption_shift_onet.parquet").exists() else pd.Series(dtype=float)
@@ -121,7 +155,7 @@ def build_data(companion_url: str | None = None) -> dict:
     economy = []
     for _, r in econ.iterrows():
         economy.append({"scope": r.scope, "level": r.level, "name": r.scope_name, "w": "emp" if r.weighting == "employment" else "wage", "total": _r(r.weight_total / (1 if r.weighting == "employment" else 1000), 1), "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "sb": _sb(r), "sb10": [_pct(r.get(f"share_by_{y}_p10")) for y in YEARS], "sb90": [_pct(r.get(f"share_by_{y}_p90")) for y in YEARS], "half": [_r(r.get("half_year_fast_from_curve", r.half_year_p10), 1), _r(r.half_year_central_from_curve, 1), _r(r.get("half_year_slow_from_curve", r.half_year_p90), 1)],
-                        "db": _db(r), "db10": _db(r, "p10"), "db90": _db(r, "p90"), "cap": _pct(r.get("ceiling_ai_share")), "hq": [_r(r.get("quarter_done_year_fast_from_curve"), 1), _r(r.get("quarter_done_year_central_from_curve"), 1), _r(r.get("quarter_done_year_slow_from_curve"), 1)], "hd": [_r(r.get("half_done_year_fast_from_curve"), 1), _r(r.get("half_done_year_central_from_curve"), 1), _r(r.get("half_done_year_slow_from_curve"), 1)]})
+                        "db": _db(r), "db10": _db(r, "p10"), "db90": _db(r, "p90"), "cap": _pct(r.get("ceiling_ai_share")), "hq": [_r(r.get("quarter_done_year_fast_from_curve"), 1), _r(r.get("quarter_done_year_central_from_curve"), 1), _r(r.get("quarter_done_year_slow_from_curve"), 1)], "hd": [_r(r.get("half_done_year_fast_from_curve"), 1), _r(r.get("half_done_year_central_from_curve"), 1), _r(r.get("half_done_year_slow_from_curve"), 1)], "ech": _emp_change(outsub, r.scope)})
 
     # ---- SSOC occupations
     occ_title = occ.set_index("onet_soc_code").title
@@ -133,7 +167,7 @@ def build_data(companion_url: str | None = None) -> dict:
     ssoc_list = []
     for _, r in ssocw.sort_values("ssoc_code").iterrows():
         f = fssoc.loc[r.ssoc_code] if r.ssoc_code in fssoc.index else None
-        ssoc_list.append({"c": r.ssoc_code, "t": r.ssoc_title, "mg": r.major_group, "sm": r.submajor_label, "smn": r.submajor_name, "emp": _r(r.employment_thousands, 1), "wage": _r(r.wage_median), "ws": r.wage_source, "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "ai": _r(r.ai_applicability_score, 2), "sb": _sb(r) if f is not None else None, "sb10": _sbq(f, "p10"), "sb90": _sbq(f, "p90"), "tiers": _tiers(f), "shift": _r(sh_ssoc.get(r.ssoc_code), 1) if r.ssoc_code in sh_ssoc.index else None, "h": _half(r), "db": _db(f), "db10": _db(f, "p10"), "db90": _db(f, "p90"), "cap": _pct(f.ceiling_ai_share) if f is not None else None, "hq": _done_years(f, "quarter"), "hd": _done_years(f, "half"), "bi": _r(f.barrier_index, 2) if f is not None else None, "onet": top_onet.get(r.ssoc_code, []), "roles": roles_by_ssoc.get(r.ssoc_code, [])})
+        ssoc_list.append({"c": r.ssoc_code, "t": r.ssoc_title, "mg": r.major_group, "sm": r.submajor_label, "smn": r.submajor_name, "emp": _r(r.employment_thousands, 1), "wage": _r(r.wage_median), "ws": r.wage_source, "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "ai": _r(r.ai_applicability_score, 2), "sb": _sb(r) if f is not None else None, "sb10": _sbq(f, "p10"), "sb90": _sbq(f, "p90"), "tiers": _tiers(f), "shift": _r(sh_ssoc.get(r.ssoc_code), 1) if r.ssoc_code in sh_ssoc.index else None, "h": _half(r), "db": _db(f), "db10": _db(f, "p10"), "db90": _db(f, "p90"), "cap": _pct(f.ceiling_ai_share) if f is not None else None, "hq": _done_years(f, "quarter"), "hd": _done_years(f, "half"), "oc": _outcome(outc, r.ssoc_code), "bi": _r(f.barrier_index, 2) if f is not None else None, "onet": top_onet.get(r.ssoc_code, []), "roles": roles_by_ssoc.get(r.ssoc_code, [])})
 
     # ---- Skills Framework roles with key tasks
     ks = kt_scores.merge(kt[["key_task", "cwf"]], left_on="key_task_id", right_index=True, how="left")
@@ -204,6 +238,8 @@ def build_data(companion_url: str | None = None) -> dict:
         {"name": "US Census Business Trends and Outlook Survey", "rung": 4, "what": "share of firms using AI in the last two weeks, every two weeks", "unit": "firm", "date": (stats.get('data_as_of') or {}).get('btos_latest_reading', ''), "record": "a copy frozen at Aug 2025 predicted 15% of firms for Oct 2026; the Census reported 24.6%. Now refreshed on every rebuild", "caution": "the question was reworded in Nov 2025; the fit carries a step"},
         {"name": "IMDA Singapore Digital Economy Reports", "rung": 4, "what": "share of Singapore firms that used AI in the year", "unit": "firm", "date": "2023 to 2025", "record": f"sets Singapore's measured lead over the US ({fmt1(stats.get('geo_lead_years_central'))} years); its sector ordering agrees with the Census sector series (rank correlation {abs(round(((stats.get('sector_adoption') or {}).get('imda_check') or {}).get('spearman_imda2023_vs_us_shift', 0),2))})", "caution": "three yearly points; a looser question than the Census's"},
         {"name": "METR time horizons", "rung": 1, "what": "how long a task AI agents can complete, by model release", "unit": "benchmark", "date": "models to 2026", "record": f"sets the capability doubling time ({fmt_int(fp.get('doubling_days_central'))} days); not testable against usage here", "caution": "software and research tasks, not the whole economy"},
+        {"name": "MOM job vacancies, wages and employment by occupation", "rung": 5, "what": "vacancies by detailed occupation (Sep 2023, 2024, 2025); median gross wages (Jun 2024, Jun 2025); employed residents by occupation sub-group (Jun, yearly)", "unit": "occupation, sub-group", "date": "to Sep 2025", "record": (lambda o: f"the outcomes the map is tested against: {o.get('n_ssoc_with_wages_both_years', 0)} occupations with wages in both years, {o.get('n_minor_groups_with_vacancy_shares', 0)} vacancy lines, 41 sub-groups; so far no clear relation to exposure at occupation level, and the more exposed groups grew faster")(stats.get("outcomes") or {}), "caution": "surveys of firms with 25 or more employees; vacancy shares are within occupational group among listed occupations"},
+        {"name": "MOM retrenchment, vacancy and resignation rates by occupational group", "rung": 5, "what": "retrenchments per 1,000 employees, job vacancy rate, resignation rate, for three broad groups", "unit": "occupational group", "date": "2025 (yearly)", "record": "PMET retrenchments per 1,000 rose from 6.1 (2019) to 10.0 (2025) while falling for the other two groups; vacancy rates fell for all groups from their 2022 peak", "caution": "three groups only; cyclical swings dwarf any AI effect so far"},
         {"name": "Headlines: \"X% of jobs exposed\"", "rung": 1, "what": "usually a rating applied to occupations", "unit": "occupation", "date": "varies", "record": "use the translator above: a rung-one job claim has historically meant a fraction of that in work actually seen, and less again with AI doing it", "caution": "check whether the report measured use or rated possibility"},
     ]
     meta = {
@@ -221,7 +257,8 @@ def build_data(companion_url: str | None = None) -> dict:
         "adoption": {"us_half": {k: _r(v, 1) for k, v in stats.get("adoption_anchor_years", {}).items()}, "sg_half": {k: _r(v - (stats.get("geo_lead_years_central") or 0), 1) for k, v in stats.get("adoption_anchor_years", {}).items()}, "lead": _r(stats.get("geo_lead_years_central"), 1), "lead_years_used": (stats.get("singapore_firm_lead") or {}).get("years_used"), "btos_last_pct": (stats.get("btos_adoption_fit") or {}).get("last_pct"), "btos_last_date": (stats.get("btos_adoption_fit") or {}).get("last_ref_end"), "half_old_wording": _r((stats.get("btos_adoption_fit") or {}).get("year_cross_50pct_old_wording"), 1), "sg_own_half": _r((stats.get("singapore_firm_lead") or {}).get("sg_year_cross_50pct"), 1)},
         "evidence": {"tiers": (stats.get("evidence") or {}).get("tiers", {}), "lag_unproven": _r(((stats.get("evidence") or {}).get("evidence_lag_years", {}).get("unproven") or [None, None, None])[1], 1), "lag_mixed": _r(((stats.get("evidence") or {}).get("evidence_lag_years", {}).get("mixed") or [None, None, None])[1], 1), "lag_newly": _r(((stats.get("evidence") or {}).get("evidence_lag_years", {}).get("newly_rated") or [None, None, None])[1], 1), "ratings_2026_used": (stats.get("evidence") or {}).get("ratings_2026_used", False)},
         "sector_shift": (stats.get("sector_adoption") or {}).get("industry_shift_years", {}),
-        "ai_share": stats.get("ai_share", {}), "ladder": lad, "validation": {k: val.get(k) for k in ["auc_seen", "auc_doing_given_seen", "agreement", "repeat_2026", "aging_of_2023_no", "aging_of_2023_yes"]}, "sources": sources,
+        "ai_share": stats.get("ai_share", {}), "ladder": lad,
+        "outcomes": _outcomes_meta(stats, outsub), "validation": {k: val.get(k) for k in ["auc_seen", "auc_doing_given_seen", "agreement", "repeat_2026", "aging_of_2023_no", "aging_of_2023_yes"]}, "sources": sources,
         "sector_labels": {"J": "Information & communications", "K": "Financial & insurance services", "M": "Professional services", "OP": "Public administration & education", "L": "Real estate services", "Q": "Health & social services", "N": "Administrative & support services", "R": "Arts, entertainment & recreation", "C": "Manufacturing", "G": "Wholesale & retail trade", "F": "Construction", "SU": "Other community, social & personal services", "ABDE": "Agriculture, mining, utilities", "H": "Transportation & storage", "I": "Accommodation & food services"},
     }
     return {"meta": meta, "economy": economy, "ssoc": ssoc_list, "roles": role_list, "onet": onet_list, "skills": skills_list, "gwa": gwa_list, "sectors": sector_list, "_key_tasks": key_tasks}

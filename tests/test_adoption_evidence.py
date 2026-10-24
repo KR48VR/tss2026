@@ -130,3 +130,16 @@ def test_done_curves_count_only_the_share_ai_does():
     assert abs(c["share_by_2028"] - 0.5) < 1e-9 and abs(c["done_by_2028"] - 0.375) < 1e-9   # involved: 2 of 4 tasks; doing: (1 + 0.5) / 4
     assert c["quarter_done_year_p50"] == 2027.0 and c["half_done_year_p50"] == 2029.0 and c["half_year_p50"] == 2028.0
     assert c["quarter_done_year_p10"] <= c["quarter_done_year_p50"] <= c["quarter_done_year_p90"]
+
+
+def test_outcome_readings_and_rank_correlation():
+    from onetx import outcomes as oc
+
+    a = pd.Series([1, 2, 3, 4, 5, 6, 7, 8, 9, 10.0]); b = -a + pd.Series([0.1, -0.1] * 5)
+    rho, n = oc._spearman(a, b)
+    assert n == 10 and rho < -0.9
+    assert oc._reading(rho, n, -1).startswith("a clear sign")
+    assert oc._reading(-rho, n, -1).startswith("the opposite")
+    assert oc._reading(0.05, n, -1) == "no clear sign yet"
+    assert oc._reading(None, 3, -1) == "too few groups to say"
+    assert oc.GROUP_OF_MAJOR["2"] == "pmet" and oc.GROUP_OF_MAJOR["4"] == "clerical_sales_service" and oc.GROUP_OF_MAJOR["9"].startswith("production")

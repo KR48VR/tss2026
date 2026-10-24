@@ -200,6 +200,16 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
     swt = se.ssoc_weighted_table(load("frontier_ssoc2024"), ssoc_curve, ssoc_w); save(swt, "sg_ssoc2024_weighted")
     econ = se.economy_exposure(swt); save(econ, "sg_economy_exposure")
     save(se.sector_view(load("frontier_sfw_roles"), role_curve), "sg_sfw_sectors")
+    # rung five: what has happened to jobs so far, and whether the map's signals relate to it yet
+    from . import outcomes as oc
+    try:
+        outc = oc.build_outcomes()
+        save(outc["ssoc"], "sg_outcomes_ssoc2024"); save(outc["submajor"], "sg_outcomes_submajor"); save(outc["jv_shares_minor"], "sg_jv_shares_minor")
+        save(outc["retrenchment"], "sg_retrenchment_by_group"); save(outc["vacancy_rate"], "sg_vacancy_rate_by_group"); save(outc["resignation_rate"], "sg_resignation_rate_by_group")
+        stats["outcomes"] = oc.outcome_tests(outc, ssoc_curve, load("frontier_ssoc2024"), econ)
+        stats["data_as_of"].update({"mom_vacancies": "Sep 2025", "mom_employment_by_occupation": "Jun 2025", "mom_retrenchment": int(outc["retrenchment"].year.max()) if len(outc["retrenchment"]) else None, "mom_wages_change": "Jun 2024 to Jun 2025"})
+    except FileNotFoundError as e:
+        stats["outcomes"] = {"error": f"outcome files missing: {e}"}
     e = econ[(econ.scope == "economy")].set_index("weighting")
     stats["singapore_economy"] = {w: {"observed_automation": float(e.loc[w, "observed_automation"]), "share_weight_observed": float(e.loc[w, "share_weight_observed"]), "share_by_2030": float(e.loc[w, "share_by_2030"]), "share_by_2035": float(e.loc[w, "share_by_2035"]), "half_year_central": float(e.loc[w, "half_year_central_from_curve"])} for w in ["employment", "wage_value"]}
     register_duckdb()

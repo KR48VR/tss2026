@@ -136,6 +136,8 @@ DATAGOV_RESOURCES = {
     "ows_2024_wages_by_occupation_estab_size": "d_7d528712f1fd454ac6ca32fe06fe8f12",
     "lfs_employed_by_occupation_status_sex": "d_3ba99a6cc9f643bacb63bdab296d7bff",
     "lfs_employed_by_occupation_age": "d_1d7ab908d16d7b9ddf6f2c2985894119",
+    "retrench_by_occupation_annual": "d_49ab680655c6d48a221004630a37edd6",
+    "jv_rate_by_occupation_quarterly": "d_1e10046c33418c507bb2483c26dca489",
 }
 SINGSTAT_TABLES = ["M182081", "M920131", "M182171"]
 # stats.mom.gov.sg sits behind a web-application firewall that returns 403 for some exact file paths
@@ -148,6 +150,15 @@ MOM_LFS_FILES = {
     "ows2025/mrsd_2025Wages_table4.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/Wages/Wages_2025/mrsd_2025Wages_table4.XLSX", "https://stats.mom.gov.sg/iMAS_Tables1/Wages/Wages_2025/mrsd_2025Wages_table4.xlsx"],
     "ows2025/mrsd_2025wages_table1.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/Wages/Wages_2025/MRSD_2025Wages_table1.xlsx", "https://stats.mom.gov.sg/iMAS_Tables1/Wages/Wages_2025/mrsd_2025Wages_table1.xlsx"],
     "ows2025/mrsd_2025Wages_table5.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/Wages/Wages_2025/mrsd_2025Wages_table5.xlsx", "https://stats.mom.gov.sg/iMAS_Tables1/Wages/Wages_2025/mrsd_2025Wages_table5.XLSX"],
+    # what has happened to jobs (rung five): vacancies by detailed occupation, employment by occupation group over time,
+    # retrenchment incidence, vacancy and resignation rates by occupational group
+    "jv/mrsd_2025_jv_by_ssoc_ind_occ_edu.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/Job%20Vacancies/2025/mrsd_2025_jv_by_ssoc_ind_occ_edu.xlsx", "https://stats.mom.gov.sg/iMAS_Tables1/Job%20Vacancies/2025/mrsd_2025_JV_by_ssoc_ind_occ_edu.xlsx"],
+    "jv/mrsd_2024_jv_by_ssoc_ind_occ_edu.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/Job%20Vacancies/2024/mrsd_2024_JV_by_ssoc_ind_occ_edu.xlsx", "https://stats.mom.gov.sg/iMAS_Tables1/Job%20Vacancies/2024/mrsd_2024_jv_by_ssoc_ind_occ_edu.xlsx"],
+    "jv/mrsd_2023_jv_by_ssoc_ind_occ_edu.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/Job%20Vacancies/2023/mrsd_2023_jv_by_ssoc_ind_occ_edu.xlsx", "https://stats.mom.gov.sg/iMAS_Tables1/Job%20Vacancies/2023/mrsd_2023_JV_by_ssoc_ind_occ_edu.xlsx"],
+    "mrsd_69_Emp_Res_DetailedOcc_Sex.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/Time-Series-Table/mrsd_69_Emp_Res_DetailedOcc_Sex.xlsx", "https://stats.mom.gov.sg/iMAS_Tables1/Time-Series-Table/MRSD_69_Emp_Res_DetailedOcc_Sex.xlsx"],
+    "mrsd_33_incidence_of_retrenchment_by_ind_occ_grp.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/Time-Series-Table/mrsd_33_incidence_of_retrenchment_by_ind_occ_grp.xlsx", "https://stats.mom.gov.sg/iMAS_Tables1/Time-Series-Table/MRSD_33_incidence_of_retrenchment_by_ind_occ_grp.xlsx"],
+    "mrsd_24_Qtly_and_annl_tsd_on_job_vac_rate_by_ind_and_occ_grp.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/Time-Series-Table/mrsd_24_Qtly_and_annl_tsd_on_job_vac_rate_by_ind_and_occ_grp.xlsx", "https://stats.mom.gov.sg/iMAS_Tables1/Time-Series-Table/MRSD_24_Qtly_and_annl_tsd_on_job_vac_rate_by_ind_and_occ_grp.xlsx"],
+    "mrsd_26_Qtly_and_annl_tsd_on_resgn_by_ind_and_occ_grp.xlsx": ["https://stats.mom.gov.sg/iMAS_Tables1/Time-Series-Table/mrsd_26_Qtly_and_annl_tsd_on_resgn_by_ind_and_occ_grp.xlsx", "https://stats.mom.gov.sg/iMAS_Tables1/Time-Series-Table/MRSD_26_Qtly_and_annl_tsd_on_resgn_by_ind_and_occ_grp.xlsx"],
 }
 
 
