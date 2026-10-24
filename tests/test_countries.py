@@ -96,3 +96,78 @@ def test_skill_level_bands_and_correlation_direction():
     assert c.loc["Reading Comprehension", "rho_level_vs_done_2035"] > 0.9
     assert c.loc["Mathematics", "rho_level_vs_done_2035"] < -0.9                      # reversed levels, opposite sign
     assert "All essential skills (average level)" in c.index
+
+
+# ---------------------------------------------------------------------------- further countries (Australia, the United Kingdom)
+from onetx import au_labour as au
+from onetx import uk_labour as uk
+from onetx import countries as cn
+
+
+def test_nfd_redistribution_keeps_totals_and_removes_nfd_codes():
+    emp = pd.Series({"1000": 10.0, "1100": 4.0, "1110": 2.0, "1111": 30.0, "1112": 10.0, "1211": 60.0, "2000": 5.0, "2111": 95.0})
+    out = au.redistribute_nfd(emp)
+    assert abs(out.sum() - emp.sum()) < 1e-9
+    assert not any(c.endswith("0") for c in out.index)
+    # 1110 goes to 1111/1112 in proportion (3:1), 1100 likewise (only 111x codes under 11), 1000 over every 1xxx code
+    assert out["1111"] > out["1112"] and out["1211"] > 60.0
+
+
+def test_isco_link_weights_sum_to_one_per_isco_code():
+    d = pd.DataFrame({"isco_code": ["1120", "1120", "2512"], "nat_code": ["1111", "1112", "2136"], "weight": [0.5, 0.5, 1.0]})
+    assert np.allclose(d.groupby("isco_code").weight.sum(), 1.0)
+
+
+def test_bics_use_definition_excludes_not_sure():
+    # 64.1% do not use, 6.2% not sure -> 29.7% use
+    not_use, not_sure = 0.641, 0.062
+    assert abs(100.0 * (1.0 - not_use - not_sure) - 29.7) < 1e-9
+
+
+def test_sic_section_ranges():
+    assert uk.sic_section("01") == "A" and uk.sic_section("33") == "C" and uk.sic_section("62") == "J" and uk.sic_section("86") == "Q" and uk.sic_section("99") == "U"
+
+
+def test_firm_lead_reads_the_us_curve_at_matched_shares():
+    fit = {"saturation": 0.9, "intercept": -2.0, "growth_per_year": 0.5}
+    # a point sitting exactly on the US curve has a lead of zero; a higher share at the same date leads
+    K, a, b = fit["saturation"], fit["intercept"], fit["growth_per_year"]
+    t = 1.5
+    p_on = K / (1 + np.exp(-(a + b * t)))
+    pts = pd.DataFrame({"group_type": ["all", "all"], "date": [2024.0 + t, 2024.0 + t], "pct": [100 * p_on, 100 * min(K - 0.01, p_on * 1.5)], "period": ["x", "y"]})
+    out = cn.firm_lead(fit, pts, min_year=2024.0)
+    assert abs(out["points"][0]["lead_years"]) < 1e-6
+    assert out["points"][1]["lead_years"] > 0
+    assert out["n_points_used"] == 2
+
+
+def test_industry_offsets_sign_and_threshold():
+    fit = {"saturation": 0.9, "intercept": -2.0, "growth_per_year": 0.5}
+    pts = pd.DataFrame({"group_type": ["all", "industry", "industry", "all", "industry"], "date": [2025.5, 2025.5, 2025.5, 2022.5, 2022.5], "industry": ["ALL", "J", "I", "ALL", "J"], "label": ["all", "Info", "Food", "all", "Info"], "pct": [12.0, 38.0, 5.0, 1.4, 7.7]})
+    out = cn.industry_offsets(pts, fit, min_national_pct=3.0).set_index("industry")
+    assert out.loc["J", "anchor_shift_years"] < 0 < out.loc["I", "anchor_shift_years"]   # earlier for the high-adoption industry
+    assert out.loc["J", "n_points"] == 1                                                # the 1.4% national reading is below the threshold
+
+
+def test_occupation_shifts_inherit_group_mix():
+    spec = cn.SPECS["AUS"]
+    mix = pd.DataFrame({"major_group": ["1", "1", "2"], "industry": ["J", "I", "J"], "employed": [300.0, 100.0, 50.0]})
+    ind = pd.DataFrame({"industry": ["J", "I"], "anchor_shift_years": [-2.0, 2.0]})
+    natw = pd.DataFrame({"anzsco_code": ["1111", "2611"], "employment_thousands": [1.0, 1.0]})
+    xw = pd.DataFrame({"onet_soc_code": ["a", "a"], "nat_code": ["1111", "2611"], "weight_rev": [1.0, 1.0]})
+    grp, nat, onet = cn.occupation_shifts(mix, ind, natw, xw, spec)
+    s = nat.set_index("nat_code").adoption_shift_years
+    assert abs(s["1111"] - (-2.0 * 0.75 + 2.0 * 0.25)) < 1e-9 and abs(s["2611"] - (-2.0)) < 1e-9
+    assert abs(onet.adoption_shift_years.iloc[0] - 0.5 * (s["1111"] + s["2611"])) < 1e-9
+
+
+def test_pair_decomposition_adds_up_and_is_symmetric_in_names():
+    a = _econ({2030: 0.20, 2035: 0.42, 2040: 0.46}, 2030.6)
+    b = _econ({2030: 0.15, 2035: 0.36, 2040: 0.43}, 2031.4)
+    x = _econ({2030: 0.17, 2035: 0.39, 2040: 0.45}, 2031.0)
+    y = _econ({2030: 0.18, 2035: 0.40, 2040: 0.44}, 2030.9)
+    d = cn.pair_decomposition(a, b, x, y, "wage_value", "AUS", "GBR")
+    for key, part in d["by_year"].items():
+        assert abs(part["gap"] - (part["job_mix"] + part["timing"])) < 1e-9, key
+        assert "AUS" in part and "GBR" in part
+    assert abs(d["by_year"]["central_2035"]["gap"] - 0.06) < 1e-9

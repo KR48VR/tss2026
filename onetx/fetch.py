@@ -15,6 +15,7 @@ from pathlib import Path
 
 from .config import RAW, ensure_dirs
 
+BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15 onetx-data-fetcher"}
 HF = "https://huggingface.co/datasets/Anthropic/EconomicIndex/resolve/main"
 
@@ -85,6 +86,23 @@ SOURCES: dict[str, str] = {
         "labor_market_impacts/job_exposure.csv", "labor_market_impacts/task_penetration.csv",
         "robot_exposure/README.md", "robot_exposure/robot_exposure_occupations.csv", "robot_exposure/robot_exposure_tasks.csv",
     ]},
+    # ---- Australia (ABS) and the United Kingdom (ONS, Skills England): the third and fourth workforces
+    "abs/lfs_EQ08.xlsx": "https://www.abs.gov.au/statistics/labour/employment-and-unemployment/labour-force-australia-detailed/mar-2026/EQ08.xlsx",
+    "abs/lfs_EQ09.xlsx": "https://www.abs.gov.au/statistics/labour/employment-and-unemployment/labour-force-australia-detailed/mar-2026/EQ09.xlsx",
+    "abs/eeh_63060DO011_202505.xlsx": "https://www.abs.gov.au/statistics/labour/earnings-and-working-conditions/employee-earnings-and-hours-australia/may-2025/63060DO011_202505.xlsx",
+    "abs/eeh_63060DO011_202305.xlsx": "https://www.abs.gov.au/statistics/labour/earnings-and-working-conditions/employee-earnings-and-hours-australia/may-2023/63060DO011_202305.xlsx",
+    "abs/cab_BCSDC06_2024-25.xlsx": "https://www.abs.gov.au/statistics/industry/technology-and-innovation/characteristics-australian-business/2024-25/BCSDC06_2024%E2%80%9325.xlsx",
+    "abs/cab_81670DO007_202122.xlsx": "https://www.abs.gov.au/statistics/industry/technology-and-innovation/characteristics-australian-business/2021-22/81670DO007_202122.xlsx",
+    "abs/anzsco2022_structure.xlsx": "https://www.abs.gov.au/statistics/classifications/anzsco-australian-and-new-zealand-standard-classification-occupations/2022/anzsco%202022%20structure%20062023.xlsx",
+    "abs/anzsco2022_index.xlsx": "https://www.abs.gov.au/statistics/classifications/anzsco-australian-and-new-zealand-standard-classification-occupations/2022/anzsco%202022%20index%20of%20principal%20titles%2C%20alternative%20titles%20and%20specialisations%20062023.xlsx",
+    "abs/anzsco2022_correspondence.xlsx": "https://www.abs.gov.au/statistics/classifications/anzsco-australian-and-new-zealand-standard-classification-occupations/2022/anzsco%202022%20correspondence%20tables.xlsx",
+    "ons/bics/bicswave165.xlsx": "https://www.ons.gov.uk/file?uri=/economy/economicoutputandproductivity/output/datasets/businessinsightsandimpactontheukeconomy/bicswave165/bicswave1652final.xlsx",
+    "ons/ashe/ashetable142025provisional.zip": "https://www.ons.gov.uk/file?uri=/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/occupation4digitsoc2010ashetable14/2025provisional/ashetable142025provisional.zip",
+    "ons/ashe/ashetable142024revised.zip": "https://www.ons.gov.uk/file?uri=/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/occupation4digitsoc2010ashetable14/2024revised/ashetable142024revised.zip",
+    "ons/soc2020_coding_index.xlsx": "https://www.ons.gov.uk/file?uri=/methodology/classificationsandstandards/standardoccupationalclassificationsoc/soc2020/soc2020volume2codingrulesandconventions/soc2020volume2thecodingindexexcel20260827v2.xlsx",
+    "ons/soc2020_structure.xlsx": "https://www.ons.gov.uk/file?uri=/methodology/classificationsandstandards/standardoccupationalclassificationsoc/soc2020/soc2020volume1structureanddescriptionsofunitgroups/soc2020volume1structureanddescriptionofunitgroupsexcel20260827.xlsx",
+    "ons/census2021_occupation_industry.json": "https://api.beta.ons.gov.uk/v1/population-types/UR/census-observations?area-type=nat&dimensions=occupation_current_105a,industry_current_88a",
+    "ifate/apprenticeship_standards.json": "https://www.instituteforapprenticeships.org/api/apprenticeshipstandards",
 }
 
 
@@ -109,7 +127,8 @@ def fetch_one(rel: str, url: str, force: bool = False, max_age_days: int | None 
         age_days = (time.time() - dest.stat().st_mtime) / 86400.0
         if max_age_days is None or age_days <= max_age_days:
             return dest
-    req = urllib.request.Request(url, headers=UA)
+    headers = {**UA, "User-Agent": BROWSER_UA} if rel.split("/")[0] in ("abs", "ons", "ifate") else UA
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=600) as r, open(dest, "wb") as fh:
         shutil.copyfileobj(r, fh)
     if dest.suffix == ".zip":
@@ -238,3 +257,31 @@ def parse_microsoft_diffusion_pdf() -> Path:
     with open(dest, "w", newline="") as fh:
         w = csv.writer(fh); w.writerow(["economy", "ai_user_share_2026q1_pct", "ai_user_share_2026q2_pct", "change_pp"]); w.writerows(rows)
     return dest
+
+
+# ----------------------------------------------------------------------------- the ABS's ANZSCO pages (one per unit group)
+def fetch_anzsco_pages(force: bool = False, pause: float = 0.7) -> dict:
+    """Download the ABS classification page of every ANZSCO 2022 unit group (364 pages, about five minutes)
+    into data/raw/abs/anzsco_pages/<unit>.html. The pages carry the official 'Tasks Include' lists."""
+    import time
+
+    from .au_labour import ABS, load_anzsco_structure
+
+    out_dir = ABS / "anzsco_pages"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    units = load_anzsco_structure()
+    ok, failed = 0, []
+    for r in units.itertuples():
+        dest = out_dir / f"{r.anzsco_code}.html"
+        if dest.exists() and dest.stat().st_size > 20000 and not force:
+            ok += 1
+            continue
+        url = f"https://www.abs.gov.au/statistics/classifications/anzsco-australian-and-new-zealand-standard-classification-occupations/2022/browse-classification/{r.major_group}/{r.submajor}/{r.minor}/{r.anzsco_code}"
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers={**UA, "User-Agent": BROWSER_UA}), timeout=120) as resp:
+                dest.write_bytes(resp.read())
+            ok += 1
+        except Exception as e:  # keep going; report at the end
+            failed.append({"unit": r.anzsco_code, "error": str(e)})
+        time.sleep(pause)
+    return {"pages": ok, "failed": failed}

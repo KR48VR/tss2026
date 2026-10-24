@@ -15,6 +15,7 @@ def main(argv=None):
     sub.add_parser("report", help="write docs/REPORT.md from the processed tables")
     f = sub.add_parser("forecast", help="re-run only the timing model (fast) and the report")
     f.add_argument("--now", default="2026-10-01")
+    sub.add_parser("countries", help="build the base tables for Australia and the United Kingdom (weights, crosswalks, official-task matches); then run forecast")
     st = sub.add_parser("site", help="build the self-contained web page (site/index.html + site/kt.json)")
     st.add_argument("--companion", default="https://claude.ai/artifact/Pxd31ubFiwTQjdTSBsu7qZ", help="URL of the companion page linked from the method view ('' for none)")
     q = sub.add_parser("query", help="run SQL against the DuckDB file")
@@ -48,6 +49,15 @@ def main(argv=None):
         write_json(stats, PROCESSED / "build_stats.json")
         print(json.dumps(stats, indent=2, default=str))
         write_report()
+    elif args.cmd == "countries":
+        from .build import build_country_bases
+        from .config import PROCESSED
+        from .io import write_json
+
+        stats = json.loads((PROCESSED / "build_stats.json").read_text()) if (PROCESSED / "build_stats.json").exists() else {}
+        stats["countries_base"] = build_country_bases()
+        write_json(stats, PROCESSED / "build_stats.json")
+        print(json.dumps(stats["countries_base"], indent=2, default=str))
     elif args.cmd == "report":
         from .report import write_report
 

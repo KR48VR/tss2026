@@ -35,7 +35,7 @@ const Meaning = (function(){
       const b64=r=>r.text().then(s=>{ const bin=atob(s.trim()); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u.buffer; });
       const [mj,mb,ms,ej,eb,es]=await Promise.all([fetch('model.json').then(r=>r.json()),fetch('model.bin.txt').then(b64),fetch('model_scales.bin.txt').then(b64),fetch('emb.json').then(r=>r.json()),fetch('emb.bin.txt').then(b64),fetch('emb_scales.bin.txt').then(b64)]);
       model={vocab:mj.vocab,dim:mj.dim,unk_id:mj.unk_id,table:new Int8Array(mb),scales:new Float32Array(ms)};
-      items={n:ej.n,dim:ej.dim,refs:ej.refs,vec:new Int8Array(eb),scales:new Float32Array(es)};
+      items={n:ej.n,dim:ej.dim,refs:ej.refs,nat:ej.nat||[],vec:new Int8Array(eb),scales:new Float32Array(es)};
       return true; }catch(e){ loading=null; return false; } })();
     return loading;
   }
@@ -48,6 +48,6 @@ const Meaning = (function(){
     idx.sort((a,b)=>scores[b]-scores[a]);
     return idx.slice(0,k).map(i=>({ref:items.refs[i],score:scores[i]}));
   }
-  return {load, encode, search, tokenIds, ready:()=>!!(model&&items), _setModel:(m)=>{model=m;}};
+  return {load, encode, search, tokenIds, ready:()=>!!(model&&items), natCodes:()=>items?items.nat:[], _setModel:(m)=>{model=m;}};
 })();
 if(typeof module!=='undefined') module.exports=Meaning;

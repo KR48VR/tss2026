@@ -125,6 +125,8 @@ def build(forecast_params: fcm.ForecastParams | None = None, now: str = "2026-10
     save(fr.rollup_skills(occf, act, "30.1"), "frontier_skills")
     save(fr.rollup_skills(occf, act, "31.0"), "frontier_skills_v31")
     ssoc_scores = fr.push_to_ssoc(occf, o2s, 2024); save(ssoc_scores, "frontier_ssoc2024")
+    # base tables for the further workforces (weights, crosswalks, official task matches); skipped when their raw files are absent
+    stats["countries_base"] = build_country_bases()
     roles_scored, kt_scored = fr.push_to_sfw(role_ssoc, ssoc_scores, kt_links, tf); save(roles_scored, "frontier_sfw_roles"); save(kt_scored, "frontier_sfw_key_tasks")
     stats["task_status_counts"] = tf.status.value_counts().to_dict()
     stats["barrier_type_counts"] = barriers.barrier_type.value_counts().to_dict()
@@ -138,6 +140,22 @@ def build(forecast_params: fcm.ForecastParams | None = None, now: str = "2026-10
     write_json(stats, PROCESSED / "build_stats.json")
     _log("DuckDB views + stats", t0)
     return stats
+
+
+def build_country_bases() -> dict:
+    """Weights, crosswalks, industry mix, adoption readings and official-task matches for Australia and
+    the United Kingdom (`python -m onetx countries`). Each country is skipped when its raw files are absent."""
+    from . import countries as cn
+
+    out = {}
+    for code, spec in cn.SPECS.items():
+        try:
+            out[code] = cn.build_base(spec)
+            print(f"ok    {code} base tables")
+        except FileNotFoundError as e:
+            out[code] = {"error": f"files missing: {e}"}
+            print(f"skip  {code}: {e}")
+    return out
 
 
 def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams | None = None, metr_trend: dict | None = None) -> dict:
@@ -214,15 +232,30 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
     stats["singapore_economy"] = {w: {"observed_automation": float(e.loc[w, "observed_automation"]), "share_weight_observed": float(e.loc[w, "share_weight_observed"]), "share_by_2030": float(e.loc[w, "share_by_2030"]), "share_by_2035": float(e.loc[w, "share_by_2035"]), "half_year_central": float(e.loc[w, "half_year_central_from_curve"])} for w in ["employment", "wage_value"]}
     # ---- a second workforce: the United States (BLS OEWS weights, US sector mix, no adoption lead)
     try:
-        stats["countries"] = build_us(tf, barriers, params, now, tiers, sector_levels, occ, occf, o2s, ssoc_w, econ, fc, ssoc_curve, shifts)
+        stats["countries"], us_ctx = build_us(tf, barriers, params, now, tiers, sector_levels, occ, occf, o2s, ssoc_w, econ, fc, ssoc_curve, shifts)
     except FileNotFoundError as e:
-        stats["countries"] = {"error": f"US files missing: {e}"}
+        stats["countries"], us_ctx = {"error": f"US files missing: {e}"}, None
+    # ---- further workforces (Australia, the United Kingdom) on their own leads and sector shifts
+    if us_ctx is not None:
+        from . import countries as cn
+        from .io import exists
+        others = {}
+        for code, spec in cn.SPECS.items():
+            if not exists(f"{spec.prefix}weights"):
+                stats["countries"][code] = {"error": f"base tables missing; run `python -m onetx countries` ({spec.prefix}weights)"}
+                continue
+            try:
+                cstats, cctx = cn.build_country(spec, tf, barriers, params, now, tiers, occ, occf, btos_fit, o2s, ssoc_w, load("frontier_ssoc2024"), econ, fc, us_ctx["us_w"], us_ctx["econ_us"], us_ctx["fc_us"], others)
+                stats["countries"][code] = cstats
+                others[code] = cctx
+            except FileNotFoundError as e:
+                stats["countries"][code] = {"error": f"{spec.name} files missing: {e}"}
     register_duckdb()
     return stats
 
 
-def build_us(tf, barriers, params, now, tiers, sector_levels, occ, occf, o2s, ssoc_w, econ_sg, fc_sg, ssoc_curve_sg, shifts) -> dict:
-    """US weights and timing, the comparison tables and the gap decomposition. Returns the stats block."""
+def build_us(tf, barriers, params, now, tiers, sector_levels, occ, occf, o2s, ssoc_w, econ_sg, fc_sg, ssoc_curve_sg, shifts) -> tuple[dict, dict]:
+    """US weights and timing, the comparison tables and the gap decomposition. Returns (stats block, context for the other countries' cross runs)."""
     from . import us_economy as ue
     from . import us_labour as ul
     from .io import load
@@ -231,7 +264,7 @@ def build_us(tf, barriers, params, now, tiers, sector_levels, occ, occf, o2s, ss
     us_w = ul.build_onet_weights(); save(us_w, "us_onet_weights")
     us_shift, us_mix = ul.onet_sector_shifts(sector_levels); save(us_shift, "us_adoption_shift_onet"); save(us_mix, "us_soc_sector_mix")
     params_us = fcm.ForecastParams(**{**fcm.asdict(params), "geo": "USA"})
-    fc_us = fcm.forecast_tasks(tf, barriers, params_us, now=now, tiers=tiers, occ_shift=us_shift)
+    fc_us = fcm.forecast_tasks(tf, barriers, params_us, now=now, tiers=tiers, occ_shift=us_shift); save(fc_us, "forecast_tasks_us")
     occ_curve_us = fcm.disruption_curve(fc_us, "onet_soc_code").merge(occ[["onet_soc_code", "title"]], on="onet_soc_code", how="left"); save(occ_curve_us, "forecast_occupations_us")
     uwt = ue.onet_weighted_table(occf, occ_curve_us, us_w); save(uwt, "us_onet_weighted")
     econ_us = ue.economy_exposure(uwt, "USA"); save(econ_us, "us_economy_exposure")
@@ -268,10 +301,11 @@ def build_us(tf, barriers, params, now, tiers, sector_levels, occ, occf, o2s, ss
     lv_stats = {"index_bands": {b: {"n_occupations": int(idx.loc[b, "n_occupations"]), "share_seen": float(idx.loc[b, "share_weight_observed"]), "done_by_2035": float(idx.loc[b, "done_by_2035"]), "quarter_done_year_central": float(idx.loc[b, "quarter_done_year_central_from_curve"]) if pd.notna(idx.loc[b, "quarter_done_year_central_from_curve"]) else None} for b in idx.index},
                 "correlations": lv["correlations"].round(3).to_dict("records")}
     e = econ_us[(econ_us.scope == "economy")].set_index("weighting")
+    ctx = {"fc_us": fc_us, "econ_us": econ_us, "us_w": us_w}
     return {
         "USA": {"clusters": {"n": int(cl_view.cluster_code.nunique()), "earliest": cl_view.iloc[0].cluster if len(cl_view) else None, "latest": cl_view.iloc[-1].cluster if len(cl_view) else None}, "competency_models": cmc_stats, "skill_levels": lv_stats, "weights": {"employment_thousands_total": float(us_w.employment_thousands.sum()), "wage_bill_usd": float(us_w.wage_value.sum() * 1000), "employment_method": us_w.employment_method.value_counts().to_dict(), "wage_sources": us_w.wage_source.value_counts(dropna=False).to_dict(), "oews_year": int(us_w.edition.iloc[0])},
                 "shift_range": [float(us_shift.adoption_shift_years.min()), float(us_shift.adoption_shift_years.max())], "geo_lead_years": 0.0,
                 "economy": {w: {"observed_automation": float(e.loc[w, "observed_automation"]), "share_weight_observed": float(e.loc[w, "share_weight_observed"]), "done_by_2035": float(e.loc[w, "done_by_2035"]), "share_by_2035": float(e.loc[w, "share_by_2035"]), "quarter_done_year_central": float(e.loc[w, "quarter_done_year_central_from_curve"])} for w in ["employment", "wage_value"]},
                 "outcomes": us_out},
         "decomposition": decomp,
-    }
+    }, ctx

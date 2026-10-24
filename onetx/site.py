@@ -223,6 +223,8 @@ def build_data(companion_url: str | None = None) -> dict:
     us_payload, us_tasks = None, None
     if us_econ is not None and us_w is not None and focc_us is not None:
         us_payload, us_tasks = build_us_payload(occ, o2s, us_w, focc_us, us_econ, onet_list, stats, ssoc_list)
+    # ---- further countries (Australia, the United Kingdom), when built
+    country_payloads, country_tasks = build_country_payloads(onet_list, ssoc_list, stats, us_payload)
 
     skills_list = [{"f": r.family, "name": r.element_name, "n": _r(r.n_occupations), "oa": _pct(r.via_occupations_observed_automation), "oaa": _pct(r.via_activities_observed_automation), "h": _half(r), "sb": _sb(r), "sb10": _sbq(r, "p10"), "sb90": _sbq(r, "p90"), "db": _db(r), "db10": _db(r, "p10"), "db90": _db(r, "p90"), "hq": _done_years(r, "quarter"), "cap": _pct(r.get("ceiling_ai_share"))} for _, r in skills.sort_values(["family", "element_name"]).iterrows()]
     gwa_list = [{"name": r["name"], "n": _r(r.n_tasks), "so": _pct(r.share_tasks_observed), "oa": _pct(r.observed_automation), "ms": _r(r.ms_share * 100, 1) if pd.notna(r.ms_share) else None, "h": _half(r), "sb": _sb(r), "sb10": _sbq(r, "p10"), "sb90": _sbq(r, "p90"), "db": _db(r), "db10": _db(r, "p10"), "db90": _db(r, "p90"), "hq": _done_years(r, "quarter"), "cap": _pct(r.get("ceiling_ai_share"))} for _, r in act[act.level == "gwa"].sort_values("observed_automation", ascending=False).iterrows()]
@@ -311,11 +313,39 @@ def build_data(companion_url: str | None = None) -> dict:
             "us_outcomes": _rnd(usa.get("outcomes") or {}),
             "us_weights": _rnd(usa.get("weights") or {}),
         }
-    return {"meta": meta, "economy": economy, "ssoc": ssoc_list, "roles": role_list, "onet": onet_list, "skills": skills_list, "gwa": gwa_list, "sectors": sector_list, "compare": compare, "us": us_payload, "_key_tasks": key_tasks, "_us_tasks": us_tasks}
+    if compare is not None and country_payloads:
+        for code, cp in country_payloads.items():
+            compare["countries"][code] = {"name": cp["name"], "econ": [e for e in cp["economy"] if e["level"] in ("economy", "major_group")], "adoption_now": (cp["adoption_now"] / 100.0) if cp.get("adoption_now") is not None else None, "adoption_now_label": f"{cp['adoption_source']}, {_date_label(cp.get('adoption_now_date'))}", "half_firms": None, "lead": cp.get("lead"), "emp_label": cp["emp_label"], "wage_label": cp["wage_label"], "shift_range": [_r(v, 1) for v in (cp.get("shift_range") or [None, None])], "outcomes": cp.get("outcomes") or {}, "major_names": cp.get("major_names")}
+        cs = stats.get("countries") or {}
+        pairs = {}
+        for code in country_payloads:
+            for k, v in ((cs.get(code) or {}).get("decompositions") or {}).items():
+                pairs[k] = _rnd(v)
+        compare["pairs"] = pairs
+    return {"meta": meta, "economy": economy, "ssoc": ssoc_list, "roles": role_list, "onet": onet_list, "skills": skills_list, "gwa": gwa_list, "sectors": sector_list, "compare": compare, "us": us_payload, "c": country_payloads or None, "_key_tasks": key_tasks, "_us_tasks": us_tasks, "_country_tasks": country_tasks}
 
 
 def _exists(name):
     return (PROCESSED / f"{name}.parquet").exists()
+
+
+def _rnd(o):
+    if isinstance(o, dict):
+        return {k: _rnd(v) for k, v in o.items()}
+    if isinstance(o, list):
+        return [_rnd(v) for v in o]
+    if isinstance(o, float):
+        return None if np.isnan(o) else round(o, 4)
+    return o
+
+
+def _date_label(y):
+    """A fractional year such as 2026.76 -> 'Oct 2026'."""
+    if y is None:
+        return ""
+    import math
+    yr = int(math.floor(y)); mon = min(12, max(1, int(round((y - yr) * 12 + 0.5))))
+    return f"{['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][mon-1]} {yr}"
 
 
 def build_us_payload(occ, o2s, us_w, focc_us, us_econ, onet_list, stats, ssoc_list):
@@ -415,7 +445,7 @@ def build_us_payload(occ, o2s, us_w, focc_us, us_econ, onet_list, stats, ssoc_li
         cr = corr.loc["All essential skills (average level)"] if (corr is not None and "All essential skills (average level)" in corr.index) else None
         lv = {"index": band_rows(ix), "index_rho": _r(cr.rho_level_vs_done_2035, 2) if cr is not None else None, "index_rho_seen": _r(cr.rho_level_vs_seen, 2) if cr is not None else None, "index_n": _r(cr.n_occupations) if cr is not None else None, "skills": skills, "bands": [["L", "low or not needed (level below 2.5)"], ["M", "middle (2.5 to 4.5)"], ["H", "high (4.5 and above)"]]}
     # on-demand file: tasks by work activity, skills with levels and examples, software, related occupations, sectors
-    ft = load("forecast_tasks").set_index("task_id")
+    ft = (load("forecast_tasks_us") if _exists("forecast_tasks_us") else load("forecast_tasks")).set_index("task_id")   # US-timed years for US task lists
     tasks = load("onet_tasks")
     td = load("onet_task_dwa")[["task_id", "dwa_id"]].merge(load("onet_activities")[["dwa_id", "gwa_name"]], on="dwa_id", how="left").drop_duplicates("task_id").set_index("task_id").gwa_name
     ratings = load("onet_descriptor_ratings_v31")
@@ -488,6 +518,7 @@ def build_site(companion_url: str | None = None) -> Path:
     data = build_data(companion_url)
     key_tasks = data.pop("_key_tasks")
     us_tasks = data.pop("_us_tasks")
+    country_tasks = data.pop("_country_tasks") or {}
     js = json.dumps(data, ensure_ascii=True, separators=(",", ":")).replace("</", "<\\/")
     meaning_js = Path(__file__).with_name("site_meaning.js").read_text().replace("if(typeof module!=='undefined') module.exports=Meaning;", "")
     html = TEMPLATE.read_text().replace("__DATA__", js).replace("__MEANING_JS__", meaning_js)
@@ -496,8 +527,178 @@ def build_site(companion_url: str | None = None) -> Path:
     (SITE / "kt.json").write_text(json.dumps(key_tasks, ensure_ascii=True, separators=(",", ":")))
     if us_tasks is not None:
         (SITE / "us_tasks.json").write_text(json.dumps(us_tasks, ensure_ascii=True, separators=(",", ":")))
+    for code, files in country_tasks.items():
+        (SITE / f"{code.lower()}_tasks.json").write_text(json.dumps(files, ensure_ascii=True, separators=(",", ":")))
     from .site_search import build_search_assets
 
-    stats = build_search_assets([s["c"] for s in data["ssoc"]], load("frontier_sfw_roles").role_id.tolist(), key_tasks, [o["c"] for o in data["onet"]] if data.get("us") else None)
+    national = {code: [o["c"] for o in cp["occ"]] for code, cp in (data.get("c") or {}).items()}
+    stats = build_search_assets([s["c"] for s in data["ssoc"]], load("frontier_sfw_roles").role_id.tolist(), key_tasks, [o["c"] for o in data["onet"]] if data.get("us") else None, national or None)
     (SITE / "search_stats.json").write_text(json.dumps(stats))
     return out
+
+
+# ----------------------------------------------------------------------------- further countries (Australia, the United Kingdom)
+def _econ_payload_row(r):
+    """An economy row in the page's shape (the same keys as Singapore's and the US's)."""
+    return {"scope": r.scope, "level": r.level, "name": r.scope_name, "w": "emp" if r.weighting == "employment" else "wage", "total": _r(r.weight_total / (1 if r.weighting == "employment" else 1000), 1), "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "sb": _sb(r), "sb10": [_pct(r.get(f"share_by_{y}_p10")) for y in YEARS], "sb90": [_pct(r.get(f"share_by_{y}_p90")) for y in YEARS], "half": [_r(r.get("half_year_fast_from_curve", r.half_year_p10), 1), _r(r.half_year_central_from_curve, 1), _r(r.get("half_year_slow_from_curve", r.half_year_p90), 1)],
+            "db": _db(r), "db10": _db(r, "p10"), "db90": _db(r, "p90"), "cap": _pct(r.get("ceiling_ai_share")), "hq": [_r(r.get("quarter_done_year_fast_from_curve"), 1), _r(r.get("quarter_done_year_central_from_curve"), 1), _r(r.get("quarter_done_year_slow_from_curve"), 1)], "hd": [_r(r.get("half_done_year_fast_from_curve"), 1), _r(r.get("half_done_year_central_from_curve"), 1), _r(r.get("half_done_year_slow_from_curve"), 1)], "ech": None}
+
+
+def _levels_payload(levels, lcorr):
+    """The O*NET skill-level test in the page's shape (shared by the US and the further countries)."""
+    if levels is None:
+        return None
+
+    def band_rows(df):
+        out = {}
+        for _, r in df.iterrows():
+            out[r.band] = [r.band, r.band_name, _r(r.n_occupations), _pct(r.share_weight_observed), _pct(r.observed_automation), _pct(r.done_by_2035), _pct(r.get("done_by_2035_p10")), _pct(r.get("done_by_2035_p90")), [_r(r.get("quarter_done_year_fast_from_curve"), 1), _r(r.get("quarter_done_year_central_from_curve"), 1), _r(r.get("quarter_done_year_slow_from_curve"), 1)]]
+        return [out.get(b) for b in ("L", "M", "H")]
+    corr = lcorr.set_index("element_name") if lcorr is not None else None
+    skills = []
+    for name, g in levels[levels.family != "index"].groupby("element_name", sort=True):
+        cr = corr.loc[name] if (corr is not None and name in corr.index) else None
+        skills.append([name, g.family.iloc[0], _r(cr.rho_level_vs_done_2035, 2) if cr is not None and pd.notna(cr.rho_level_vs_done_2035) else None, _r(cr.rho_level_vs_seen, 2) if cr is not None and pd.notna(cr.rho_level_vs_seen) else None, _r(cr.n_occupations) if cr is not None else None, band_rows(g)])
+    ix = levels[levels.family == "index"]
+    cr = corr.loc["All essential skills (average level)"] if (corr is not None and "All essential skills (average level)" in corr.index) else None
+    return {"index": band_rows(ix), "index_rho": _r(cr.rho_level_vs_done_2035, 2) if cr is not None else None, "index_rho_seen": _r(cr.rho_level_vs_seen, 2) if cr is not None else None, "index_n": _r(cr.n_occupations) if cr is not None else None, "skills": skills, "bands": [["L", "low or not needed (level below 2.5)"], ["M", "middle (2.5 to 4.5)"], ["H", "high (4.5 and above)"]]}
+
+
+def _task_item(text, f, score, onet_text, extra=None):
+    """One matched task line in the key-task shape the page already renders:
+    [text, status, central year, barrier, match score, O*NET task text, tier, autonomy, rubric barrier, AI share, ...extra]."""
+    item = [str(text)[:170], STATUS_CODE.get(f.status if f is not None else None, 3), _r(f.disrupt_year_p50, 1) if f is not None else None, BARRIER_CODE.get(f.barrier_type if f is not None else None, 0), _r(score, 2), str(onet_text)[:110] if isinstance(onet_text, str) else None,
+            _code(TIER_CODE, f.get("evidence_tier")) if f is not None else None, _code(AUTONOMY_CODE, f.get("autonomy_2026")) if f is not None else None, _code(RBARRIER_CODE, f.get("barrier_2026")) if f is not None else None, _pct(f.get("ai_share")) if f is not None else None]
+    return item + (extra or [])
+
+
+def build_country_payloads(onet_list, ssoc_list, stats, us_payload):
+    """Per further country: the page payload and the on-demand task file. Returns ({code: payload}, {code: tasks})."""
+    from . import countries as cn
+
+    payloads, files = {}, {}
+    for code, spec in cn.SPECS.items():
+        p = spec.prefix
+        if not (_exists(f"{p}weighted") and _exists(f"{p}economy_exposure")):
+            continue
+        payloads[code], files[code] = build_country_payload(spec, onet_list, ssoc_list, stats, us_payload)
+    return payloads, files
+
+
+def build_country_payload(spec, onet_list, ssoc_list, stats, us_payload):
+    p = spec.prefix
+    cs = ((stats.get("countries") or {}).get(spec.code)) or {}
+    t = load(f"{p}weighted").sort_values("nat_code")
+    econ = load(f"{p}economy_exposure")
+    xw = load(f"{p}onet_crosswalk")
+    outc = load(f"{p}outcomes").set_index(spec.code_col) if _exists(f"{p}outcomes") else None
+    sh = load(f"{p}adoption_shift_national").set_index("nat_code").adoption_shift_years if _exists(f"{p}adoption_shift_national") else pd.Series(dtype=float)
+    iv = load(f"{p}industry_view") if _exists(f"{p}industry_view") else None
+    bands = load(f"{p}skill_level_bands") if _exists(f"{p}skill_level_bands") else None
+    levels = load(f"{p}onet_skill_level_exposure") if _exists(f"{p}onet_skill_level_exposure") else None
+    lcorr = load(f"{p}onet_skill_level_correlations") if _exists(f"{p}onet_skill_level_correlations") else None
+    tasks = load(f"{p}tasks").rename(columns={spec.code_col: "nat_code"}) if _exists(f"{p}tasks") else None
+    links = load(f"{p}task_onet_task") if _exists(f"{p}task_onet_task") else None
+    ft = (load(f"forecast_tasks_{p.rstrip('_')}") if _exists(f"forecast_tasks_{p.rstrip('_')}") else load("forecast_tasks")).set_index("task_id")
+    onet_tasks = load("onet_tasks").set_index("task_id").task_statement
+    occ_title = {e["c"]: e["t"] for e in onet_list}
+    us_idx = {e["c"]: i for i, e in enumerate((us_payload or {}).get("occ") or [])}
+    us_occ = (us_payload or {}).get("occ") or []
+    # the heaviest O*NET occupations in each code (by the share of the code's workers), and counterparts
+    top_onet, top_code = {}, {}
+    for c, g in xw.sort_values("weight_rev", ascending=False).groupby("nat_code"):
+        top_onet[c] = [[occ_title.get(o, o), _pct(w)] for o, w in zip(g.onet_soc_code.head(4), g.weight_rev.head(4))]
+        top_code[c] = g.onet_soc_code.iloc[0]
+    n_tasks = tasks.groupby("nat_code").size().to_dict() if tasks is not None else {}
+    std_by_soc = {}
+    standards, routes = None, None
+    if spec.code == "GBR" and _exists("uk_ifate_standards") and _exists("uk_ifate_standard_soc"):
+        stds = load("uk_ifate_standards").reset_index(drop=True)
+        ss = load("uk_ifate_standard_soc")
+        soc_of = {r: [[c, _r(s, 2)] for c, s in zip(g.soc_code, g.share)] for r, g in ss.groupby("reference")}
+        standards = [{"ref": r.reference, "title": r.title, "lvl": _r(r.level), "route": r.route, "url": r.url, "soc": soc_of.get(r.reference, []), "nd": int(len(r.duties)), "nk": int(len(r.knowledges)), "ns": int(len(r.skills)), "nb": int(len(r.behaviours)), "dur": _r(r.typical_duration_months), "m": "title" if (soc_of.get(r.reference) and any(ss[(ss.reference == r.reference)].method == "title_in_coding_index")) else "text"} for r in stds.itertuples()]
+        std_index = {s["ref"]: i for i, s in enumerate(standards)}
+        for r in ss.itertuples():
+            std_by_soc.setdefault(r.soc_code, []).append(std_index[r.reference])
+        if _exists("uk_ifate_route_view"):
+            rv = load("uk_ifate_route_view")
+            routes = [{"route": r.route, "n": _r(r.n_standards), "nsoc": _r(r.n_soc_codes), "emp": _r(r.employment_thousands, 1), "levels": r.levels, "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "db30": _pct(r.done_by_2030), "db35": _pct(r.done_by_2035), "db35f": _pct(r.done_by_2035_p10), "db35s": _pct(r.done_by_2035_p90), "sb35": _pct(r.share_by_2035), "cap": _pct(r.ceiling_ai_share), "hq": [_r(r.quarter_done_year_p10, 1), _r(r.quarter_done_year_p50, 1), _r(r.quarter_done_year_p90, 1)]} for r in rv.itertuples()]
+    yf, yt = (cs.get("outcomes") or {}).get("years") or [None, None]
+    occ_rows = []
+    for _, r in t.iterrows():
+        o = outc.loc[r.nat_code] if (outc is not None and r.nat_code in outc.index) else None
+        oc = None
+        if o is not None:
+            wcols = [c for c in o.index if c.startswith("wage_") and c.split("_")[1].isdigit()]
+            wcols = sorted(wcols, key=lambda c: int(c.split("_")[1]))
+            oc = [_r(o.get(f"emp_{yf}"), 1), _r(o.get(f"emp_{yt}"), 1), _r(o.get("emp_change_pct"), 1), _r(o.get(wcols[0])) if wcols else None, _r(o.get(wcols[-1])) if wcols else None, _r(o.get("wage_change_pct"), 1)]
+        top = top_code.get(r.nat_code)
+        ui = us_idx.get(top)
+        occ_rows.append({"c": r.nat_code, "t": r.nat_title, "mg": r.major_group, "sm": r.submajor_label, "smn": r.submajor_name if isinstance(r.submajor_name, str) else None, "lvl": _r(r.skill_level, 1) if pd.notna(r.skill_level) else None, "emp": _r(r.employment_thousands, 1), "wage": _r(r.get("wage_median", r.get("wage_weekly"))), "ws": r.wage_source if isinstance(r.wage_source, str) else None,
+                         "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "ai": _r(r.get("ai_applicability_score"), 2), "sb": _sb(r) if pd.notna(r.get("share_by_2035")) else None, "sb10": _sbq(r, "p10"), "sb90": _sbq(r, "p90"), "tiers": _tiers(r), "shift": _r(sh.get(r.nat_code), 1) if r.nat_code in sh.index else None, "h": _half(r),
+                         "db": _db(r), "db10": _db(r, "p10"), "db90": _db(r, "p90"), "cap": _pct(r.get("ceiling_ai_share")), "hq": _done_years(r, "quarter"), "hd": _done_years(r, "half"), "oc": oc, "bi": _r(r.get("barrier_index"), 2) if pd.notna(r.get("barrier_index")) else None,
+                         "onet": top_onet.get(r.nat_code, []), "nt": int(n_tasks.get(r.nat_code, 0)), "us": ui, "sg": (us_occ[ui].get("sg") if ui is not None else None), "std": std_by_soc.get(r.nat_code, [])})
+    economy = [_econ_payload_row(r) for _, r in econ.iterrows()]
+    industries = None
+    if iv is not None:
+        industries = [{"code": r.industry, "name": r.label, "es": _pct(r.employment_share), "ai": _r(r.ai_use_latest_pct, 1) if pd.notna(r.ai_use_latest_pct) else None, "aid": _r(r.ai_use_latest_date, 2) if pd.notna(r.ai_use_latest_date) else None, "ai0": _r(r.ai_use_first_pct, 1) if pd.notna(r.ai_use_first_pct) else None, "aid0": _r(r.ai_use_first_date, 2) if pd.notna(r.ai_use_first_date) else None, "shift": _r(r.anchor_shift_years, 1), "sv": bool(r.surveyed),
+                       "oa": _pct(r.get("observed_automation")), "so": _pct(r.get("share_weight_observed")), "sp": _pct(r.get("share_weight_physical")), "db30": _pct(r.get("done_by_2030")), "db35": _pct(r.get("done_by_2035")), "db35f": _pct(r.get("done_by_2035_p10")), "db35s": _pct(r.get("done_by_2035_p90")), "sb35": _pct(r.get("share_by_2035")), "cap": _pct(r.get("ceiling_ai_share")), "hq": [_r(r.get("quarter_done_year_p10"), 1), _r(r.get("quarter_done_year_p50"), 1), _r(r.get("quarter_done_year_p90"), 1)]} for r in iv.itertuples()]
+    levels_national = None
+    if bands is not None:
+        bs = cs.get("skill_levels_national") or {}
+        levels_national = {"bands": [[_r(r.level), r.level_name, _r(r.n_codes), _pct(r.employment_share), _pct(r.share_weight_observed), _pct(r.observed_automation), _pct(r.done_by_2035), _pct(r.get("done_by_2035_p10")), _pct(r.get("done_by_2035_p90")), [_r(r.get("quarter_done_year_p10"), 1), _r(r.get("quarter_done_year_p50"), 1), _r(r.get("quarter_done_year_p90"), 1)]] for _, r in bands.sort_values("level").iterrows()],
+                           "rho": _r(bs.get("rho_level_vs_done_2035"), 2) if bs.get("rho_level_vs_done_2035") is not None else None, "rho_seen": _r(bs.get("rho_level_vs_seen"), 2) if bs.get("rho_level_vs_seen") is not None else None, "n": bs.get("n_codes"), "reading": bs.get("reading"), "max_level": int(max(spec.skill_level_names))}
+    lead = cs.get("lead") or {}
+    adoption = [[_r(x.get("date"), 2), _r(x.get("pct"), 1), x.get("label")] for x in (lead.get("points") or [])]
+    # O*NET occupation (page order) -> the national code holding most of its workers, for task search results
+    nat_idx = {r["c"]: i for i, r in enumerate(occ_rows)}
+    emp_of = {r["c"]: (r["emp"] or 0.0) for r in occ_rows}
+    best = {}
+    for o, g in xw.groupby("onet_soc_code"):
+        k = max(((emp_of.get(c, 0.0) * float(w), c) for c, w in zip(g.nat_code, g.weight_rev.fillna(0))), default=None)
+        if k and k[1] in nat_idx:
+            best[o] = nat_idx[k[1]]
+    o2n = [best.get(e["c"]) for e in onet_list]
+    payload = {"code": spec.code, "name": spec.name, "adj": spec.adjective, "cls": spec.classification, "cur": spec.currency, "emp_label": spec.emp_label, "wage_label": spec.wage_label, "wage_period": spec.wage_period, "adoption_source": spec.adoption_source, "industry_label": spec.industry_label, "major_names": spec.major_names,
+               "occ": occ_rows, "economy": economy, "industries": industries, "levels_national": levels_national, "levels": _levels_payload(levels, lcorr), "outcomes": cs.get("outcomes") or {}, "weights": cs.get("weights") or {}, "shift_range": cs.get("shift_range"), "lead": _r(lead.get("lead_years"), 1) if lead.get("lead_years") is not None else None, "lead_points_used": lead.get("n_points_used"), "adoption": adoption, "adoption_now": _r(lead.get("latest_pct"), 1) if lead.get("latest_pct") is not None else None, "adoption_now_date": _r(lead.get("latest_date"), 2) if lead.get("latest_date") is not None else None,
+               "standards": standards, "routes": routes, "industry_shifts": cs.get("industry_shifts") or {}, "o2n": o2n}
+    # on-demand file: the official task list per code, matched to O*NET tasks, on this country's timing
+    files = {"occ": {}, "std": {}}
+    if tasks is not None and links is not None:
+        top_links = links[links["rank"] == 1].set_index(["nat_code", "task_seq"])
+        desc = load("au_descriptions").set_index("anzsco_code") if (spec.code == "AUS" and _exists("au_descriptions")) else None
+        st_desc = load("uk_structure").set_index("soc_code") if (spec.code == "GBR" and _exists("uk_structure")) else None
+        for c, g in tasks.groupby("nat_code"):
+            items = []
+            for r in g.sort_values("task_seq").itertuples():
+                key = (c, int(r.task_seq))
+                if key not in top_links.index:
+                    continue
+                lk = top_links.loc[key]
+                f = ft.loc[lk.task_id] if lk.task_id in ft.index else None
+                items.append(_task_item(r.task, f, lk.score, onet_tasks.get(lk.task_id), [1 if bool(lk.in_mapped_occ) else 0]))
+            items.sort(key=lambda it: (it[2] is None, it[2] or 9999))
+            entry = {"g": [["Official tasks", items]]}
+            if desc is not None and c in desc.index:
+                entry["desc"] = str(desc.loc[c].description)[:600]
+                entry["skill"] = str(desc.loc[c].skill_text)[:400]
+            if st_desc is not None and c in st_desc.index:
+                entry["desc"] = str(st_desc.loc[c].description or "")[:600]
+                entry["entry"] = str(st_desc.loc[c].entry_routes or "")[:500]
+            files["occ"][c] = entry
+    if standards is not None and _exists("uk_ifate_duty_onet_task"):
+        stds = load("uk_ifate_standards").set_index("reference")
+        dl = load("uk_ifate_duty_onet_task").set_index(["reference", "duty_seq"])
+        for s in standards:
+            r = stds.loc[s["ref"]]
+            duties = []
+            for i, d in enumerate(r.duties):
+                key = (s["ref"], i)
+                if key not in dl.index:
+                    continue
+                lk = dl.loc[key]
+                f = ft.loc[lk.task_id] if lk.task_id in ft.index else None
+                duties.append(_task_item(d, f, lk.score, onet_tasks.get(lk.task_id), [1 if (i < len(r.duty_core) and bool(r.duty_core[i])) else 0]))
+            duties.sort(key=lambda it: (it[2] is None, it[2] or 9999))
+            files["std"][s["ref"]] = {"d": duties, "k": [str(x)[:220] for x in r.knowledges], "s": [str(x)[:220] for x in r.skills], "b": [str(x)[:220] for x in r.behaviours], "sum": str(r.summary)[:600]}
+    return payload, files

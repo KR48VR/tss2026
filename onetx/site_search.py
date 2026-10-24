@@ -42,7 +42,7 @@ def _write_b64(path: Path, raw: bytes) -> None:
     path.write_text(base64.b64encode(raw).decode("ascii"))
 
 
-def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: list[list], onet_order: list[str] | None = None) -> dict:
+def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: list[list], onet_order: list[str] | None = None, national: dict | None = None) -> dict:
     """ssoc_order: SSOC codes in the page's order; role_ids: role ids in the page's order;
     key_tasks: the per-role grouped key tasks exactly as written to kt.json."""
     SITE.mkdir(parents=True, exist_ok=True)
@@ -90,7 +90,27 @@ def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: l
     for _, t in tasks.iterrows():
         f = fc.loc[t.task_id]
         onet_tasks.append([str(t.task_statement)[:160], STATUS_CODE.get(f.status, 3), _r(f.disrupt_year_p50, 1), occ.get(t.onet_soc_code, ""), top_ssoc.get(t.onet_soc_code, []), TIER_CODE.get(f.get("evidence_tier"), None), onet_idx.get(t.onet_soc_code)])
-    (SITE / "search.json").write_text(json.dumps({"alt": alt, "onet": onet_tasks, "us": us_alt}, ensure_ascii=True, separators=(",", ":")))
+    # ---- further countries: alternative titles per national code (ABS index of titles; ONS coding index)
+    nat_alt, nat_titles, nat_codes = {}, {}, list((national or {}).keys())
+    for code, order in (national or {}).items():
+        idx = {c: i for i, c in enumerate(order)}
+        rows, seen_n = [], set()
+        if code == "AUS":
+            from . import au_labour as au
+            w = load("au_weights").set_index("anzsco_code").anzsco_title
+            for _, r in au.load_title_index().iterrows():
+                if r.unit in idx and (r.unit, r.title.casefold()) not in seen_n and r.title.casefold() != str(w.get(r.unit, "")).casefold():
+                    seen_n.add((r.unit, r.title.casefold())); rows.append([idx[r.unit], r.title])
+            nat_titles[code] = [str(w.get(c, c)) for c in order]
+        elif code == "GBR":
+            from . import uk_labour as uk
+            w = load("uk_weights").set_index("soc_code").soc_title
+            for _, r in uk.coding_index_titles().iterrows():
+                if r.soc_code in idx and (r.soc_code, r.key) not in seen_n and r.title.casefold() != str(w.get(r.soc_code, "")).casefold():
+                    seen_n.add((r.soc_code, r.key)); rows.append([idx[r.soc_code], r.title])
+            nat_titles[code] = [str(w.get(c, c)) for c in order]
+        nat_alt[code] = rows
+    (SITE / "search.json").write_text(json.dumps({"alt": alt, "onet": onet_tasks, "us": us_alt, "nat": nat_alt}, ensure_ascii=True, separators=(",", ":")))
 
     # ---- items to embed
     from model2vec import StaticModel
@@ -116,11 +136,16 @@ def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: l
         occ_titles = load("onet_occupations").set_index("onet_soc_code").title
         for c in onet_order:
             texts.append(str(occ_titles.get(c, c))); refs.append([5, onet_idx[c]])
+    for k, code in enumerate(nat_codes):
+        for i, t in enumerate(nat_titles.get(code, [])):
+            texts.append(t); refs.append([6, k, i])
+        for i, (ni, t) in enumerate(nat_alt.get(code, [])):
+            texts.append(t); refs.append([7, k, i])
     vecs = m.encode(texts, normalize=True).astype(np.float32)
     q, sc = _quantise(vecs)
     _write_b64(SITE / "emb.bin.txt", q.tobytes())
     _write_b64(SITE / "emb_scales.bin.txt", sc.tobytes())
-    (SITE / "emb.json").write_text(json.dumps({"n": len(refs), "dim": int(vecs.shape[1]), "refs": refs}, separators=(",", ":")))
+    (SITE / "emb.json").write_text(json.dumps({"n": len(refs), "dim": int(vecs.shape[1]), "refs": refs, "nat": nat_codes}, separators=(",", ":")))
 
     # ---- model export: vocabulary + int8 table
     tok = json.loads(m.tokenizer.to_str())
@@ -130,4 +155,4 @@ def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: l
     _write_b64(SITE / "model.bin.txt", tq.tobytes())
     _write_b64(SITE / "model_scales.bin.txt", tsc.tobytes())
     (SITE / "model.json").write_text(json.dumps({"name": MODEL_NAME, "n": int(table.shape[0]), "dim": int(table.shape[1]), "unk_id": int(m.unk_token_id) if m.unk_token_id is not None else 1, "vocab": vocab, "lowercase": tok["normalizer"].get("lowercase", True)}, separators=(",", ":")))
-    return {"alt_titles": len(alt), "us_alt_titles": len(us_alt), "onet_tasks": len(onet_tasks), "items_embedded": len(refs), "dim": int(vecs.shape[1]), "vocab": len(vocab)}
+    return {"alt_titles": len(alt), "us_alt_titles": len(us_alt), "national_alt_titles": {k: len(v) for k, v in nat_alt.items()}, "onet_tasks": len(onet_tasks), "items_embedded": len(refs), "dim": int(vecs.shape[1]), "vocab": len(vocab)}
