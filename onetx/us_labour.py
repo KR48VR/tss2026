@@ -118,9 +118,79 @@ def build_onet_weights(year: int = 2024) -> pd.DataFrame:
     t = t.merge(mg[["onet_soc_code", "major_group"]], on="onet_soc_code", how="left")
     # military and a few residual codes have no ISCO route; keep them out of group tables but in the total
     t["major_group"] = t.major_group.fillna("X")
+    # SOC minor groups (the US counterpart of Singapore's sub-major groups), named from the OEWS file
+    minor = load_oews_minor_groups(year)
+    t["submajor_label"] = t.soc_2018.str[:4] + "000"   # SOC minor group: major digits plus the first digit after the hyphen
+    t["submajor_name"] = t.submajor_label.map(minor.set_index("soc_minor").title)
     t["edition"] = year
-    cols = ["onet_soc_code", "onet_title", "soc_2018", "soc_title", "major_group", "employment_thousands", "employment_method", "wage_median", "wage_source", "wage_top_coded", "wage_value", "edition"]
+    cols = ["onet_soc_code", "onet_title", "soc_2018", "soc_title", "major_group", "submajor_label", "submajor_name", "employment_thousands", "employment_method", "wage_median", "wage_source", "wage_top_coded", "wage_value", "edition"]
     return t[cols].reset_index(drop=True)
+
+
+def load_oews_minor_groups(year: int = 2024) -> pd.DataFrame:
+    """SOC minor groups (codes like 11-1000) with titles and employment, from the OEWS national file."""
+    rows = _oews_rows(year)
+    m = rows[rows.o_group == "minor"].drop_duplicates("soc_2018")
+    return pd.DataFrame({"soc_minor": m.soc_2018.values, "title": m.soc_title.values, "employment": m.employment.values, "year": year})
+
+
+# ---- career clusters and the DOL industry competency models (the US stand-ins for Skills Framework sectors)
+REF = RAW.parent / "reference"
+
+
+def load_career_clusters() -> pd.DataFrame:
+    """O*NET OnLine's 14 career clusters (National Career Clusters Framework) to O*NET occupations, from
+    data/reference/onet_career_clusters_2026.csv (collected from the website; not in the database download)."""
+    path = REF / "onet_career_clusters_2026.csv"
+    if not path.exists():
+        raise FileNotFoundError(path)
+    d = pd.read_csv(path, dtype=str)
+    return d[["cluster_code", "cluster", "onet_soc_code", "onet_title"]].drop_duplicates(["cluster_code", "onet_soc_code"]).reset_index(drop=True)
+
+
+def load_cmc_cluster_crosswalk() -> pd.DataFrame:
+    path = REF / "cmc_models_to_career_clusters.csv"
+    if not path.exists():
+        raise FileNotFoundError(path)
+    return pd.read_csv(path, dtype=str).fillna("")
+
+
+def _sql_rows(path) -> pd.DataFrame:
+    """Rows from an Oracle-style script of 'Insert into "t" ("a", "b") Values (1, 'x');' statements,
+    using each statement's own column list (NULL columns are sometimes left out)."""
+    import re
+
+    s = open(path, encoding="utf-8", errors="ignore").read()
+    out = []
+    for m in re.finditer(r"Insert\s+into\s+\"\w+\"\s*\(([^)]*)\)\s*Values\s*\((.*?)\);", s, flags=re.S | re.I):
+        cols = re.findall(r'"(\w+)"', m.group(1))
+        vals = re.findall(r"'((?:[^']|'')*)'|(-?\d+(?:\.\d+)?)|(NULL)", m.group(2))
+        vals = [v[0].replace("''", "'") if v[0] else (v[1] if v[1] else None) for v in vals]
+        out.append(dict(zip(cols, vals)))
+    return pd.DataFrame(out)
+
+
+def load_competency_models() -> dict:
+    """The Competency Model Clearinghouse database (DOL ETA, Sept 2025) from its SQL scripts: models,
+    tiers, competency blocks, key behaviours and the model-to-block links."""
+    base = RAW / "dol"
+    folders = [p for p in base.glob("CMC Data Downloads*") if p.is_dir()] if base.exists() else []
+    if not folders:
+        raise FileNotFoundError(f"{base}/CMC Data Downloads* (run `python -m onetx fetch`)")
+    d = folders[0]
+    models = _sql_rows(d / "1-cmc_models.sql").reindex(columns=["model_id", "model_name"])
+    tiers = _sql_rows(d / "4-tiers.sql").reindex(columns=["tier_id", "tier_name", "tier_desc", "tier_type_id"])
+    blocks = _sql_rows(d / "5-blocks.sql").reindex(columns=["tier_id", "block_id", "block_name", "block_desc"])
+    kb = _sql_rows(d / "6-keybehaviors.sql").reindex(columns=["block_id", "kb_level_id", "kb_id", "kb_name", "kb_desc", "kb_sort_id"])
+    mb = _sql_rows(d / "7-cmc_model_blocks.sql").reindex(columns=["model_id", "tier_id", "block_id"])
+    for df, cols in [(models, ["model_id"]), (tiers, ["tier_id", "tier_type_id"]), (blocks, ["tier_id", "block_id"]), (kb, ["block_id", "kb_level_id", "kb_id", "kb_sort_id"]), (mb, ["model_id", "tier_id", "block_id"])]:
+        for c in cols:
+            df[c] = pd.to_numeric(df[c], errors="coerce").astype("Int64")
+    tiers["tier_type"] = tiers.tier_type_id.map({1: "foundation", 2: "industry", 3: "occupation"})
+    import re as _re
+    kb["kb_desc"] = kb.kb_desc.fillna("").map(lambda x: _re.sub(r"<[^>]+>", " ", x).strip())
+    blocks["block_desc"] = blocks.block_desc.fillna("").map(lambda x: _re.sub(r"<[^>]+>", " ", x).strip())
+    return {"models": models, "tiers": tiers, "blocks": blocks, "key_behaviors": kb, "model_blocks": mb}
 
 
 def onet_sector_shifts(sector_levels: pd.DataFrame, year: int = 2024) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -148,8 +218,8 @@ def employment_change(year_from: int = 2023, year_to: int = 2024) -> pd.DataFram
     a = load_oews_national(year_from)[["soc_2018", "employment", "wage_median_usd"]].rename(columns={"employment": f"emp_{year_from}", "wage_median_usd": f"wage_{year_from}"})
     b = load_oews_national(year_to)[["soc_2018", "soc_title", "employment", "wage_median_usd"]].rename(columns={"employment": f"emp_{year_to}", "wage_median_usd": f"wage_{year_to}"})
     d = b.merge(a, on="soc_2018", how="inner")
-    d["emp_change_pct"] = 100.0 * (d[f"emp_{year_to}"] / d[f"emp_{year_from}"] - 1.0)
-    d["wage_change_pct"] = 100.0 * (d[f"wage_{year_to}"] / d[f"wage_{year_from}"] - 1.0)
+    d["emp_change_pct"] = 100.0 * (d[f"emp_{year_to}"] / d[f"emp_{year_from}"].where(d[f"emp_{year_from}"] > 0) - 1.0)
+    d["wage_change_pct"] = 100.0 * (d[f"wage_{year_to}"] / d[f"wage_{year_from}"].where(d[f"wage_{year_from}"] > 0) - 1.0)
     d["year_from"] = year_from
     d["year_to"] = year_to
     return d

@@ -25,7 +25,7 @@ RBARRIER_CODE = {b: i for i, b in enumerate(RUBRIC_BARRIERS)}
 
 
 def _r(x, nd=0):
-    if x is None or (isinstance(x, float) and np.isnan(x)):
+    if x is None or (isinstance(x, float) and (np.isnan(x) or np.isinf(x))):
         return None
     return round(float(x), nd) if nd else int(round(float(x)))
 
@@ -219,6 +219,11 @@ def build_data(companion_url: str | None = None) -> dict:
         f = focc.loc[r.onet_soc_code] if r.onet_soc_code in focc.index else None
         onet_list.append({"c": r.onet_soc_code, "t": r.title, "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "ms": _r(r.ai_applicability_score, 2), "oe": _r(r.openai_exposure_beta_gpt4, 2), "g": r.google_atlas_flag if isinstance(r.google_atlas_flag, str) else None, "np": _r(r.n_providers_positive), "h": _half(f) if f is not None else [None, None, None], "sb": _sb(f) if f is not None else None, "sb10": _sbq(f, "p10"), "sb90": _sbq(f, "p90"), "tiers": _tiers(f), "shift": _r(sh_onet.get(r.onet_soc_code), 1) if r.onet_soc_code in sh_onet.index else None, "db": _db(f), "cap": _pct(f.ceiling_ai_share) if f is not None else None, "hq": _done_years(f, "quarter"), "gd": bool(r.gdpval_covered)})
 
+    # ---- United States: occupations with US weights and timing, clusters, competency models, levels
+    us_payload, us_tasks = None, None
+    if us_econ is not None and us_w is not None and focc_us is not None:
+        us_payload, us_tasks = build_us_payload(occ, o2s, us_w, focc_us, us_econ, onet_list, stats, ssoc_list)
+
     skills_list = [{"f": r.family, "name": r.element_name, "n": _r(r.n_occupations), "oa": _pct(r.via_occupations_observed_automation), "oaa": _pct(r.via_activities_observed_automation), "h": _half(r), "sb": _sb(r), "sb10": _sbq(r, "p10"), "sb90": _sbq(r, "p90"), "db": _db(r), "db10": _db(r, "p10"), "db90": _db(r, "p90"), "hq": _done_years(r, "quarter"), "cap": _pct(r.get("ceiling_ai_share"))} for _, r in skills.sort_values(["family", "element_name"]).iterrows()]
     gwa_list = [{"name": r["name"], "n": _r(r.n_tasks), "so": _pct(r.share_tasks_observed), "oa": _pct(r.observed_automation), "ms": _r(r.ms_share * 100, 1) if pd.notna(r.ms_share) else None, "h": _half(r), "sb": _sb(r), "sb10": _sbq(r, "p10"), "sb90": _sbq(r, "p90"), "db": _db(r), "db10": _db(r, "p10"), "db90": _db(r, "p90"), "hq": _done_years(r, "quarter"), "cap": _pct(r.get("ceiling_ai_share"))} for _, r in act[act.level == "gwa"].sort_values("observed_automation", ascending=False).iterrows()]
     sector_list = [{"sector": r.sector, "n": _r(r.n_roles), "oat": _pct(r.observed_automation_via_tasks), "sko": _pct(r.share_key_tasks_observed), "skp": _pct(r.share_key_tasks_physical), "sb30": _pct(r.share_by_2030), "sb35": _pct(r.share_by_2035), "sb30f": _pct(r.get("share_by_2030_p10")), "sb30s": _pct(r.get("share_by_2030_p90")), "sb35f": _pct(r.get("share_by_2035_p10")), "sb35s": _pct(r.get("share_by_2035_p90")), "h": [_r(r.get("half_year_p10_median_role"), 1), _r(r.half_year_p50_median_role, 1), _r(r.half_year_p90_median_role, 1)], "db30": _pct(r.get("done_by_2030")), "db35": _pct(r.get("done_by_2035")), "db30f": _pct(r.get("done_by_2030_p10")), "db30s": _pct(r.get("done_by_2030_p90")), "db35f": _pct(r.get("done_by_2035_p10")), "db35s": _pct(r.get("done_by_2035_p90")), "cap": _pct(r.get("ceiling_ai_share")), "hq": [_r(r.get("quarter_done_year_p10"), 1), _r(r.get("quarter_done_year_p50"), 1), _r(r.get("quarter_done_year_p90"), 1)]} for _, r in sectors.iterrows()]
@@ -306,7 +311,172 @@ def build_data(companion_url: str | None = None) -> dict:
             "us_outcomes": _rnd(usa.get("outcomes") or {}),
             "us_weights": _rnd(usa.get("weights") or {}),
         }
-    return {"meta": meta, "economy": economy, "ssoc": ssoc_list, "roles": role_list, "onet": onet_list, "skills": skills_list, "gwa": gwa_list, "sectors": sector_list, "compare": compare, "_key_tasks": key_tasks}
+    return {"meta": meta, "economy": economy, "ssoc": ssoc_list, "roles": role_list, "onet": onet_list, "skills": skills_list, "gwa": gwa_list, "sectors": sector_list, "compare": compare, "us": us_payload, "_key_tasks": key_tasks, "_us_tasks": us_tasks}
+
+
+def _exists(name):
+    return (PROCESSED / f"{name}.parquet").exists()
+
+
+def build_us_payload(occ, o2s, us_w, focc_us, us_econ, onet_list, stats, ssoc_list):
+    """The US side of the page: per-occupation entries (weights, timing, outcomes, clusters, the Singapore
+    counterpart), career clusters with their competency models, the skill-level test, and the on-demand
+    file with each occupation's tasks, skills with levels, software, related occupations and sectors."""
+    cs = (stats.get("countries") or {}).get("USA") or {}
+    order = [e["c"] for e in onet_list]
+    idx = {c: i for i, c in enumerate(order)}
+    clusters = load("us_career_clusters") if _exists("us_career_clusters") else None
+    cl_view = load("us_cluster_view") if _exists("us_cluster_view") else None
+    levels = load("us_skill_level_exposure") if _exists("us_skill_level_exposure") else None
+    lcorr = load("us_skill_level_correlations") if _exists("us_skill_level_correlations") else None
+    usoc = load("us_outcomes_soc").set_index("soc_2018") if _exists("us_outcomes_soc") else None
+    sh_us = load("us_adoption_shift_onet").set_index("onet_soc_code").adoption_shift_years if _exists("us_adoption_shift_onet") else pd.Series(dtype=float)
+    mix = load("us_soc_sector_mix") if _exists("us_soc_sector_mix") else None
+    jz = load("onet_job_zones").set_index("onet_soc_code").job_zone
+    cl_by_occ = clusters.groupby("onet_soc_code").cluster_code.apply(list).to_dict() if clusters is not None else {}
+    cl_names = clusters.drop_duplicates("cluster_code").set_index("cluster_code").cluster.to_dict() if clusters is not None else {}
+    ssoc_idx = {e["c"]: i for i, e in enumerate(ssoc_list)}
+    # Singapore counterpart: the SSOC code accounting for the most Singapore workers in this occupation
+    # (resident employment x the share of the occupation that maps to the code), mirroring the US pick
+    sg_emp = {e["c"]: (e.get("emp") or 0.0) for e in ssoc_list}
+    sg_top = {}
+    for c, g in o2s.groupby("onet_soc_code"):
+        best, best_k = None, -1.0
+        for code, wr in zip(g.ssoc_code, g.weight_rev.fillna(0)):
+            if code in ssoc_idx:
+                k = float(sg_emp.get(code, 0.0)) * float(wr)
+                if k > best_k:
+                    best, best_k = ssoc_idx[code], k
+        if best is not None:
+            sg_top[c] = best
+    occ_rows = []
+    for e in onet_list:
+        c = e["c"]
+        w = us_w.loc[c] if c in us_w.index else None
+        f = focc_us.loc[c] if c in focc_us.index else None
+        o = usoc.loc[w.soc_2018] if (w is not None and usoc is not None and w.soc_2018 in usoc.index) else None
+        occ_rows.append({"c": c, "t": e["t"], "soc": w.soc_2018 if w is not None else None, "mg": w.major_group if w is not None else None, "sm": w.submajor_label if w is not None else None, "smn": w.submajor_name if (w is not None and isinstance(w.submajor_name, str)) else None,
+                         "jz": _r(jz.get(c)) if pd.notna(jz.get(c, np.nan)) else None, "emp": _r(w.employment_thousands, 1) if w is not None and pd.notna(w.employment_thousands) else None, "wage": _r(w.wage_median) if w is not None and pd.notna(w.wage_median) else None, "wtop": bool(w.wage_top_coded) if w is not None else False, "wsrc": w.wage_source if w is not None and isinstance(w.wage_source, str) else None,
+                         "oa": e["oa"], "so": e["so"], "sp": e["sp"], "ms": e["ms"], "oe": e["oe"], "g": e["g"], "np": e["np"], "gd": e["gd"],
+                         "sb": _sb(f) if f is not None else None, "sb10": _sbq(f, "p10"), "sb90": _sbq(f, "p90"), "db": _db(f), "db10": _db(f, "p10"), "db90": _db(f, "p90"), "cap": _pct(f.ceiling_ai_share) if f is not None else None, "hq": _done_years(f, "quarter"), "hd": _done_years(f, "half"), "h": _half(f) if f is not None else [None, None, None], "tiers": _tiers(f), "bi": _r(f.barrier_index, 2) if f is not None else None, "shift": _r(sh_us.get(c), 1) if c in sh_us.index else None,
+                         "oc": [_r(o.emp_2023), _r(o.emp_2024), _r(o.emp_change_pct, 1), _r(o.wage_2023), _r(o.wage_2024), _r(o.wage_change_pct, 1)] if o is not None else None,
+                         "cl": cl_by_occ.get(c, []), "sg": sg_top.get(c)})
+    # economy rows (same shape as Singapore's)
+    def _row(r):
+        return {"scope": r.scope, "level": r.level, "name": r.scope_name, "w": "emp" if r.weighting == "employment" else "wage", "total": _r(r.weight_total / (1 if r.weighting == "employment" else 1000), 1), "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "sb": _sb(r), "sb10": [_pct(r.get(f"share_by_{y}_p10")) for y in YEARS], "sb90": [_pct(r.get(f"share_by_{y}_p90")) for y in YEARS], "half": [_r(r.get("half_year_fast_from_curve", r.half_year_p10), 1), _r(r.half_year_central_from_curve, 1), _r(r.get("half_year_slow_from_curve", r.half_year_p90), 1)],
+                "db": _db(r), "db10": _db(r, "p10"), "db90": _db(r, "p90"), "cap": _pct(r.get("ceiling_ai_share")), "hq": [_r(r.get("quarter_done_year_fast_from_curve"), 1), _r(r.get("quarter_done_year_central_from_curve"), 1), _r(r.get("quarter_done_year_slow_from_curve"), 1)], "hd": [_r(r.get("half_done_year_fast_from_curve"), 1), _r(r.get("half_done_year_central_from_curve"), 1), _r(r.get("half_done_year_slow_from_curve"), 1)], "ech": None}
+    economy = [_row(r) for _, r in us_econ.iterrows()]
+    # clusters with their occupations and the matched competency models
+    cl_list, cmc_blocks = [], {}
+    if cl_view is not None:
+        emp_by = us_w.employment_thousands
+        models = load("cmc_models") if _exists("cmc_models") else None
+        xw = load("cmc_models_to_clusters") if _exists("cmc_models_to_clusters") else None
+        blocks = load("cmc_blocks") if _exists("cmc_blocks") else None
+        mb = load("cmc_model_blocks") if _exists("cmc_model_blocks") else None
+        kb = load("cmc_key_behaviors") if _exists("cmc_key_behaviors") else None
+        tiers = load("cmc_tiers").set_index("tier_id").tier_name.to_dict() if _exists("cmc_tiers") else {}
+        for _, r in cl_view.iterrows():
+            code = str(r.cluster_code)
+            occs = clusters[clusters.cluster_code == code].onet_soc_code
+            occs = sorted([c for c in occs if c in idx], key=lambda c: -(float(emp_by.get(c, 0)) if pd.notna(emp_by.get(c, np.nan)) else 0.0))
+            model_names = xw[xw.cluster_code == code].model_name.tolist() if xw is not None else []
+            cl_list.append({"code": code, "name": r.cluster, "n": _r(r.n_occupations), "emp": _r(r.employment_thousands, 1), "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "sb30": _pct(r.share_by_2030), "sb35": _pct(r.share_by_2035), "sb35f": _pct(r.get("share_by_2035_p10")), "sb35s": _pct(r.get("share_by_2035_p90")), "db30": _pct(r.done_by_2030), "db30f": _pct(r.get("done_by_2030_p10")), "db30s": _pct(r.get("done_by_2030_p90")), "db35": _pct(r.done_by_2035), "db35f": _pct(r.get("done_by_2035_p10")), "db35s": _pct(r.get("done_by_2035_p90")), "cap": _pct(r.ceiling_ai_share), "hq": [_r(r.get("quarter_done_year_fast_from_curve"), 1), _r(r.get("quarter_done_year_central_from_curve"), 1), _r(r.get("quarter_done_year_slow_from_curve"), 1)], "h": [_r(r.get("half_year_fast_from_curve"), 1), _r(r.get("half_year_central_from_curve"), 1), _r(r.get("half_year_slow_from_curve"), 1)], "occ": [idx[c] for c in occs], "models": model_names})
+            if models is not None and model_names:
+                out_blocks = []
+                for mname in model_names:
+                    mid = models[models.model_name == mname].model_id
+                    if not len(mid):
+                        continue
+                    bl = mb[mb.model_id == int(mid.iloc[0])].merge(blocks, on=["tier_id", "block_id"], how="left").sort_values(["tier_id", "block_id"])
+                    for _, b in bl.iterrows():
+                        t = int(b.tier_id)
+                        kbs = kb[kb.block_id == int(b.block_id)].sort_values("kb_sort_id").kb_name.dropna().astype(str).tolist() if (kb is not None and t >= 4) else []
+                        kbs = [k for k in kbs if k.strip() and k.strip() != str(b.block_name).strip()][:8]
+                        out_blocks.append([mname, t, tiers.get(t, f"Tier {t}"), str(b.block_name), str(b.block_desc)[:220], kbs])
+                cmc_blocks[code] = out_blocks
+    # the skill-level test
+    lv = None
+    if levels is not None:
+        def band_rows(df):
+            out = {}
+            for _, r in df.iterrows():
+                out[r.band] = [r.band, r.band_name, _r(r.n_occupations), _pct(r.share_weight_observed), _pct(r.observed_automation), _pct(r.done_by_2035), _pct(r.get("done_by_2035_p10")), _pct(r.get("done_by_2035_p90")), [_r(r.get("quarter_done_year_fast_from_curve"), 1), _r(r.get("quarter_done_year_central_from_curve"), 1), _r(r.get("quarter_done_year_slow_from_curve"), 1)]]
+            return [out.get(b) for b in ("L", "M", "H")]
+        corr = lcorr.set_index("element_name") if lcorr is not None else None
+        skills = []
+        for name, g in levels[levels.family != "index"].groupby("element_name", sort=True):
+            cr = corr.loc[name] if (corr is not None and name in corr.index) else None
+            skills.append([name, g.family.iloc[0], _r(cr.rho_level_vs_done_2035, 2) if cr is not None and pd.notna(cr.rho_level_vs_done_2035) else None, _r(cr.rho_level_vs_seen, 2) if cr is not None and pd.notna(cr.rho_level_vs_seen) else None, _r(cr.n_occupations) if cr is not None else None, band_rows(g)])
+        ix = levels[levels.family == "index"]
+        cr = corr.loc["All essential skills (average level)"] if (corr is not None and "All essential skills (average level)" in corr.index) else None
+        lv = {"index": band_rows(ix), "index_rho": _r(cr.rho_level_vs_done_2035, 2) if cr is not None else None, "index_rho_seen": _r(cr.rho_level_vs_seen, 2) if cr is not None else None, "index_n": _r(cr.n_occupations) if cr is not None else None, "skills": skills, "bands": [["L", "low or not needed (level below 2.5)"], ["M", "middle (2.5 to 4.5)"], ["H", "high (4.5 and above)"]]}
+    # on-demand file: tasks by work activity, skills with levels and examples, software, related occupations, sectors
+    ft = load("forecast_tasks").set_index("task_id")
+    tasks = load("onet_tasks")
+    td = load("onet_task_dwa")[["task_id", "dwa_id"]].merge(load("onet_activities")[["dwa_id", "gwa_name"]], on="dwa_id", how="left").drop_duplicates("task_id").set_index("task_id").gwa_name
+    ratings = load("onet_descriptor_ratings_v31")
+    ratings = ratings[ratings.family.isin(["essential_skill", "transferable_skill", "knowledge"]) & (ratings.importance >= 3.0)]
+    anchors = onet_level_anchors()
+    sw = load("onet_software_skills_v31") if _exists("onet_software_skills_v31") else None
+    rel = load("onet_related_occupations")
+    rel = rel[rel.relatedness_tier == "Primary-Short"].sort_values("index")
+    titles = occ.set_index("onet_soc_code").title
+    sec_lab = {"11": "Agriculture", "21": "Mining, oil and gas", "22": "Utilities", "23": "Construction", "31": "Manufacturing", "42": "Wholesale trade", "44": "Retail trade", "48": "Transport and warehousing", "51": "Information", "52": "Finance and insurance", "53": "Real estate", "54": "Professional and technical services", "55": "Management of companies", "56": "Administrative and support services", "61": "Education", "62": "Health care and social assistance", "71": "Arts, entertainment and recreation", "72": "Accommodation and food services", "81": "Other services", "99": "Government"}
+    fam_code = {"essential_skill": "E", "transferable_skill": "T", "knowledge": "K"}
+    us_tasks = {"occ": {}, "cmc": cmc_blocks}
+    t_by = {c: g for c, g in tasks.groupby("onet_soc_code")}
+    r_by = {c: g for c, g in ratings.groupby("onet_soc_code")}
+    sw_by = {c: g for c, g in sw.groupby("onet_soc_code")} if sw is not None else {}
+    rel_by = {c: g for c, g in rel.groupby("onet_soc_code")}
+    mix_by = {c: g for c, g in mix.groupby("soc_2018")} if mix is not None else {}
+    for e in onet_list:
+        c = e["c"]
+        g = t_by.get(c)
+        groups = []
+        if g is not None:
+            gg = g.merge(ft[["status", "disrupt_year_p50", "barrier_type", "evidence_tier", "autonomy_2026", "barrier_2026", "ai_share"]], left_on="task_id", right_index=True, how="left")
+            gg["gwa"] = gg.task_id.map(td).fillna("Other tasks")
+            for gwa, grp in gg.sort_values("importance", ascending=False).groupby("gwa", sort=False):
+                items = [[str(k.task_statement)[:170], STATUS_CODE.get(k.status, 3), _r(k.disrupt_year_p50, 1), BARRIER_CODE.get(k.barrier_type, 0), _code(TIER_CODE, k.evidence_tier), _code(AUTONOMY_CODE, k.autonomy_2026), _code(RBARRIER_CODE, k.barrier_2026), _pct(k.ai_share), 1 if k.task_type == "Core" else 0, _r(k.importance, 1)] for _, k in grp.iterrows()]
+                groups.append([str(gwa), items])
+            groups.sort(key=lambda x: -sum((it[9] or 0) for it in x[1]))
+        ks = []
+        rg = r_by.get(c)
+        if rg is not None:
+            for _, k in rg.sort_values(["importance"], ascending=False).head(18).iterrows():
+                ks.append([fam_code.get(k.family, "?"), str(k.element_name), _r(k.importance, 1), _r(k.level, 1) if pd.notna(k.level) else None, anchors.get((k.element_id, round(float(k.level)) if pd.notna(k.level) else None))])
+        sws = []
+        sg_ = sw_by.get(c)
+        if sg_ is not None:
+            sg_ = sg_.assign(hot=(sg_.hot_technology == "Y").astype(int)).sort_values(["hot"], ascending=False).drop_duplicates("workplace_example").head(15)
+            sws = [[str(k.workplace_example), str(k.element_name), int(k.hot)] for _, k in sg_.iterrows()]
+        rels = [[str(k.related_onet_soc_code), str(titles.get(k.related_onet_soc_code, "")), idx.get(k.related_onet_soc_code)] for _, k in rel_by.get(c, pd.DataFrame(columns=rel.columns)).head(6).iterrows()]
+        secs = []
+        w = us_w.loc[c] if c in us_w.index else None
+        if w is not None and w.soc_2018 in mix_by:
+            mg = mix_by[w.soc_2018].sort_values("share", ascending=False).head(4)
+            secs = [[sec_lab.get(str(k.sector), str(k.sector)), _pct(k.share)] for _, k in mg.iterrows()]
+        us_tasks["occ"][c] = {"g": groups, "k": ks, "sw": sws, "rel": rels, "sec": secs}
+    payload = {"occ": occ_rows, "economy": economy, "clusters": cl_list, "levels": lv, "outcomes": (cs.get("outcomes") or {}), "weights": cs.get("weights") or {}, "shift_range": cs.get("shift_range"),
+               "jz_names": {1: "little or no preparation", 2: "some preparation", 3: "medium preparation", 4: "considerable preparation", 5: "extensive preparation"}}
+    return payload, us_tasks
+
+
+def onet_level_anchors() -> dict:
+    """(element_id, level rounded) -> the nearest written example on the 0-7 level scale."""
+    from . import onet
+    try:
+        a = onet.load_level_anchors()
+    except Exception:
+        return {}
+    out = {}
+    for eid, g in a.groupby("element_id"):
+        vals = g.sort_values("anchor_value")
+        for lv in range(0, 8):
+            nearest = vals.iloc[(vals.anchor_value - lv).abs().argmin()]
+            out[(eid, lv)] = f"level {int(nearest.anchor_value)} example: {nearest.anchor_description}"
+    return out
 
 
 def build_site(companion_url: str | None = None) -> Path:
@@ -314,14 +484,17 @@ def build_site(companion_url: str | None = None) -> Path:
     SITE.mkdir(parents=True, exist_ok=True)
     data = build_data(companion_url)
     key_tasks = data.pop("_key_tasks")
+    us_tasks = data.pop("_us_tasks")
     js = json.dumps(data, ensure_ascii=True, separators=(",", ":")).replace("</", "<\\/")
     meaning_js = Path(__file__).with_name("site_meaning.js").read_text().replace("if(typeof module!=='undefined') module.exports=Meaning;", "")
     html = TEMPLATE.read_text().replace("__DATA__", js).replace("__MEANING_JS__", meaning_js)
     out = SITE / "index.html"
     out.write_text(html)
     (SITE / "kt.json").write_text(json.dumps(key_tasks, ensure_ascii=True, separators=(",", ":")))
+    if us_tasks is not None:
+        (SITE / "us_tasks.json").write_text(json.dumps(us_tasks, ensure_ascii=True, separators=(",", ":")))
     from .site_search import build_search_assets
 
-    stats = build_search_assets([s["c"] for s in data["ssoc"]], load("frontier_sfw_roles").role_id.tolist(), key_tasks)
+    stats = build_search_assets([s["c"] for s in data["ssoc"]], load("frontier_sfw_roles").role_id.tolist(), key_tasks, [o["c"] for o in data["onet"]] if data.get("us") else None)
     (SITE / "search_stats.json").write_text(json.dumps(stats))
     return out

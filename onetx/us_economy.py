@@ -90,3 +90,62 @@ def outcome_tests(change: pd.DataFrame, weights: pd.DataFrame, forecast_occ: pd.
     d["tercile"] = pd.qcut(d.done_by_2035.rank(method="first"), 3, labels=["least exposed third", "middle third", "most exposed third"])
     terc = d.groupby("tercile", observed=True).apply(lambda g: 100.0 * (g[f"emp_{yt}"].sum() / g[f"emp_{yf}"].sum() - 1.0), include_groups=False)
     return {"tests": tests, "headline": headline, "n_soc": int(len(d)), "years": [yf, yt], "total_employment_change_pct": 100.0 * (tot_to / tot_from - 1.0), "emp_change_by_exposure_tercile": {str(k): float(v) for k, v in terc.items()}}
+
+
+# ---- career clusters as the US sector lens, and skill levels against AI
+def cluster_view(weights: pd.DataFrame, frontier_occ: pd.DataFrame, forecast_occ: pd.DataFrame, clusters: pd.DataFrame) -> pd.DataFrame:
+    """One row per career cluster, employment-weighted over its occupations (an occupation in two clusters
+    counts in both), with the same curve columns as the economy table: shares, AI doing by year, ceiling,
+    and the quarter-done years read off the cluster's own curve."""
+    t = onet_weighted_table(frontier_occ, forecast_occ, weights)
+    t = t.drop(columns=[c for c in ["major_group", "major_group_name", "submajor_label", "submajor_name"] if c in t.columns])
+    t = t.merge(clusters[["cluster_code", "cluster", "onet_soc_code"]], on="onet_soc_code", how="inner")
+    t["major_group"] = t.cluster_code
+    e = se.economy_exposure(t)
+    e = e[(e.level == "major_group") & (e.weighting == "employment")].copy()
+    e["cluster_code"] = e.scope.str.replace("major_", "", regex=False)
+    names = clusters.drop_duplicates("cluster_code").set_index("cluster_code").cluster
+    e["cluster"] = e.cluster_code.map(names)
+    n = t.groupby("cluster_code").agg(n_occupations=("onet_soc_code", "nunique"), employment_thousands=("employment_thousands", "sum"), wage_bill=("wage_value", "sum")).reset_index()
+    e = e.merge(n, on="cluster_code", how="left")
+    e["scope_name"] = e.cluster
+    return e.sort_values("quarter_done_year_central_from_curve").reset_index(drop=True)
+
+
+LEVEL_BANDS = [("L", "low or not needed (level below 2.5)", -1.0, 2.5), ("M", "middle (2.5 to 4.5)", 2.5, 4.5), ("H", "high (4.5 and above)", 4.5, 99.0)]
+
+
+def skill_level_exposure(weights: pd.DataFrame, ratings: pd.DataFrame, frontier_occ: pd.DataFrame, forecast_occ: pd.DataFrame, families: tuple = ("essential_skill", "transferable_skill")) -> dict:
+    """Does AI reach work that needs a low or a high level of a skill first? For each skill, occupations are
+    banded by the level the job needs (O*NET's 0-7 scale) and the bands are compared, employment-weighted:
+    share of work seen in AI use, AI doing by 2035, the quarter-done year. Also a rank correlation of level
+    with 'AI doing by 2035' across occupations, and the same for the average level over the essential skills."""
+    from .outcomes import _spearman
+
+    base = onet_weighted_table(frontier_occ, forecast_occ, weights)
+    base = base.drop(columns=[c for c in ["major_group", "major_group_name", "submajor_label", "submajor_name"] if c in base.columns])
+    r = ratings[ratings.family.isin(families)][["onet_soc_code", "element_id", "element_name", "family", "importance", "level"]].copy()
+    r = r.dropna(subset=["level"])
+    frames, corr = [], []
+
+    def bands_for(label, fam, lv: pd.Series):
+        d = base.merge(lv.rename("lv"), left_on="onet_soc_code", right_index=True, how="inner")
+        d["major_group"] = pd.cut(d.lv, bins=[b[2] for b in LEVEL_BANDS] + [LEVEL_BANDS[-1][3]], labels=[b[0] for b in LEVEL_BANDS], right=False).astype(str)
+        e = se.economy_exposure(d)
+        e = e[(e.level == "major_group") & (e.weighting == "employment")].copy()
+        e["band"] = e.scope.str.replace("major_", "", regex=False)
+        e["band_name"] = e.band.map({b[0]: b[1] for b in LEVEL_BANDS})
+        e["element_name"] = label
+        e["family"] = fam
+        e["n_occupations"] = e.band.map(d.groupby("major_group").onet_soc_code.nunique())
+        rho, n = _spearman(d.lv, d.done_by_2035)
+        rho_seen, _ = _spearman(d.lv, d.share_weight_observed)
+        corr.append({"element_name": label, "family": fam, "n_occupations": n, "rho_level_vs_done_2035": rho, "rho_level_vs_seen": rho_seen, "mean_level": float(d.lv.mean())})
+        return e[["element_name", "family", "band", "band_name", "n_occupations", "weight_total", "share_weight_observed", "observed_automation", "share_weight_physical", "share_by_2035", "done_by_2030", "done_by_2035", "done_by_2035_p10", "done_by_2035_p90", "ceiling_ai_share", "quarter_done_year_central_from_curve", "quarter_done_year_fast_from_curve", "quarter_done_year_slow_from_curve"]]
+
+    for (eid, name, fam), g in r.groupby(["element_id", "element_name", "family"]):
+        frames.append(bands_for(name, fam, g.set_index("onet_soc_code")["level"]))
+    ess = r[r.family == "essential_skill"].groupby("onet_soc_code")["level"].mean()
+    frames.append(bands_for("All essential skills (average level)", "index", ess))
+    out = pd.concat(frames, ignore_index=True)
+    return {"bands": out, "correlations": pd.DataFrame(corr)}

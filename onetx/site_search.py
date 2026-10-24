@@ -42,7 +42,7 @@ def _write_b64(path: Path, raw: bytes) -> None:
     path.write_text(base64.b64encode(raw).decode("ascii"))
 
 
-def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: list[list]) -> dict:
+def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: list[list], onet_order: list[str] | None = None) -> dict:
     """ssoc_order: SSOC codes in the page's order; role_ids: role ids in the page's order;
     key_tasks: the per-role grouped key tasks exactly as written to kt.json."""
     SITE.mkdir(parents=True, exist_ok=True)
@@ -65,7 +65,22 @@ def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: l
         seen.add(key)
         alt.append([ssoc_idx[r.ssoc_code], t])
 
-    # ---- O*NET task index: statement, status, central year, occupation, up to 3 SSOC codes
+    # ---- US job titles: O*NET alternate titles -> occupation index (the page's O*NET order)
+    onet_idx = {c: i for i, c in enumerate(onet_order or [])}
+    us_alt = []
+    if onet_idx:
+        at = load("onet_alternate_titles")
+        occ_titles = load("onet_occupations").set_index("onet_soc_code").title
+        seen_us = set()
+        for _, r in at[at.onet_soc_code.isin(onet_idx)].iterrows():
+            t = str(r.alt_title).strip()
+            key = (r.onet_soc_code, t.casefold())
+            if key in seen_us or t.casefold() == str(occ_titles.get(r.onet_soc_code, "")).casefold():
+                continue
+            seen_us.add(key)
+            us_alt.append([onet_idx[r.onet_soc_code], t])
+
+    # ---- O*NET task index: statement, status, central year, occupation, up to 3 SSOC codes, tier, occupation index
     tasks = load("onet_tasks")[["task_id", "onet_soc_code", "task_statement"]]
     fc = load("forecast_tasks").set_index("task_id")
     occ = load("onet_occupations").set_index("onet_soc_code").title
@@ -74,8 +89,8 @@ def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: l
     onet_tasks = []
     for _, t in tasks.iterrows():
         f = fc.loc[t.task_id]
-        onet_tasks.append([str(t.task_statement)[:160], STATUS_CODE.get(f.status, 3), _r(f.disrupt_year_p50, 1), occ.get(t.onet_soc_code, ""), top_ssoc.get(t.onet_soc_code, []), TIER_CODE.get(f.get("evidence_tier"), None)])
-    (SITE / "search.json").write_text(json.dumps({"alt": alt, "onet": onet_tasks}, ensure_ascii=True, separators=(",", ":")))
+        onet_tasks.append([str(t.task_statement)[:160], STATUS_CODE.get(f.status, 3), _r(f.disrupt_year_p50, 1), occ.get(t.onet_soc_code, ""), top_ssoc.get(t.onet_soc_code, []), TIER_CODE.get(f.get("evidence_tier"), None), onet_idx.get(t.onet_soc_code)])
+    (SITE / "search.json").write_text(json.dumps({"alt": alt, "onet": onet_tasks, "us": us_alt}, ensure_ascii=True, separators=(",", ":")))
 
     # ---- items to embed
     from model2vec import StaticModel
@@ -97,6 +112,10 @@ def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: l
                 texts.append(it[0]); refs.append([3, ri, gi, ti])
     for i, t in enumerate(onet_tasks):
         texts.append(t[0]); refs.append([4, i])
+    if onet_idx:
+        occ_titles = load("onet_occupations").set_index("onet_soc_code").title
+        for c in onet_order:
+            texts.append(str(occ_titles.get(c, c))); refs.append([5, onet_idx[c]])
     vecs = m.encode(texts, normalize=True).astype(np.float32)
     q, sc = _quantise(vecs)
     _write_b64(SITE / "emb.bin.txt", q.tobytes())
@@ -111,4 +130,4 @@ def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: l
     _write_b64(SITE / "model.bin.txt", tq.tobytes())
     _write_b64(SITE / "model_scales.bin.txt", tsc.tobytes())
     (SITE / "model.json").write_text(json.dumps({"name": MODEL_NAME, "n": int(table.shape[0]), "dim": int(table.shape[1]), "unk_id": int(m.unk_token_id) if m.unk_token_id is not None else 1, "vocab": vocab, "lowercase": tok["normalizer"].get("lowercase", True)}, separators=(",", ":")))
-    return {"alt_titles": len(alt), "onet_tasks": len(onet_tasks), "items_embedded": len(refs), "dim": int(vecs.shape[1]), "vocab": len(vocab)}
+    return {"alt_titles": len(alt), "us_alt_titles": len(us_alt), "onet_tasks": len(onet_tasks), "items_embedded": len(refs), "dim": int(vecs.shape[1]), "vocab": len(vocab)}

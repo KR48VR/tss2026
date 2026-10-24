@@ -188,6 +188,17 @@ def load_descriptor_ratings(version: str = ONET_BASE_VERSION) -> pd.DataFrame:
     return out
 
 
+def load_level_anchors(version: str = "31.0") -> pd.DataFrame:
+    """Written examples for points on the 0-7 level scale, per element (e.g. Reading Comprehension level 4:
+    'Understand an email from management describing new personnel policies')."""
+    df = _read(version, "Level Scale Anchors")
+    df.columns = [_snake(c) for c in df.columns]
+    df = df[df.scale_id == "LV"][["element_id", "element_name", "anchor_value", "anchor_description"]].copy()
+    df["anchor_value"] = pd.to_numeric(df.anchor_value, errors="coerce")
+    df["onet_version"] = version
+    return df.reset_index(drop=True)
+
+
 def load_descriptor_to_work_activity(version: str = ONET_BASE_VERSION) -> pd.DataFrame:
     """O*NET's own links from skills/abilities/work styles to the GWAs they are used in."""
     names = {

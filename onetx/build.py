@@ -249,9 +249,27 @@ def build_us(tf, barriers, params, now, tiers, sector_levels, occ, occf, o2s, ss
         us_out = ue.outcome_tests(change, us_w, occ_curve_us, occf)
     except FileNotFoundError as e:
         us_out = {"error": str(e)}
+    # career clusters (the US sector lens) and the DOL industry competency models beside them
+    clusters = ul.load_career_clusters(); save(clusters, "us_career_clusters")
+    cl_view = ue.cluster_view(us_w, occf, occ_curve_us, clusters); save(cl_view, "us_cluster_view")
+    cmc_stats = {}
+    try:
+        cmc = ul.load_competency_models()
+        for k, df in cmc.items():
+            save(df, f"cmc_{k}")
+        save(ul.load_cmc_cluster_crosswalk(), "cmc_models_to_clusters")
+        cmc_stats = {"models": int(len(cmc["models"])), "blocks": int(len(cmc["blocks"])), "key_behaviors": int(len(cmc["key_behaviors"]))}
+    except FileNotFoundError as e:
+        cmc_stats = {"error": str(e)}
+    # skill levels against AI: does AI reach low-level or high-level work first?
+    lv = ue.skill_level_exposure(us_w, load("onet_descriptor_ratings_v31"), occf, occ_curve_us)
+    save(lv["bands"], "us_skill_level_exposure"); save(lv["correlations"], "us_skill_level_correlations")
+    idx = lv["bands"][lv["bands"].family == "index"].set_index("band")
+    lv_stats = {"index_bands": {b: {"n_occupations": int(idx.loc[b, "n_occupations"]), "share_seen": float(idx.loc[b, "share_weight_observed"]), "done_by_2035": float(idx.loc[b, "done_by_2035"]), "quarter_done_year_central": float(idx.loc[b, "quarter_done_year_central_from_curve"]) if pd.notna(idx.loc[b, "quarter_done_year_central_from_curve"]) else None} for b in idx.index},
+                "correlations": lv["correlations"].round(3).to_dict("records")}
     e = econ_us[(econ_us.scope == "economy")].set_index("weighting")
     return {
-        "USA": {"weights": {"employment_thousands_total": float(us_w.employment_thousands.sum()), "wage_bill_usd": float(us_w.wage_value.sum() * 1000), "employment_method": us_w.employment_method.value_counts().to_dict(), "wage_sources": us_w.wage_source.value_counts(dropna=False).to_dict(), "oews_year": int(us_w.edition.iloc[0])},
+        "USA": {"clusters": {"n": int(cl_view.cluster_code.nunique()), "earliest": cl_view.iloc[0].cluster if len(cl_view) else None, "latest": cl_view.iloc[-1].cluster if len(cl_view) else None}, "competency_models": cmc_stats, "skill_levels": lv_stats, "weights": {"employment_thousands_total": float(us_w.employment_thousands.sum()), "wage_bill_usd": float(us_w.wage_value.sum() * 1000), "employment_method": us_w.employment_method.value_counts().to_dict(), "wage_sources": us_w.wage_source.value_counts(dropna=False).to_dict(), "oews_year": int(us_w.edition.iloc[0])},
                 "shift_range": [float(us_shift.adoption_shift_years.min()), float(us_shift.adoption_shift_years.max())], "geo_lead_years": 0.0,
                 "economy": {w: {"observed_automation": float(e.loc[w, "observed_automation"]), "share_weight_observed": float(e.loc[w, "share_weight_observed"]), "done_by_2035": float(e.loc[w, "done_by_2035"]), "share_by_2035": float(e.loc[w, "share_by_2035"]), "quarter_done_year_central": float(e.loc[w, "quarter_done_year_central_from_curve"])} for w in ["employment", "wage_value"]},
                 "outcomes": us_out},

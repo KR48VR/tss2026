@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .config import RAW, ensure_dirs
 
-UA = {"User-Agent": "Mozilla/5.0 (onetx data fetcher)"}
+UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15 onetx-data-fetcher"}
 HF = "https://huggingface.co/datasets/Anthropic/EconomicIndex/resolve/main"
 
 SOURCES: dict[str, str] = {
@@ -65,6 +65,10 @@ SOURCES: dict[str, str] = {
     "bls/oesm24nat.zip": "https://www.bls.gov/oes/special-requests/oesm24nat.zip",
     "bls/oesm23nat.zip": "https://www.bls.gov/oes/special-requests/oesm23nat.zip",
     "bls/oesm24in4.zip": "https://www.bls.gov/oes/special-requests/oesm24in4.zip",
+    # US Department of Labor, Competency Model Clearinghouse: the 30 industry competency models and the
+    # Building Blocks model as database scripts (CC BY 4.0; credit the CMC and DOL ETA)
+    "dol/cmc_competency_models.zip": "https://www.careeronestop.org/TridionMultimedia/tcm24-44482_CareerOneStop_CompetencyACC.zip",
+    "dol/cmc_competency_models_readme.txt": "https://www.careeronestop.org/TridionMultimedia/tcm24-44486_CompetencyModelClearinghouse_DataDownloadReadme.txt",
     # reports kept for reference (numbers are hand-transcribed into data/reference/)
     "openai/how_people_use_chatgpt_2025.pdf": "https://cdn.openai.com/pdf/a253471f-8260-40c6-a2cc-aa93fe9f142e/economic-research-chatgpt-usage-paper.pdf",
     "google/GoogleATLASv1.pdf": "https://ai.google/static/documents/GoogleATLASv1.pdf",
