@@ -71,7 +71,7 @@ def test_evidence_lag_delays_unproven_desk_tasks():
     p = fcm.ForecastParams()
     p.evidence_lag_years = {"mixed": (0.5, 1.0, 2.0), "unproven": (1.0, 2.0, 4.0), "newly_rated": (0.0, 0.0, 0.0)}
     tf = pd.DataFrame({"task_id": [1, 2], "onet_soc_code": ["11-1011.00"] * 2, "task_weight": [1.0, 1.0], "physical": [False, False], "robot_tier": [np.nan, np.nan], "status": ["not_observed"] * 2,
-                       "usage_latest": [0.0, 0.0], "automation_share": [0.4, 0.4], "observed_automation": [0.0, 0.0], "human_only_ability_pct": [np.nan, np.nan], "usage_index": [0.0, 0.0], "usage_trend": [np.nan, np.nan], "human_only_hours": [2.0, 2.0]})
+                       "usage_latest": [0.0, 0.0], "usage_n_vintages": [0, 0], "automation_share": [0.4, 0.4], "observed_automation": [0.0, 0.0], "human_only_ability_pct": [np.nan, np.nan], "usage_index": [0.0, 0.0], "usage_trend": [np.nan, np.nan], "human_only_hours": [2.0, 2.0]})
     barriers = pd.DataFrame({"task_id": [1, 2], "barrier_index": [0.2, 0.2], "barrier_type": ["none"] * 2, "b_interpersonal": [0, 0], "b_in_person": [0, 0], "b_accountability": [0, 0], "b_handover": [0, 0]})
     tiers = pd.DataFrame({"task_id": ["1", "2"], "evidence_tier": ["rated", "unproven"], "exposure_2026": [None, None], "autonomy_2026": [None, None], "barrier_2026": [None, None]})
     p = fcm.calibrate(p, tf.assign(usage_latest=[0.1, 0.1], automation_share=[0.5, 0.6]))
@@ -118,3 +118,15 @@ def test_validation_ladder_and_agreement():
     lad = out["ladder"]
     assert 0 < lad["rated_to_seen"] <= 1 and 0 <= lad["rated_no_to_seen"] < lad["rated_to_seen"]
     assert 0 <= lad["seen_to_doing"] <= 1
+
+
+def test_done_curves_count_only_the_share_ai_does():
+    from onetx.forecast import disruption_curve
+
+    fc = pd.DataFrame({"task_id": [1, 2, 3, 4], "grp": ["a"] * 4, "task_weight": [1.0] * 4, "ai_share": [1.0, 0.5, 0.5, 0.0],
+                       "disrupt_year_p50": [2027.0, 2028.0, 2029.0, 2030.0], "disrupt_year_p10": [2026.5, 2027.0, 2028.0, 2029.0], "disrupt_year_p90": [2028.0, 2030.0, 2031.0, 2032.0], "already_observed": [False] * 4, "barrier_index": [0.2] * 4})
+    c = disruption_curve(fc, "grp").iloc[0]
+    assert abs(c["ceiling_ai_share"] - 0.5) < 1e-9
+    assert abs(c["share_by_2028"] - 0.5) < 1e-9 and abs(c["done_by_2028"] - 0.375) < 1e-9   # involved: 2 of 4 tasks; doing: (1 + 0.5) / 4
+    assert c["quarter_done_year_p50"] == 2027.0 and c["half_done_year_p50"] == 2029.0 and c["half_year_p50"] == 2028.0
+    assert c["quarter_done_year_p10"] <= c["quarter_done_year_p50"] <= c["quarter_done_year_p90"]

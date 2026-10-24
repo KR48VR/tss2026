@@ -120,13 +120,13 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
   <div class="grid tiles" id="econ-tiles"></div>
   <div class="panel">
     <div class="eyebrow">Resident workforce, by major occupational group</div>
-    <h3>How much of each group's pay sits in work AI already does, and when half of it could be disruptable</h3>
-    <p class="small muted">Bars show the share of the group's wage bill in tasks where AI is already observed doing the work. The dot is the year when half of the group's wage bill becomes disruptable in the selected scenario; the line is the fast-to-slow range. "2031 mid" means around the middle of 2031; early is the first third of the year, late the last.</p>
+    <h3>How much of each group's pay sits in work AI already does, and when AI could be doing a quarter of the group's work</h3>
+    <p class="small muted">Bars show the share of the group's wage bill in tasks where AI is already observed doing the work. The dot is the year by which AI could be doing a quarter of the group's work in the selected scenario; the line is the fast-to-slow range. "2031 mid" means around the middle of 2031; early is the first third of the year, late the last.</p>
     <div class="tablewrap" tabindex="0" role="region" aria-label="Major group chart, scrolls sideways on small screens"><div id="major-chart" style="min-width:640px"></div></div>
   </div>
   <div class="panel">
     <div class="eyebrow">43 occupation sub-groups</div>
-    <h3>Sub-groups ranked by the central half-way year</h3>
+    <h3>Sub-groups ranked by when AI could be doing a quarter of their work</h3>
     <div class="flexrow small"><label for="sub-weight">Weight by</label><select id="sub-weight" style="width:auto"><option value="wage">wage bill</option><option value="emp">employment</option></select></div>
     <div class="tablewrap" tabindex="0" role="region" aria-label="Sub-group table, scrolls sideways on small screens"><table id="sub-table"><caption class="sr-only">Occupation sub-groups with exposure and timing</caption></table></div>
   </div>
@@ -152,8 +152,8 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
 <section class="view" id="view-sectors" role="tabpanel" aria-labelledby="tab-sectors" hidden>
   <div class="panel">
     <div class="eyebrow">Skills Framework sectors</div>
-    <h2>Sectors, by the typical role's central half-way year</h2>
-    <p class="small muted">Unweighted averages over the roles in each sector's Skills Framework. "Seen in AI use" is the share of a sector's key tasks that already appear in AI usage data; "AI doing it" is how much of that use looks like the AI doing the task rather than helping. Half-way years carry a season (early, mid, late) because sectors sit close together.</p>
+    <h2>Sectors, by when AI could be doing a quarter of the typical role's work</h2>
+    <p class="small muted">Unweighted averages over the roles in each sector's Skills Framework. "Seen in AI use" is the share of a sector's key tasks that already appear in AI usage data; "AI doing it today" is how much of that use looks like the AI doing the task rather than helping. "AI doing by 2035" counts only the share of each task AI completes; "AI involved" counts whole tasks. Years carry a season (early, mid, late) because sectors sit close together.</p>
     <div class="tablewrap" tabindex="0" role="region" aria-label="Sector table, scrolls sideways on small screens"><table id="sector-table"><caption class="sr-only">Skills Framework sectors with exposure and timing</caption></table></div>
   </div>
 </section>
@@ -206,7 +206,7 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
   <div class="lede">
     <h2>How to read this page</h2>
     <p><strong>Labels for a task.</strong> <span class="pill s0">AI doing it</span> means the task shows up in AI usage data (any release since December 2024) and, when it does, the AI mostly completes it rather than assisting. <span class="pill s1">AI helping</span> means it shows up but people mostly use AI to help. <span class="pill s2">Physical</span> means the task is hands-on and the relevant question is robotics, not chatbots. For tasks nobody has yet been seen handing to AI, the page shows the strongest remaining evidence: <span class="pill s4">Rated doable</span> (the 2023 human and GPT-4 raters in OpenAI's study said AI could halve the time, and so does Claude's October 2026 rating of every task on the same scale), <span class="pill s5">Newly rated</span> (the 2023 raters said no, only the 2026 rating says yes), <span class="pill s6">Raters disagree</span>, and <span class="pill s7">Unproven</span> (every rater said no and nothing has been seen). "Unproven" never means "AI cannot"; it means nobody has shown it yet. Unproven, disputed and newly rated tasks wait a measured lag before they count as capable (<span id="m-lag-unproven"></span>, <span id="m-lag-mixed"></span> and <span id="m-lag-newly"></span> years in the central case), measured from how far behind rated tasks each group is in actually being seen in use. A fresh "yes" from one model alone has so far been the weakest predictor of actual use, which is why it waits longest.</p>
-    <p><strong>"Half-way year".</strong> For a job, the year by which half of its task weight is "disruptable": AI can do the task at workplace reliability <em>and</em> typical organisations have had time to adopt it. Three numbers are always given: fast, central, slow. The honest statement is the range.</p>
+    <p><strong>"Involved" and "doing".</strong> Picture a job made of ten equal tasks. By 2031 the model says AI is capable of six of them and employers have adopted it. Counting whole tasks, AI is <em>involved</em> in 60% of the job. But look at how much of each task AI actually does when people use it: nearly all of two of them, half of two, a fifth of two. That adds up to about three tasks' worth, so AI is <em>doing</em> about 30% of the job. This page leads with "doing", because that is what people mean by disrupted. The share AI does when it is used comes from the usage data for tasks that have been seen (the share of use where AI completes the task rather than helps), and from the 2026 end-to-end rating for tasks that have not, calibrated on the seen ones (<span id="m-aishare"></span>). Two consequences worth knowing: on today's patterns AI does roughly 40% to 60% of almost any task it is used on, so the <em>ceiling</em> for most jobs is under half even if every task were disrupted; and that is why the headline year is "AI doing a quarter of the work", with "AI involved in half" kept beside it. Three numbers are always given: fast, central, slow. The honest statement is the range.</p>
     <p><strong>What drives the timing.</strong> Adoption: a curve fitted to the US Census survey of firms using AI, refreshed from the Census on every rebuild (latest reading <span id="m-btos-date"></span>, <span id="m-btos-pct"></span> of firms); half of US firms by <span id="m-anchor"></span> in the central case, <span id="m-anchor-fast"></span> fast and <span id="m-anchor-slow"></span> slow. Singapore firms run about <span id="m-lead"></span> years ahead, measured by comparing IMDA's enterprise survey with the US series at matched adoption levels, so half of Singapore firms by <span id="m-sg-anchor"></span>. Each job's industries move its date: from the Census sector series, information and communications firms run about <span id="m-shift-early"></span> years ahead of the Singapore average and accommodation and food services about <span id="m-shift-late"></span> years behind; an occupation takes the employment mix of its industries, and a Skills Framework role takes its sector. Then the capability term: the evidence lags above, a delay for long tasks using the measured doubling of AI task length every <span id="m-doubling"></span> days, and robot-readiness tiers for physical tasks. Then a barrier delay for work that is interpersonal, in person, carries accountability, or that people keep for themselves even with AI around. The fast and slow cases change the adoption speed, the lags and the barrier delay together.</p>
     <p><strong>Where the numbers come from.</strong> Anthropic's Economic Index (seven snapshots, December 2024 to May 2026) is the only source that publishes usage by task. Microsoft's Copilot study gives a second opinion at the activity level. OpenAI's 2023 study rated every task twice (human raters and GPT-4); Claude rated every task again in October 2026 on the same scale, through a re-runnable command in the open-source pipeline, and agrees with each 2023 rater about as often as they agreed with each other. OpenAI and Google also publish occupation-level ratings and lists. Firm adoption comes from the US Census Business Trends and Outlook Survey (national and by sector) and IMDA's Singapore Digital Economy Reports. Singapore employment is from MOM's Labour Force in Singapore 2025 and wages from MOM's Occupational Wage Survey, June 2025.</p>
     <p><strong>What to be careful about.</strong> The usage data reflect who uses Claude, which skews to office and software work, so "unproven" is weaker evidence for hands-on and frontline jobs. The Census reworded its question in late 2025 and the level jumped; the curve carries a step for it, and the old-wording curve would put the US half-way point at <span id="m-anchor-old"></span>. The 2023 ratings are old: a "yes" from then still stands, a "no" is only a flag to look again, which is what the 2026 rating and the usage data do. Within each 2-digit occupation group, employment is split evenly across surveyed occupations because no finer official count exists; group totals are solid, single-occupation wage figures are not. Links between Singapore roles and O*NET are official where SingStat coded them and text-matched elsewhere; each match shows its score.</p>
@@ -231,6 +231,8 @@ const SCN_NAMES = ["fast","central","slow"];
 let SCN = 1; try{ const v=localStorage.getItem('scn'); if(v==='0'||v==='1'||v==='2') SCN=+v; }catch(e){}
 const sbOf = e => !e ? null : (SCN===0 ? (e.sb10||e.sb) : SCN===2 ? (e.sb90||e.sb) : e.sb);
 const hOf = e => { if(!e) return null; const h=e.h||e.half; return h ? h[SCN] : null; };
+const dbOf = e => !e ? null : (SCN===0 ? (e.db10||e.db) : SCN===2 ? (e.db90||e.db) : e.db);
+const I35 = Y.indexOf(2035), I30 = Y.indexOf(2030);
 const fmt = (v, d=0) => (v==null||Number.isNaN(v)) ? "\u2013" : Number(v).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
 const pct = v => v==null ? "\u2013" : fmt(v)+"%";
 const yr = v => v==null ? "beyond 2045" : String(Math.round(v));           // whole year, no thousands separator
@@ -266,27 +268,27 @@ function tilesRender(){
   const tiles = [
     ["Work that already shows up in AI use", pct(ecoE.so), `share of the work of ${fmt(ecoE.total,0)} thousand employed residents (task weight) seen in AI usage data in any release since December 2024`],
     ["Of the wage bill, AI already doing the work", pct(ecoW.oa), "share of resident wage value in tasks where observed AI use is mostly the AI completing the task"],
-    ["Physical work", pct(ecoW.sp), "share of the wage bill in hands-on tasks, where robotics, not chatbots, sets the pace"],
-    [`Half the wage bill disruptable by (${SCN_NAMES[SCN]} case)`, yr(ecoW.half[SCN]), `fast ${yr(ecoW.half[0])} ${MID} central ${yr(ecoW.half[1])} ${MID} slow ${yr(ecoW.half[2])}; by 2035 the ${SCN_NAMES[SCN]} case reaches ${pct((sbOf(ecoW)||ecoW.sb)[Y.indexOf(2035)])}`],
+    [`By 2035, AI could be doing (${SCN_NAMES[SCN]} case)`, pct((dbOf(ecoW)||ecoW.db||[])[I35]), `of the wage bill's work, and be involved in ${pct((sbOf(ecoW)||ecoW.sb)[I35])} of it. Even if every task were disrupted, AI would be doing about ${pct(ecoW.cap)} on today's patterns; it helps with the rest`],
+    [`AI doing a quarter of the wage bill's work by (${SCN_NAMES[SCN]})`, yr(ecoW.hq?ecoW.hq[SCN]:null), `fast ${yr(ecoW.hq?ecoW.hq[0]:null)} ${MID} central ${yr(ecoW.hq?ecoW.hq[1]:null)} ${MID} slow ${yr(ecoW.hq?ecoW.hq[2]:null)}; AI involved in half the work by ${yr(ecoW.half[SCN])}; doing half: ${yr(ecoW.hd?ecoW.hd[SCN]:null)}`],
   ];
   document.getElementById('econ-tiles').innerHTML = tiles.map(t=>`<div class="panel tile"><div class="lbl">${esc(t[0])}</div><div class="num">${esc(t[1])}</div><div class="small muted">${esc(t[2])}</div></div>`).join('');
 }
 tilesRender();
 
 function majorChart(){
-  const rows = D.economy.filter(e=>e.level==='major_group'&&e.w==='wage').sort((a,b)=>(a.half[SCN]||9999)-(b.half[SCN]||9999));
+  const rows = D.economy.filter(e=>e.level==='major_group'&&e.w==='wage').map(e=>({...e, hqv:(e.hq&&e.hq[SCN]!=null)?e.hq[SCN]:null})).sort((a,b)=>(a.hqv||9999)-(b.hqv||9999));
   const box = document.getElementById('major-chart');
   const W=Math.max(640, box.clientWidth||1000), rowH=36, nameW=Math.round(W*0.27), barX=nameW+14, barW=Math.round(W*0.11), left=barX+barW+60, right=70, H=rows.length*rowH+44;
   const x0=2026, x1=2045, xs = v => left + (Math.min(Math.max(v,x0),x1)-x0)/(x1-x0)*(W-left-right);
   const maxOa = Math.max(10, ...rows.map(r=>r.oa||0));
-  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Major occupational groups: share of wage bill where AI already does the work, and the half-way year in the ${SCN_NAMES[SCN]} case with the fast-to-slow range">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Major occupational groups: share of wage bill where AI already does the work, and the year AI could be doing a quarter of the group's work in the ${SCN_NAMES[SCN]} case with the fast-to-slow range">`;
   s+=`<text x="${barX}" y="16" font-size="11" fill="var(--muted)">${W>=900?'AI doing it (share of pay)':'AI doing it'}</text>`;
   for(let y=2026;y<=2045;y+=3){ s+=`<line class="grid" x1="${xs(y)}" x2="${xs(y)}" y1="26" y2="${H-14}"/><text x="${xs(y)}" y="16" font-size="11" text-anchor="middle">${y}</text>`; }
   rows.forEach((r,i)=>{ const y=40+i*rowH; const name=r.name.length>36?r.name.slice(0,35)+ELL:r.name;
     s+=`<text x="${nameW}" y="${y+5}" font-size="12" text-anchor="end">${esc(name)}</text>`;
     const bw = (r.oa||0)/maxOa*barW; s+=`<rect x="${barX}" y="${y-7}" width="${Math.max(2,bw)}" height="14" fill="var(--doing)" opacity=".85"/><text x="${barX+Math.max(2,bw)+5}" y="${y+5}" font-size="12" fill="var(--muted)">${pct(r.oa)}</text>`;
-    if(r.half[0]!=null){ s+=`<line x1="${xs(r.half[0])}" x2="${xs(r.half[2]||2045)}" y1="${y}" y2="${y}" stroke="var(--accent)" stroke-width="3" opacity=".45"/>`; }
-    const hc=r.half[SCN]; if(hc!=null){ s+=`<circle cx="${xs(hc)}" cy="${y}" r="6" fill="var(--accent)"/><text x="${xs(hc)+10}" y="${y+5}" font-size="12">${yr1(hc)}</text>`; }
+    if(r.hq&&r.hq[0]!=null){ s+=`<line x1="${xs(r.hq[0])}" x2="${xs(r.hq[2]||2045)}" y1="${y}" y2="${y}" stroke="var(--accent)" stroke-width="3" opacity=".45"/>`; }
+    const hc=r.hqv; if(hc!=null){ s+=`<circle cx="${xs(hc)}" cy="${y}" r="6" fill="var(--accent)"/><text x="${xs(hc)+10}" y="${y+5}" font-size="12">${yr1(hc)}</text>`; }
   });
   s+=`</svg>`;
   box.innerHTML = s;
@@ -308,12 +310,12 @@ function makeTable(el, cols, rows, defaultSort){
 const bar = v => `<div class="flexrow" style="gap:6px;flex-wrap:nowrap"><div class="bar" style="flex:1"><i style="width:${Math.min(100,v||0)}%"></i></div><span style="min-width:38px;text-align:right">${pct(v)}</span></div>`;
 function subTable(){
   const w = document.getElementById('sub-weight').value;
-  const rows = D.economy.filter(e=>e.level==='submajor_group'&&e.w===w).map(e=>{ const sb=sbOf(e)||e.sb; return {name:e.name, total:e.total, oa:e.oa, so:e.so, sp:e.sp, sb30:sb[Y.indexOf(2030)], sb32:sb[Y.indexOf(2032)], sb35:sb[Y.indexOf(2035)], h50:e.half[SCN]}; });
+  const rows = D.economy.filter(e=>e.level==='submajor_group'&&e.w===w).map(e=>{ const sb=sbOf(e)||e.sb, db=dbOf(e)||e.db||[]; return {name:e.name, total:e.total, oa:e.oa, so:e.so, sp:e.sp, db30:db[I30], db35:db[I35], sb35:sb[I35], cap:e.cap, hq:e.hq?e.hq[SCN]:null, h50:e.half[SCN]}; });
   makeTable(document.getElementById('sub-table'), [
     {k:'name',label:'Sub-group'}, {k:'total',label:w==='wage'?'Wage bill (S$m / month)':'Employed (thousands)',num:true,fmt:v=>fmt(v,w==='wage'?0:1)},
-    {k:'oa',label:'AI doing it',num:true,fmt:bar}, {k:'so',label:'Seen in AI use',num:true,fmt:pct}, {k:'sp',label:'Physical',num:true,fmt:pct},
-    {k:'sb30',label:`Disruptable by 2030 (${SCN_NAMES[SCN]})`,num:true,fmt:pct}, {k:'sb32',label:'by 2032',num:true,fmt:pct}, {k:'sb35',label:'by 2035',num:true,fmt:pct}, {k:'h50',label:`Half-way year (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)}
-  ], rows, ['h50',1]);
+    {k:'oa',label:'AI doing it today',num:true,fmt:bar}, {k:'so',label:'Seen in AI use',num:true,fmt:pct}, {k:'sp',label:'Physical',num:true,fmt:pct},
+    {k:'db30',label:`AI doing by 2030 (${SCN_NAMES[SCN]})`,num:true,fmt:pct}, {k:'db35',label:'AI doing by 2035',num:true,fmt:pct}, {k:'sb35',label:'AI involved by 2035',num:true,fmt:pct}, {k:'cap',label:'Ceiling',num:true,fmt:pct}, {k:'hq',label:`AI doing a quarter by (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)}, {k:'h50',label:`AI involved in half by (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)}
+  ], rows, ['hq',1]);
 }
 document.getElementById('sub-weight').addEventListener('change', subTable); subTable();
 
@@ -423,17 +425,18 @@ document.getElementById('examples').querySelectorAll('a').forEach(a=>a.addEventL
 
 function timeline(e, label){
   const sb = sbOf(e); if(!sb) return '<p class="muted small">No timing available (no O*NET tasks linked).</p>';
-  const lo = e.sb10||sb, hi = e.sb90||sb, half = e.h||e.half||[null,null,null];
+  const db = dbOf(e)||e.db; const lo = db ? (e.db10||db) : (e.sb10||sb), hi = db ? (e.db90||db) : (e.sb90||sb); const hq = e.hq||[null,null,null];
   const panel=document.getElementById('job-detail'); const W=Math.max(300, Math.min(760, (panel.clientWidth||640)-34)),H=Math.round(W*0.25)+40,l=36,r=12,t=14,b=28; const xs=i=>l+i/(Y.length-1)*(W-l-r), ys=v=>t+(1-v/100)*(H-t-b);
   let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(label)}">`;
   [0,50,100].forEach(v=>{ s+=`<line class="grid" x1="${l}" x2="${W-r}" y1="${ys(v)}" y2="${ys(v)}"/><text x="${l-6}" y="${ys(v)+4}" font-size="11" text-anchor="end">${v}%</text>`; });
   Y.forEach((y,i)=>{ if(y%2===0) s+=`<text x="${xs(i)}" y="${H-8}" font-size="11" text-anchor="middle">${y}</text>`; });
-  const pts = sb.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' ');
+  const main = db||sb; const pts = main.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' ');
   if(lo!==hi){ const band = lo.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' ') + ' ' + hi.map((v,i)=>`${xs(Y.length-1-i)},${ys(hi[Y.length-1-i]||0)}`).join(' '); s+=`<polygon points="${band}" fill="var(--accent)" opacity=".12"/>`; }
+  if(db){ const inv = sb.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' '); s+=`<polyline points="${inv}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4" opacity=".8"/>`; if(e.cap!=null){ s+=`<line x1="${l}" x2="${W-r}" y1="${ys(e.cap)}" y2="${ys(e.cap)}" stroke="var(--warn)" stroke-width="1" stroke-dasharray="2 3" opacity=".7"/><text x="${W-r}" y="${ys(e.cap)-3}" font-size="10" text-anchor="end" fill="var(--warn)">ceiling ${pct(e.cap)}</text>`; } }
   s+=`<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`;
-  const hc = half[SCN];
-  if(hc!=null){ const i=(hc-Y[0])/(Y[Y.length-1]-Y[0])*(Y.length-1); if(i>=0&&i<=Y.length-1){ s+=`<line x1="${xs(i)}" x2="${xs(i)}" y1="${t}" y2="${H-b}" stroke="var(--helping)" stroke-dasharray="4 3"/><text x="${xs(i)+4}" y="${t+10}" font-size="11" fill="var(--helping)">half-way ${yr1(hc)} (${SCN_NAMES[SCN]})</text>`; } }
-  s+=`</svg>`; return `<div class="timeline">${s}</div><p class="small muted" style="margin:0 0 8px">Line: the ${SCN_NAMES[SCN]} case. Shaded band: from the fast to the slow case. Switch the scenario at the top of the page.</p>`;
+  const hc = db ? hq[SCN] : (e.h||e.half||[null,null,null])[SCN];
+  if(hc!=null){ const i=(hc-Y[0])/(Y[Y.length-1]-Y[0])*(Y.length-1); if(i>=0&&i<=Y.length-1){ s+=`<line x1="${xs(i)}" x2="${xs(i)}" y1="${t}" y2="${H-b}" stroke="var(--helping)" stroke-dasharray="4 3"/><text x="${xs(i)+4}" y="${t+10}" font-size="11" fill="var(--helping)">${db?'a quarter done':'half-way'} ${yr1(hc)} (${SCN_NAMES[SCN]})</text>`; } }
+  s+=`</svg>`; return `<div class="timeline">${s}</div><p class="small muted" style="margin:0 0 8px">${db?'Solid line: share of the work AI could be <strong>doing</strong>. Dashed grey line: share of the work AI could be <strong>involved in</strong>. Red dotted line: the ceiling, how much AI would be doing if every task were disrupted on today\'s patterns. ':'Line: '}Shaded band: from the fast to the slow case in the ${SCN_NAMES[SCN]} view; switch the scenario at the top of the page.</p>`;
 }
 function evidence(e, kind){
   if(!e||!e.tiers) return '';
@@ -445,13 +448,17 @@ function evidence(e, kind){
    <div class="evlegend">${names.map((n,i)=>`<span><i class="${cls[i]}"></i>${n} ${pct(e.tiers[i])}</span>`).join('')}</div>
    <p class="small muted">Capability is shown as evidence, not as a date. The bar splits this ${kind==='role'?"role's":"occupation's"} ${unit} by the strongest evidence that AI can do each task. Tasks rated unproven wait a measured ${fmt(ev.lag_unproven,1)} years before they count as capable, tasks the raters disagree on ${fmt(ev.lag_mixed,1)} years, and tasks only the 2026 rating calls doable ${fmt(ev.lag_newly,1)} years (so far the weakest predictor of actual use); "unproven" never means "AI cannot". The years then come from when employers in ${kind==='role'?"this sector":"this occupation's industries"} typically adopt AI${sh?' ('+sh+')':''}, plus the barrier delay.</p>`;
 }
-function headline(h, oa, so, sp, kind){
-  const unit = kind==='role' ? 'key tasks' : 'task weight';
-  return `<div class="grid tiles compact" style="margin:12px 0">
+function headline(h, oa, so, sp, kind, e){
+  const unit = kind==='role' ? 'key tasks' : 'task weight'; const db=dbOf(e)||e.db||[], sb=sbOf(e)||e.sb||[], hq=e.hq||[null,null,null], hd=e.hd||[null,null,null];
+  const lead = e.db ? `<div class="grid tiles compact" style="margin:12px 0">
+    <div class="tile"><div class="lbl">By 2035, AI could be doing (${SCN_NAMES[SCN]})</div><div class="num">${pct(db[I35])}</div><div class="small muted">of this ${kind==='role'?"role's":"job's"} work, and be involved in ${pct(sb[I35])} of it</div></div>
+    <div class="tile"><div class="lbl">AI doing a quarter of the work by (${SCN_NAMES[SCN]})</div><div class="num">${yr1(hq[SCN])}</div><div class="small muted">fast ${yr1(hq[0])} ${MID} central ${yr1(hq[1])} ${MID} slow ${yr1(hq[2])}</div></div>
+    <div class="tile"><div class="lbl">AI involved in half the work by (${SCN_NAMES[SCN]})</div><div class="num">${yr1(h[SCN])}</div><div class="small muted">fast ${yr1(h[0])} ${MID} central ${yr1(h[1])} ${MID} slow ${yr1(h[2])}; doing half: ${yr1(hd[SCN])}</div></div></div>
+    <p class="small" style="margin:0 0 10px"><strong>In one line:</strong> even if every task were disrupted, AI would be doing about ${pct(e.cap)} of this ${kind==='role'?"role's":"job's"} work on today's patterns and helping with the rest. "Doing" counts only the share of each task AI completes rather than helps with; "involved" counts the whole task.</p>` : '';
+  return lead + `<div class="grid tiles compact" style="margin:12px 0">
     <div class="tile"><div class="lbl">AI already doing it</div><div class="num">${pct(oa)}</div><div class="small muted">${kind==='role'?'average over the key tasks of how much observed AI use completes the task':'share of task weight where observed AI use mostly completes the task'}</div></div>
     <div class="tile"><div class="lbl">Seen in AI use</div><div class="num">${pct(so)}</div><div class="small muted">share of ${unit} that appears in usage data at all</div></div>
-    <div class="tile"><div class="lbl">Physical work</div><div class="num">${pct(sp)}</div><div class="small muted">hands-on ${unit}; robotics sets the pace</div></div>
-    <div class="tile"><div class="lbl">Half the job disruptable by (${SCN_NAMES[SCN]})</div><div class="num">${yr1(h[SCN])}</div><div class="small muted">fast ${yr1(h[0])} ${MID} central ${yr1(h[1])} ${MID} slow ${yr1(h[2])}</div></div></div>`;
+    <div class="tile"><div class="lbl">Physical work</div><div class="num">${pct(sp)}</div><div class="small muted">hands-on ${unit}; robotics sets the pace</div></div></div>`;
 }
 function open(kind,i){
   current={kind,i}; search();
@@ -460,8 +467,8 @@ function open(kind,i){
     const s=D.ssoc[i];
     const roles = (s.roles||[]).map(ri=>`<li><a href="#jobs" data-kind="role" data-i="${ri}">${esc(D.roles[ri].role)}</a> <span class="muted small">(${esc(D.roles[ri].sector)})</span></li>`).join('');
     el.innerHTML = `<div class="eyebrow">SSOC 2024 ${MID} ${esc(s.c)} ${MID} ${esc(s.smn||'')}</div><h2>${esc(s.t)}</h2>
-      ${headline(s.h,s.oa,s.so,s.sp,'ssoc')}
-      ${timeline(s,'Share of this occupation\'s task weight disruptable by year')}
+      ${headline(s.h,s.oa,s.so,s.sp,'ssoc',s)}
+      ${timeline(s,'Share of this occupation\'s work AI could be doing, and be involved in, by year')}
       ${evidence(s,'ssoc')}
       <dl class="kv"><dt>Employed residents</dt><dd>${fmt(s.emp,1)} thousand <span class="muted small">(group total split evenly across surveyed occupations)</span></dd>
       <dt>Median gross wage</dt><dd>S$${fmt(s.wage)} / month <span class="muted small">(${s.ws==='ows_2025_coded'?'MOM wage survey, June 2025':s.ws==='ows_2024_title_match'?'MOM wage survey 2024, matched by title':'group median, no survey figure'})</span></dd>
@@ -473,8 +480,8 @@ function open(kind,i){
   } else {
     const r=D.roles[i];
     el.innerHTML = `<div class="eyebrow">Skills Framework ${MID} ${esc(r.sector)}${r.track?' '+MID+' '+esc(r.track):''}</div><h2>${esc(r.role)}</h2><p class="small muted">${esc(r.desc)}</p>
-      ${headline(r.h,r.oat,r.sko,r.skp,'role')}
-      ${timeline(r,'Share of this role\'s key tasks disruptable by year')}
+      ${headline(r.h,r.oat,r.sko,r.skp,'role',r)}
+      ${timeline(r,'Share of this role\'s work AI could be doing, and be involved in, by year')}
       ${evidence(r,'role')}
       <dl class="kv"><dt>Key tasks</dt><dd>${fmt(r.nk)} <span class="muted small">(each matched to its closest O*NET task; average match score ${r.ms==null?'\u2013':fmt(r.ms,2)} out of 1)</span></dd>
       <dt>Via the SSOC code</dt><dd>AI doing it ${pct(r.oas)} <span class="muted small">(the same job seen through its occupation code rather than its listed tasks)</span></dd>
@@ -482,7 +489,7 @@ function open(kind,i){
       <h3 class="sub">The role's key tasks, earliest first</h3><p class="small muted">Label and year come from the closest O*NET task; years follow the ${SCN_NAMES[SCN]} case. The grey line under each gives the 2026 rating and why a task may be late even if AI could do it.</p>
       <div id="kt-list"><p class="muted small">Loading key tasks\u2026</p></div>`;
     loadKT().then(k=>{ const box=document.getElementById('kt-list'); if(!box||!current||current.kind!=='role'||current.i!==i) return; if(!k){ box.innerHTML='<p class="muted small">Key task detail could not be loaded.</p>'; return; }
-      const groups=k[i]||[]; box.innerHTML = groups.map(g=>`<div class="cwf">${esc(g[0])}</div><ul class="kt">${g[1].map(t=>`<li><span>${esc(t[0])}</span><span class="pill ${(t[1]===3&&t[6]!=null?TIER[t[6]]:STATUS[t[1]])[1]}">${(t[1]===3&&t[6]!=null?TIER[t[6]]:STATUS[t[1]])[0]}</span><span class="range">${yr1(t[2])}</span><span class="why">${t[7]!=null?'2026 rating: '+AUTON[t[7]]+(t[8]?' (main barrier: '+RBARR[t[8]]+')':'')+' '+MID+' ':''}${t[3]?'why late: '+BARRIER[t[3]]+' '+MID+' ':''}matched to O*NET: "${esc(t[5]||'')}" (score ${fmt(t[4],2)})</span></li>`).join('')}</ul>`).join('') || '<p class="muted small">No key tasks listed.</p>'; });
+      const groups=k[i]||[]; box.innerHTML = groups.map(g=>`<div class="cwf">${esc(g[0])}</div><ul class="kt">${g[1].map(t=>`<li><span>${esc(t[0])}</span><span class="pill ${(t[1]===3&&t[6]!=null?TIER[t[6]]:STATUS[t[1]])[1]}">${(t[1]===3&&t[6]!=null?TIER[t[6]]:STATUS[t[1]])[0]}</span><span class="range">${yr1(t[2])}</span><span class="why">${t[9]!=null?'AI would do about '+pct(t[9])+' of this task '+MID+' ':''}${t[7]!=null?'2026 rating: '+AUTON[t[7]]+(t[8]?' (main barrier: '+RBARR[t[8]]+')':'')+' '+MID+' ':''}${t[3]?'why late: '+BARRIER[t[3]]+' '+MID+' ':''}matched to O*NET: "${esc(t[5]||'')}" (score ${fmt(t[4],2)})</span></li>`).join('')}</ul>`).join('') || '<p class="muted small">No key tasks listed.</p>'; });
   }
   el.querySelectorAll('a[data-kind]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); open(a.dataset.kind,+a.dataset.i); el.scrollIntoView({behavior:'smooth',block:'start'});}));
   el.querySelectorAll('a[data-ssoc]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); const j=D.ssoc.findIndex(s=>s.c===a.dataset.ssoc); if(j>=0){ open('ssoc',j); el.scrollIntoView({behavior:'smooth',block:'start'}); }}));
@@ -492,26 +499,26 @@ let rsz; window.addEventListener('resize',()=>{ clearTimeout(rsz); rsz=setTimeou
 
 // ---------- sectors
 function sectorTable(){
-  const rows = D.sectors.map(s=>({sector:s.sector, n:s.n, sko:s.sko, oat:s.oat, skp:s.skp, sb30:[s.sb30f,s.sb30,s.sb30s][SCN]??s.sb30, sb35:[s.sb35f,s.sb35,s.sb35s][SCN]??s.sb35, h:s.h[SCN], h10:s.h[0], h90:s.h[2]}));
+  const rows = D.sectors.map(s=>({sector:s.sector, n:s.n, sko:s.sko, oat:s.oat, skp:s.skp, db30:[s.db30f,s.db30,s.db30s][SCN]??s.db30, db35:[s.db35f,s.db35,s.db35s][SCN]??s.db35, sb35:[s.sb35f,s.sb35,s.sb35s][SCN]??s.sb35, cap:s.cap, hq:s.hq?s.hq[SCN]:null, h:s.h[SCN]}));
   makeTable(document.getElementById('sector-table'), [
-    {k:'sector',label:'Sector'},{k:'n',label:'Roles',num:true,fmt:v=>fmt(v)},{k:'sko',label:'Key tasks seen in AI use',num:true,fmt:bar},{k:'oat',label:'AI doing it',num:true,fmt:pct},{k:'skp',label:'Physical',num:true,fmt:pct},{k:'sb30',label:`Disruptable by 2030 (${SCN_NAMES[SCN]})`,num:true,fmt:pct},{k:'sb35',label:'by 2035',num:true,fmt:pct},{k:'h',label:`Typical role: half-way year (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)},{k:'h10',label:'fast case',num:true,fmt:v=>yr1(v)},{k:'h90',label:'slow case',num:true,fmt:v=>yr1(v)}
-  ], rows, ['h',1]);
+    {k:'sector',label:'Sector'},{k:'n',label:'Roles',num:true,fmt:v=>fmt(v)},{k:'sko',label:'Key tasks seen in AI use',num:true,fmt:bar},{k:'oat',label:'AI doing it today',num:true,fmt:pct},{k:'skp',label:'Physical',num:true,fmt:pct},{k:'db30',label:`AI doing by 2030 (${SCN_NAMES[SCN]})`,num:true,fmt:pct},{k:'db35',label:'AI doing by 2035',num:true,fmt:pct},{k:'sb35',label:'AI involved by 2035',num:true,fmt:pct},{k:'cap',label:'Ceiling',num:true,fmt:pct},{k:'hq',label:`Typical role: AI doing a quarter by (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)},{k:'h',label:`AI involved in half by (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)}
+  ], rows, ['hq',1]);
 }
 sectorTable();
 
 // ---------- skills
 function skillTable(){
   const fam=document.getElementById('skill-family').value;
-  const rows=D.skills.filter(s=>s.f===fam).map(s=>{ const sb=sbOf(s); return {name:s.name,n:s.n,oa:s.oa,oaa:s.oaa,sb30:sb?sb[Y.indexOf(2030)]:null,sb35:sb?sb[Y.indexOf(2035)]:null,h:s.h[SCN],h10:s.h[0],h90:s.h[2]}; });
+  const rows=D.skills.filter(s=>s.f===fam).map(s=>{ const sb=sbOf(s), db=dbOf(s)||s.db; return {name:s.name,n:s.n,oa:s.oa,oaa:s.oaa,db30:db?db[I30]:null,db35:db?db[I35]:null,sb35:sb?sb[I35]:null,hq:s.hq?s.hq[SCN]:null,h:s.h[SCN]}; });
   makeTable(document.getElementById('skill-table'), [
-    {k:'name',label:fam==='knowledge'?'Knowledge area':fam==='ability'?'Ability':fam==='work_activity'?'Work activity':'Skill'},{k:'n',label:'Jobs needing it',num:true,fmt:v=>fmt(v)},{k:'oa',label:'AI doing it, in those jobs',num:true,fmt:bar},{k:'oaa',label:'via linked activities',num:true,fmt:pct},{k:'sb30',label:`Disruptable by 2030 (${SCN_NAMES[SCN]})`,num:true,fmt:pct},{k:'sb35',label:'by 2035',num:true,fmt:pct},{k:'h',label:`Half-way year (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)},{k:'h10',label:'fast case',num:true,fmt:v=>yr1(v)},{k:'h90',label:'slow case',num:true,fmt:v=>yr1(v)}
+    {k:'name',label:fam==='knowledge'?'Knowledge area':fam==='ability'?'Ability':fam==='work_activity'?'Work activity':'Skill'},{k:'n',label:'Jobs needing it',num:true,fmt:v=>fmt(v)},{k:'oa',label:'AI doing it today, in those jobs',num:true,fmt:bar},{k:'oaa',label:'via linked activities',num:true,fmt:pct},{k:'db30',label:`AI doing by 2030 (${SCN_NAMES[SCN]})`,num:true,fmt:pct},{k:'db35',label:'AI doing by 2035',num:true,fmt:pct},{k:'sb35',label:'AI involved by 2035',num:true,fmt:pct},{k:'hq',label:`AI doing a quarter by (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)},{k:'h',label:`AI involved in half by (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)}
   ], rows, ['oa',-1]);
 }
 document.getElementById('skill-family').addEventListener('change', skillTable); skillTable();
 function gwaTable(){
   makeTable(document.getElementById('gwa-table'), [
-    {k:'name',label:'Activity'},{k:'n',label:'Tasks',num:true,fmt:v=>fmt(v)},{k:'so',label:'Tasks seen in AI use',num:true,fmt:bar},{k:'oa',label:'AI doing it',num:true,fmt:pct},{k:'ms',label:'Copilot share (%)',num:true,fmt:v=>v==null?'\u2013':fmt(v,1)},{k:'h',label:`Half-way year (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)}
-  ], D.gwa.map(g=>({name:g.name,n:g.n,so:g.so,oa:g.oa,ms:g.ms,h:g.h[SCN]})), ['oa',-1]);
+    {k:'name',label:'Activity'},{k:'n',label:'Tasks',num:true,fmt:v=>fmt(v)},{k:'so',label:'Tasks seen in AI use',num:true,fmt:bar},{k:'oa',label:'AI doing it today',num:true,fmt:pct},{k:'ms',label:'Copilot share (%)',num:true,fmt:v=>v==null?'\u2013':fmt(v,1)},{k:'db35',label:`AI doing by 2035 (${SCN_NAMES[SCN]})`,num:true,fmt:pct},{k:'hq',label:`AI doing a quarter by (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)},{k:'h',label:`AI involved in half by (${SCN_NAMES[SCN]})`,num:true,fmt:v=>yr1(v)}
+  ], D.gwa.map(g=>{ const db=dbOf(g)||g.db; return {name:g.name,n:g.n,so:g.so,oa:g.oa,ms:g.ms,db35:db?db[I35]:null,hq:g.hq?g.hq[SCN]:null,h:g.h[SCN]}; }), ['oa',-1]);
 }
 gwaTable();
 function rerender(){ tilesRender(); majorChart(); subTable(); sectorTable(); skillTable(); gwaTable(); if(current) open(current.kind,current.i); }
@@ -553,6 +560,7 @@ const setT=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent
 setT('m-anchor', yr1(m.adoption_anchor.central)); setT('m-anchor-fast', yr1(m.adoption_anchor.fast)); setT('m-anchor-slow', yr1(m.adoption_anchor.slow));
 setT('m-lead', fmt(m.geo_lead,1)); setT('m-sg-anchor', yr1((ad.sg_half||{}).central)); setT('m-doubling', fmt(m.doubling_days,0));
 setT('m-btos-date', dfmt(ad.btos_last_date)); setT('m-btos-pct', ad.btos_last_pct==null?'':fmt(ad.btos_last_pct,1)+'%'); setT('m-anchor-old', yr1(ad.half_old_wording));
+setT('m-aishare', (function(){ const a=(m.ai_share||{}).by_autonomy||{}; const ks=['A0','A1','A2','A3']; return ks.filter(k=>a[k]).map(k=>`${AUTON[+k[1]]}: ${pct(a[k].mean*100)}`).join('; '); })());
 setT('m-lag-unproven', fmt(ev.lag_unproven,1)); setT('m-lag-mixed', fmt(ev.lag_mixed,1)); setT('m-lag-newly', fmt(ev.lag_newly,1));
 setT('m-shift-early', fmt(Math.abs(ss.J||0),1)); setT('m-shift-late', fmt(Math.abs(ss.I||0),1));
 const ts=m.task_status, cw=m.crosswalk, sw=m.sg_weights;

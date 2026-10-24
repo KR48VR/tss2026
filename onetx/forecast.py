@@ -69,6 +69,11 @@ class ForecastParams:
     # evidence tier (overwritten by calibrate_evidence(): measured from how far each tier lags the
     # best-rated tasks in being seen in actual use)
     evidence_lag_years: dict = field(default_factory=lambda: {"mixed": (0.7, 1.4, 2.8), "unproven": (1.1, 2.2, 4.4), "newly_rated": (0.0, 0.0, 0.0)})
+    # how much of a task AI does once it is used on it ("doing" against "involved"): the observed automation
+    # share for seen tasks; for unseen tasks the mean observed share of seen desk tasks with the same 2026
+    # end-to-end autonomy rating (overwritten by calibrate_ai_share()); fallback = mean of seen tasks
+    ai_share_by_autonomy: dict = field(default_factory=lambda: {"A0": 0.41, "A1": 0.42, "A2": 0.51, "A3": 0.59})
+    ai_share_fallback: float = 0.48
     # barriers
     max_barrier_years: tuple = (2.0, 4.0, 6.0)      # fast / central / slow
     observed_credit_years: float = 1.0
@@ -234,6 +239,25 @@ def calibrate_evidence(p: ForecastParams, usage_long: pd.DataFrame, tiers: pd.Da
     return p, out
 
 
+def calibrate_ai_share(p: ForecastParams, tf: pd.DataFrame, tiers: pd.DataFrame | None) -> tuple[ForecastParams, dict]:
+    """Mean observed automation share of seen desk tasks by 2026 autonomy rating, used as the expected
+    'AI doing' share of unseen tasks with the same rating."""
+    p = ForecastParams(**asdict(p))
+    d = tf[["task_id", "physical", "usage_n_vintages", "automation_share"]].copy(); d["task_id"] = d.task_id.astype(str)
+    seen = (d.usage_n_vintages.fillna(0) >= 1) & d.automation_share.notna()
+    out = {"fallback": float(d.automation_share[seen].mean()) if seen.any() else p.ai_share_fallback, "n_seen": int(seen.sum())}
+    p.ai_share_fallback = out["fallback"]
+    if tiers is not None and "autonomy_2026" in tiers.columns:
+        t = tiers.copy(); t["task_id"] = t.task_id.astype(str)
+        d = d.merge(t[["task_id", "autonomy_2026"]], on="task_id", how="left")
+        m = seen & ~d.physical.astype(bool) & d.autonomy_2026.notna()
+        by = d[m].groupby("autonomy_2026").automation_share.agg(["mean", "size"])
+        if len(by) >= 2:
+            p.ai_share_by_autonomy = {k: float(v) for k, v in by["mean"].items()}
+            out["by_autonomy"] = {k: {"mean": float(r["mean"]), "n": int(r["size"])} for k, r in by.iterrows()}
+    return p, out
+
+
 def impute_task_minutes(tf: pd.DataFrame) -> pd.DataFrame:
     """human_only_minutes with imputation chain: task (AEI) -> DWA median -> IWA median -> GWA median -> Job Zone median."""
     t = tf[["task_id", "onet_soc_code", "human_only_hours"]].copy()
@@ -270,7 +294,7 @@ def forecast_tasks(tf: pd.DataFrame, barriers: pd.DataFrame, params: ForecastPar
     p = params or ForecastParams()
     now_y = _frac_year(pd.Timestamp(now))
     mins = impute_task_minutes(tf)
-    d = tf[["task_id", "onet_soc_code", "task_weight", "physical", "robot_tier", "status", "usage_latest", "automation_share", "observed_automation", "human_only_ability_pct", "usage_index", "usage_trend"]].merge(mins, on="task_id").merge(barriers[["task_id", "barrier_index", "barrier_type", "b_interpersonal", "b_in_person", "b_accountability", "b_handover"]], on="task_id", how="left")
+    d = tf[["task_id", "onet_soc_code", "task_weight", "physical", "robot_tier", "status", "usage_latest", "usage_n_vintages", "automation_share", "observed_automation", "human_only_ability_pct", "usage_index", "usage_trend"]].merge(mins, on="task_id").merge(barriers[["task_id", "barrier_index", "barrier_type", "b_interpersonal", "b_in_person", "b_accountability", "b_handover"]], on="task_id", how="left")
     d["barrier_index"] = d.barrier_index.fillna(float(d.barrier_index.median()))
     if tiers is not None:
         t = tiers.copy(); t["task_id"] = t.task_id.astype(d.task_id.dtype) if d.task_id.dtype != object else t.task_id.astype(str)
@@ -309,6 +333,11 @@ def forecast_tasks(tf: pd.DataFrame, barriers: pd.DataFrame, params: ForecastPar
     else:
         shift = np.zeros(len(d))
     out["adoption_shift_years"] = shift
+    # 'AI doing' share of each task once it is used: observed for seen tasks, by autonomy rating otherwise
+    seen_any = (d.usage_n_vintages.fillna(0) >= 1).values
+    rated = d.autonomy_2026.map(p.ai_share_by_autonomy) if "autonomy_2026" in d else pd.Series(np.nan, index=d.index)
+    out["ai_share"] = np.where(seen_any & d.automation_share.notna().values, d.automation_share.values, np.where(rated.notna().values, rated.values, p.ai_share_fallback))
+    out["ai_share_source"] = np.where(seen_any & d.automation_share.notna().values, "seen", np.where(rated.notna().values, "rated_2026", "fallback"))
     for (name, q, mb), mult in zip([("fast", "p10", p.max_barrier_years[0]), ("central", "p50", p.max_barrier_years[1]), ("slow", "p90", p.max_barrier_years[2])], p.adoption_growth_mult):
         barrier_years = d.barrier_index.values * mb
         y = anchors[name] - leads[name] + shift / mult + np.maximum(cap[name] - now_y, 0.0) + barrier_years - credit
@@ -359,6 +388,16 @@ def disruption_curve(fc: pd.DataFrame, by: str, weight: str = "task_weight", col
         if qc in d.columns and qc != col:
             for y in YEARS:
                 out[f"share_by_{y}_{q}"] = d.assign(_x=d.w * (d[qc] <= y)).groupby(by)._x.sum() / tot
+    if "ai_share" in d:
+        d["wa"] = d.w * d.ai_share.fillna(0)
+        out["ceiling_ai_share"] = d.groupby(by).wa.sum() / tot
+        for y in YEARS:
+            out[f"done_by_{y}"] = d.assign(_x=d.wa * (d[col] <= y)).groupby(by)._x.sum() / tot
+        for q in ["p10", "p90"]:
+            qc = col.replace("p50", q)
+            if qc in d.columns and qc != col:
+                for y in YEARS:
+                    out[f"done_by_{y}_{q}"] = d.assign(_x=d.wa * (d[qc] <= y)).groupby(by)._x.sum() / tot
     out["share_beyond_horizon"] = d.assign(_x=d.w * d[col].isna()).groupby(by)._x.sum() / tot
     out["share_already_observed"] = d.assign(_x=d.w * d["already_observed"]).groupby(by)._x.sum() / tot if "already_observed" in d else np.nan
     if "barrier_index" in d:
@@ -379,6 +418,21 @@ def disruption_curve(fc: pd.DataFrame, by: str, weight: str = "task_weight", col
     out["half_year_p10"] = half("disrupt_year_p10")
     out["half_year_p50"] = half("disrupt_year_p50")
     out["half_year_p90"] = half("disrupt_year_p90")
+
+    def first_done(colname, thr):
+        """First year by which AI could be doing `thr` of the group's work (weight x ai_share)."""
+        res = {}
+        for k, grp in d.groupby(by):
+            grp = grp.sort_values(colname)
+            cs = grp.wa.cumsum() / grp.w.sum()
+            hit = grp[(cs >= thr) & grp[colname].notna()]
+            res[k] = float(hit[colname].iloc[0]) if len(hit) else np.nan
+        return pd.Series(res)
+
+    if "ai_share" in d:
+        for q in ["p10", "p50", "p90"]:
+            out[f"quarter_done_year_{q}"] = first_done(f"disrupt_year_{q}", 0.25)
+            out[f"half_done_year_{q}"] = first_done(f"disrupt_year_{q}", 0.5)
     return out.reset_index()
 
 
@@ -388,19 +442,22 @@ def skill_curves(fc: pd.DataFrame, occ_scores: pd.DataFrame, version: str = "30.
     oc = disruption_curve(fc, "onet_soc_code")
     r = onet.load_descriptor_ratings(version)
     r = r[r.importance >= min_importance].merge(oc, on="onet_soc_code", how="inner")
-    share_cols = [c for c in oc.columns if c.startswith("share_by_")] + ["share_beyond_horizon", "share_already_observed"]
+    share_cols = [c for c in oc.columns if c.startswith("share_by_") or c.startswith("done_by_")] + ["share_beyond_horizon", "share_already_observed"] + (["ceiling_ai_share"] if "ceiling_ai_share" in oc.columns else [])
+    year_cols = ["half_year"] + [k for k in ["quarter_done_year", "half_done_year"] if f"{k}_p50" in oc.columns]
     rows = []
     for (fam, eid, name), g in r.groupby(["family", "element_id", "element_name"]):
         w = g.importance.values
         row = {"family": fam, "element_id": eid, "element_name": name, "n_occupations": int(g.onet_soc_code.nunique())}
         for c in share_cols:
             row[c] = float(np.average(g[c].fillna(0).values, weights=w))
-        for q in ["p10", "p50", "p90"]:
-            v = g[f"half_year_{q}"]
-            row[f"half_year_{q}"] = float(np.average(v.fillna(2046).values, weights=w))
+        for k in year_cols:
+            for q in ["p10", "p50", "p90"]:
+                v = g[f"{k}_{q}"]
+                row[f"{k}_{q}"] = float(np.average(v.fillna(2046).values, weights=w))
         rows.append(row)
     out = pd.DataFrame(rows)
-    for q in ["p10", "p50", "p90"]:
-        out[f"half_year_{q}"] = out[f"half_year_{q}"].where(out[f"half_year_{q}"] <= 2045, np.nan)
+    for k in year_cols:
+        for q in ["p10", "p50", "p90"]:
+            out[f"{k}_{q}"] = out[f"{k}_{q}"].where(out[f"{k}_{q}"] <= 2045, np.nan)
     out["onet_version"] = version
     return out
