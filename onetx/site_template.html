@@ -6,11 +6,11 @@
 :root{
   --bg:#f6f4ee; --panel:#ffffff; --fg:#1d2426; --muted:#5d6a6e; --line:#d9d4c8; --accent:#0e6b67; --accent-soft:#d9ece9;
   --doing:#0e6b67; --helping:#8f5a10; --physical:#5a6b7d; --notseen:#8a9497; --warn:#a33a2b;
-  --involved:#6fa8a3; --involved-text:#3a746e; --rated:#2f7d32; --mixed:#6b4fa0; --fast:#a3571a; --central:#0e6b67; --slow:#3f5f8a; --scn:#0e6b67; --zebra:#f3f1ea; --heat-warm:233,167,156; --heat-cool:188,208,234;
+  --involved:#6fa8a3; --involved-text:#3a746e; --us:#8a4b6e; --rated:#2f7d32; --mixed:#6b4fa0; --fast:#a3571a; --central:#0e6b67; --slow:#3f5f8a; --scn:#0e6b67; --zebra:#f3f1ea; --heat-warm:233,167,156; --heat-cool:188,208,234;
   --font-display:"Newsreader", Georgia, "Times New Roman", serif; --font-body:"Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif; --font-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#141a1b; --panel:#1c2426; --fg:#e8e9e4; --muted:#a4adaf; --line:#2f3a3c; --accent:#5fc0b9; --accent-soft:#1f3836; --doing:#5fc0b9; --helping:#e0a04e; --physical:#9db0c2; --notseen:#6c777a; --warn:#e07a68; --involved:#3d8a85; --involved-text:#8ccfc8; --rated:#7fcb7f; --mixed:#b79bea; --fast:#e0a04e; --central:#5fc0b9; --slow:#8fb0e0; --scn:#5fc0b9; --zebra:#202a2c; --heat-warm:150,70,55; --heat-cool:55,80,120; --on-scn:#141a1b; color-scheme:dark } }
-:root[data-theme="dark"]{ --bg:#141a1b; --panel:#1c2426; --fg:#e8e9e4; --muted:#a4adaf; --line:#2f3a3c; --accent:#5fc0b9; --accent-soft:#1f3836; --doing:#5fc0b9; --helping:#e0a04e; --physical:#9db0c2; --notseen:#6c777a; --warn:#e07a68; --involved:#3d8a85; --involved-text:#8ccfc8; --rated:#7fcb7f; --mixed:#b79bea; --fast:#e0a04e; --central:#5fc0b9; --slow:#8fb0e0; --scn:#5fc0b9; --zebra:#202a2c; --heat-warm:150,70,55; --heat-cool:55,80,120; --on-scn:#141a1b; color-scheme:dark }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#141a1b; --panel:#1c2426; --fg:#e8e9e4; --muted:#a4adaf; --line:#2f3a3c; --accent:#5fc0b9; --accent-soft:#1f3836; --doing:#5fc0b9; --helping:#e0a04e; --physical:#9db0c2; --notseen:#6c777a; --warn:#e07a68; --involved:#3d8a85; --involved-text:#8ccfc8; --us:#d19ab8; --rated:#7fcb7f; --mixed:#b79bea; --fast:#e0a04e; --central:#5fc0b9; --slow:#8fb0e0; --scn:#5fc0b9; --zebra:#202a2c; --heat-warm:150,70,55; --heat-cool:55,80,120; --on-scn:#141a1b; color-scheme:dark } }
+:root[data-theme="dark"]{ --bg:#141a1b; --panel:#1c2426; --fg:#e8e9e4; --muted:#a4adaf; --line:#2f3a3c; --accent:#5fc0b9; --accent-soft:#1f3836; --doing:#5fc0b9; --helping:#e0a04e; --physical:#9db0c2; --notseen:#6c777a; --warn:#e07a68; --involved:#3d8a85; --involved-text:#8ccfc8; --us:#d19ab8; --rated:#7fcb7f; --mixed:#b79bea; --fast:#e0a04e; --central:#5fc0b9; --slow:#8fb0e0; --scn:#5fc0b9; --zebra:#202a2c; --heat-warm:150,70,55; --heat-cool:55,80,120; --on-scn:#141a1b; color-scheme:dark }
 :root[data-scn="0"]{--scn:var(--fast)} :root[data-scn="1"]{--scn:var(--central)} :root[data-scn="2"]{--scn:var(--slow)}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;margin:0}
@@ -68,7 +68,7 @@ input[type="search"]:focus-visible,select:focus-visible,button:focus-visible{out
 .kv dt{color:var(--muted)} .kv dd{margin:0;font-variant-numeric:tabular-nums}
 table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
 th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-size:.75rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;cursor:pointer;user-select:none;white-space:nowrap}
+th{font-size:.75rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;cursor:pointer;user-select:none;white-space:nowrap} th.wrap{white-space:normal;line-height:1.2;vertical-align:bottom} #cmp-table th,#cmp-groups th{cursor:default} #cmp-table td.num{white-space:nowrap} #cmp-table td:first-child{min-width:9rem} @media (max-width:720px){#cmp-table td:nth-child(4),#cmp-table th:nth-child(4){display:none} #cmp-table td.num{white-space:normal} #cmp-table td:first-child{min-width:6.5rem;padding-right:4px}}
 th:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 caption{text-align:left;font-size:.8rem;color:var(--muted);padding:4px 8px}
 .tablewrap:focus-visible{outline:2px solid var(--accent)}
@@ -124,6 +124,7 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
   <nav class="tabs" role="tablist" aria-label="Views">
     <button role="tab" data-view="leaders" aria-selected="true" aria-controls="view-leaders" id="tab-leaders">Executive summary</button>
     <button role="tab" data-view="overview" aria-selected="false" aria-controls="view-overview" id="tab-overview">Overview</button>
+    <button role="tab" data-view="compare" aria-selected="false" aria-controls="view-compare" id="tab-compare">Singapore vs US</button>
     <button role="tab" data-view="jobs" aria-selected="false" aria-controls="view-jobs" id="tab-jobs">Find a job</button>
     <button role="tab" data-view="sectors" aria-selected="false" aria-controls="view-sectors" id="tab-sectors">Sectors</button>
     <button role="tab" data-view="skills" aria-selected="false" aria-controls="view-skills" id="tab-skills">Skills and activities</button>
@@ -195,6 +196,20 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
   <div class="panel"><div class="eyebrow">What it is not</div>
     <p>Not a prediction of job losses: a job whose tasks are disruptable changes, it does not disappear, and nothing here measures a single firm. Not a verdict on capability: "unproven" means nobody has shown it yet. On today's patterns AI does under half of almost any job even when every task is disrupted, which is why the headline year is "a quarter". The 2026 rating is a model rating its own kind; its agreement with human raters and a repeat run are the guards, and the usage data are allowed to overrule it.</p></div>
   </div>
+</section>
+
+<section class="view" id="view-compare" role="tabpanel" aria-labelledby="tab-compare" hidden>
+  <div class="lede">
+    <h2>Singapore and the United States, side by side</h2>
+    <p>The same 18,796 tasks, the same AI evidence and the same timing model, weighted by two workforces. Singapore's figures use MOM employment and wages by SSOC code; the US figures use the Bureau of Labor Statistics' employment and wages by occupation. Timing differs in two measured ways: Singapore firms run <span id="cmp-lead"></span> years ahead on the adoption curve, and each occupation's industries carry the Census sector shifts through its own country's job-by-industry mix.</p>
+    <p class="small muted" id="cmp-note"></p>
+  </div>
+  <div class="panel"><div class="eyebrow">Head to head</div><div class="tablewrap" tabindex="0" role="region" aria-label="Singapore and US comparison table"><table id="cmp-table"><caption class="sr-only">Singapore and the United States compared</caption></table></div></div>
+  <div class="panel"><div class="eyebrow">The share of each country's pay that AI could be doing, by year</div><div id="cmp-chart"></div></div>
+  <div class="panel"><div class="eyebrow">Where the gap comes from</div><p id="cmp-decomp"></p><p class="small muted">Measured by running each country's workforce on the other's timing: the job-mix part is what the gap would be if both countries sat on the US timing; the timing part is the rest (Singapore's adoption lead and its industry mix). The two parts add up to the gap.</p></div>
+  <div class="panel"><div class="eyebrow">By occupation group</div><h3>The same nine occupation groups in both countries</h3><p class="small muted">Both countries are placed on the ISCO-08 major groups (Singapore's SSOC major groups follow them; US occupations are mapped through the O*NET to ISCO crosswalk). Shares are of each country's wage bill. Years follow the chosen scenario.</p><div class="tablewrap" tabindex="0" role="region" aria-label="Occupation groups in both countries, scrolls sideways on small screens"><table id="cmp-groups"><caption class="sr-only">Occupation groups compared across the two countries</caption></table></div></div>
+  <div class="panel"><div class="eyebrow">Showing up in jobs yet?</div><div id="cmp-outcomes"></div></div>
+  <details class="more"><summary>What to be careful about</summary><p class="small">The two workforces are measured by different surveys in different years: Singapore's employment is residents in June 2025 and wages are monthly medians from June 2025; the US figures are all jobs in May 2024 with annual medians. Shares of each country's own wage bill are comparable; absolute wages are not, and are not compared. The US adoption curve is the Census survey of firms; Singapore's lead is measured from IMDA's survey, which asks a looser question. The US rung-five test uses one year of employment change (May 2023 to May 2024), Singapore's uses vacancies, wages and employment to 2025. Occupations that O*NET lists but the BLS does not publish separately (about twenty, mostly military) carry no US weight.</p></details>
 </section>
 
 <section class="view" id="view-jobs" role="tabpanel" aria-labelledby="tab-jobs" hidden>
@@ -311,8 +326,8 @@ let ktCache = null, ktLoading = null;
 function loadKT(){ if(ktCache) return Promise.resolve(ktCache); if(!ktLoading){ ktLoading = fetch('kt.json').then(r=>r.json()).then(j=>{ktCache=j;return j;}).catch(()=>null);} return ktLoading; }
 
 // ---------- views
-const views = ["leaders","overview","jobs","sectors","skills","news","method"];
-function show(v){ views.forEach(x=>{ document.getElementById('view-'+x).hidden = (x!==v); }); document.querySelectorAll('nav.tabs button').forEach(b=>{ const on=b.dataset.view===v; b.setAttribute('aria-selected', on?'true':'false'); b.tabIndex = on?0:-1; }); try{localStorage.setItem('view',v);}catch(e){} }
+const views = ["leaders","overview","compare","jobs","sectors","skills","news","method"];
+function show(v){ views.forEach(x=>{ document.getElementById('view-'+x).hidden = (x!==v); }); if(v==='compare' && typeof compareRender==='function' && document.getElementById('cmp-chart')) compareRender(); document.querySelectorAll('nav.tabs button').forEach(b=>{ const on=b.dataset.view===v; b.setAttribute('aria-selected', on?'true':'false'); b.tabIndex = on?0:-1; }); try{localStorage.setItem('view',v);}catch(e){} }
 const tabButtons = Array.from(document.querySelectorAll('nav.tabs button'));
 tabButtons.forEach((b,i)=>{ b.addEventListener('click',()=>show(b.dataset.view)); b.addEventListener('keydown',e=>{ if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault(); const j=(i+(e.key==='ArrowRight'?1:-1)+tabButtons.length)%tabButtons.length; tabButtons[j].focus(); show(tabButtons[j].dataset.view); } }); });
 let start = (location.hash||"").replace('#',''); if(!views.includes(start)){ try{ start = localStorage.getItem('view')||'leaders'; }catch(e){ start='leaders'; } if(!views.includes(start)) start='leaders'; }
@@ -323,7 +338,7 @@ function setScn(v){ SCN=v; try{localStorage.setItem('scn',String(v));}catch(e){}
 let CMP = false; try{ CMP = localStorage.getItem('cmp')==='1'; }catch(e){}
 function setCmp(v){ CMP=!!v; try{localStorage.setItem('cmp',CMP?'1':'0');}catch(e){} rerender(); }
 document.addEventListener('change', ev=>{ if(ev.target && ev.target.classList && ev.target.classList.contains('cmp-toggle')) setCmp(ev.target.checked); });
-document.addEventListener('click', ev=>{ const b=ev.target.closest && ev.target.closest('.scn-pick'); if(b) setScn(+b.dataset.scn); });
+document.addEventListener('click', ev=>{ const b=ev.target.closest && ev.target.closest('.scn-pick'); if(b) setScn(+b.dataset.scn); const v=ev.target.closest && ev.target.closest('[data-view-link]'); if(v){ ev.preventDefault(); show(v.dataset.viewLink); window.scrollTo(0,0); } });
 scnButtons.forEach(b=>b.addEventListener('click',()=>setScn(+b.dataset.scn)));
 paintScn();
 
@@ -362,6 +377,62 @@ function ladderSvg(compact){
     if(i<4&&conv[i]){ s+=`<text x="${x+sw-10}" y="${y-9}" font-size="11" font-weight="600" text-anchor="end" fill="var(--fg)">${conv[i]} \u2197</text>`; }
   });
   s+=`<text x="6" y="${H-8}" font-size="10" fill="var(--muted)">Share of tasks or firms that have so far moved up to the next rung</text></svg>`; return s;
+}
+function compareRender(){
+  const C=D.compare; const tab=document.getElementById('tab-compare'); if(!C){ if(tab) tab.hidden=true; return; }
+  const SG=C.countries.SGP, US=C.countries.USA; const scn=SCN_NAMES[SCN];
+  const row=(c,lvl,w)=>c.econ.find(e=>e.level===lvl&&e.w===w&&(lvl!=='economy'||e.scope==='economy'));
+  const sgW=row(SG,'economy','wage'), usW=row(US,'economy','wage'), sgE=row(SG,'economy','emp'), usE=row(US,'economy','emp');
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('cmp-lead', fmt(SG.lead,1));
+  set('cmp-note', `Singapore: ${fmt(sgE.total,0)} thousand ${SG.emp_label}. United States: ${fmt(usE.total/1000,1)} million ${US.emp_label}. Every figure below follows the ${scn} case chosen at the top.`);
+  const oc=m.outcomes||{}; const sgv = oc.headline ? ((Math.abs((oc.headline.occupation||{}).median_signed_rho||0)<0.15 && ((oc.headline.submajor||{}).median_signed_rho||0)>=0) ? 'Not yet' : 'Not clearly') : 'not tested';
+  const uo=C.us_outcomes||{}; const uh=(uo.headline||{}).occupation||{}; const usv = uh.median_signed_rho==null ? 'not tested' : Math.abs(uh.median_signed_rho)<0.15 ? 'Not yet' : (uh.median_signed_rho>0 ? 'Not yet: more exposed jobs grew faster' : 'Early signs');
+  const rows=[
+    [`AI doing by 2035 (${scn} case)`, pct((dbOf(sgW)||sgW.db)[I35]), pct((dbOf(usW)||usW.db)[I35]), 'share of the wage bill AI itself could be doing'],
+    [`AI involved by 2035 (${scn} case)`, pct((sbOf(sgW)||sgW.sb)[I35]), pct((sbOf(usW)||usW.sb)[I35]), 'share of the wage bill in tasks AI does or helps with'],
+    [`A quarter of the wage bill done by (${scn})`, yr1(sgW.hq[SCN]), yr1(usW.hq[SCN]), `fast ${yr1(sgW.hq[0])} / slow ${yr1(sgW.hq[2])} against fast ${yr1(usW.hq[0])} / slow ${yr1(usW.hq[2])}`],
+    ['Ceiling on today\u2019s patterns', pct(sgW.cap), pct(usW.cap), 'what AI would be doing if every task were adopted'],
+    ['Work already seen in AI use', pct(sgE.so), pct(usE.so), 'share of all work (task weight) seen in usage data'],
+    ['AI already doing the work', pct(sgW.oa), pct(usW.oa), 'share of the wage bill in tasks where observed use is mostly AI completing the task'],
+    ['Firms using AI now', SG.adoption_now!=null?pct(100*SG.adoption_now):'\u2013', US.adoption_now!=null?pct(100*US.adoption_now):'\u2013', `${SG.adoption_now_label||''} against ${US.adoption_now_label||''}`],
+    ['Half of firms using AI by (central)', yr1(SG.half_firms), yr1(US.half_firms), `Singapore measured ${fmt(SG.lead,1)} years ahead on the same curve`],
+    ['Industry timing spread', SG.shift_range?`${fmt(SG.shift_range[0],1)} to +${fmt(SG.shift_range[1],1)} yrs`:'\u2013', US.shift_range?`${fmt(US.shift_range[0],1)} to +${fmt(US.shift_range[1],1)} yrs`:'\u2013', 'years an occupation\u2019s industries run ahead (negative) or behind the national curve'],
+    ['Showing up in jobs yet?', sgv, usv, 'Singapore: vacancies, wages and employment to 2025; US: employment change May 2023 to May 2024'],
+  ];
+  document.getElementById('cmp-table').innerHTML = `<thead><tr><th scope="col">Measure</th><th scope="col" class="num">Singapore</th><th scope="col" class="num">United States</th><th scope="col">What it is</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td class="num"><strong>${esc(String(r[1]))}</strong></td><td class="num"><strong>${esc(String(r[2]))}</strong></td><td class="small muted">${esc(r[3])}</td></tr>`).join('')}</tbody>`;
+  // chart: the two countries' "AI doing" lines in the chosen case
+  (function(){ const box=document.getElementById('cmp-chart'); const W=Math.max(300, Math.min(760,(box.clientWidth||640)-34)), H=Math.round(W*0.28)+40, l=36, r=92, t=14, b=28; const xs=i=>l+i/(Y.length-1)*(W-l-r), ys=v=>t+(1-v/100)*(H-t-b);
+    const series=[[sgW, 'var(--scn)', 'Singapore', ''], [usW, 'var(--us)', 'United States', 'stroke-dasharray="7 4"']];
+    let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Share of each country's wage bill AI could be doing by year, ${scn} case: Singapore ${pct((dbOf(sgW)||sgW.db)[I35])} and the United States ${pct((dbOf(usW)||usW.db)[I35])} by 2035">`;
+    [0,25,50].forEach(v=>{ s+=`<line class="grid" x1="${l}" x2="${W-r}" y1="${ys(v)}" y2="${ys(v)}"/><text x="${l-6}" y="${ys(v)+4}" font-size="11" text-anchor="end">${v}%</text>`; });
+    const step=W<480?4:2; Y.forEach((y,i)=>{ if((y-Y[0])%step===0) s+=`<text x="${xs(i)}" y="${H-8}" font-size="11" text-anchor="middle">${y}</text>`; });
+    const ends=[]; const dots=[];
+    series.forEach(([e,col,name,dash],k)=>{ const d=(dbOf(e)||e.db); const pts=d.map((v,i)=>`${xs(i)},${ys(Math.min(v||0,50))}`).join(' '); s+=`<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="3" ${dash}/>`; const hq=e.hq?e.hq[SCN]:null; if(hq!=null){ const i=(hq-Y[0])/(Y[Y.length-1]-Y[0])*(Y.length-1); if(i>=0&&i<=Y.length-1){ s+=`<circle cx="${xs(i)}" cy="${ys(25)}" r="5" fill="${col}"/>`; dots.push([xs(i), col, `${name} ${yr1(hq)}`, k]); } } ends.push([col,name,ys(Math.min(d[Y.length-1]||0,50))]); });
+    if(W>=480){ dots.forEach(([x,col,txt,k])=>{ const left = k===0; s+=`<text x="${left?x-9:x+9}" y="${ys(25)+4}" font-size="10.5" font-weight="600" text-anchor="${left?'end':'start'}" fill="${col}">${txt}</text>`; }); }
+    ends.sort((a,b)=>a[2]-b[2]); for(let j=1;j<ends.length;j++){ if(ends[j][2]-ends[j-1][2]<13) ends[j][2]=ends[j-1][2]+13; }
+    ends.forEach(([col,name,y])=>{ s+=`<text x="${W-r+6}" y="${y+4}" font-size="11" font-weight="700" fill="${col}">${name}</text>`; });
+    s+=`</svg>`;
+    box.innerHTML=`<div class="timeline">${s}</div><div class="evlegend" style="margin:2px 0 4px"><span><svg class="sw" viewBox="0 0 24 12" aria-hidden="true"><line x1="0" x2="24" y1="6" y2="6" stroke="var(--scn)" stroke-width="3"/></svg>Singapore, AI doing the work (${scn} case)</span><span><svg class="sw" viewBox="0 0 24 12" aria-hidden="true"><line x1="0" x2="24" y1="6" y2="6" stroke="var(--us)" stroke-width="3" stroke-dasharray="7 4"/></svg>United States, AI doing the work (${scn} case)</span><span>dots: a quarter of the wage bill done</span></div><p class="small muted chart-note"><strong>Reading the chart.</strong> Each line is the share of that country's total pay that AI itself could be doing, year by year, in the ${scn} case; the axis stops at 50% because neither line reaches it by 2040. Switch the scenario at the top to see the fast or slow case for both.</p>`;
+  })();
+  // decomposition
+  (function(){ const d=(C.decomp||{}).wage_value; const el=document.getElementById('cmp-decomp'); if(!d||!d.by_year){ el.textContent=''; return; } const k=d.by_year[`${scn}_2035`]; if(!k){ el.textContent=''; return; }
+    const gap=100*k.gap, jm=100*k.job_mix, tm=100*k.timing; const ahead = gap>=0;
+    el.innerHTML = `By 2035 (${scn} case) AI could be doing <strong>${pct(100*k.singapore)}</strong> of Singapore's wage bill against <strong>${pct(100*k.us)}</strong> of the US's: Singapore is ${fmt(Math.abs(gap),1)} points ${ahead?'ahead':'behind'}. About <strong>${fmt(Math.abs(jm),1)} points</strong> of that come from the job mix (what people are employed as, and what they are paid) and <strong>${fmt(Math.abs(tm),1)} points</strong> from timing (Singapore firms' ${fmt(SG.lead,1)}-year adoption lead and its industry mix)${(jm<0)!==(tm<0)&&Math.abs(jm)>0.05&&Math.abs(tm)>0.05?`, the two pulling in opposite directions`:''}. Fast case: ${pct(100*(d.by_year[`fast_2035`]||{}).singapore)} against ${pct(100*(d.by_year[`fast_2035`]||{}).us)}; slow case: ${pct(100*(d.by_year[`slow_2035`]||{}).singapore)} against ${pct(100*(d.by_year[`slow_2035`]||{}).us)}.`;
+  })();
+  // groups
+  (function(){ const names={"1":"Managers","2":"Professionals","3":"Associate professionals & technicians","4":"Clerical support workers","5":"Service & sales workers","6":"Agricultural & fishery workers","7":"Craftsmen & related trades","8":"Plant & machine operators","9":"Cleaners, labourers & related"};
+    const trs=Object.keys(names).map(g=>{ const a=SG.econ.find(e=>e.scope==='major_'+g&&e.w==='wage'), b=US.econ.find(e=>e.scope==='major_'+g&&e.w==='wage'); if(!a&&!b) return ''; const sh=(e,tot)=>e?pct(100*e.total/tot):'\u2013'; const db=e=>e?pct((dbOf(e)||e.db)[I35]):'\u2013'; const hq=e=>e&&e.hq?heat(e.hq[SCN]):'\u2013';
+      return `<tr><td>${esc(names[g])}</td><td class="num">${sh(a,sgW.total)}</td><td class="num">${sh(b,usW.total)}</td><td class="num">${db(a)}</td><td class="num">${db(b)}</td><td class="num">${hq(a)}</td><td class="num">${hq(b)}</td></tr>`; }).join('');
+    document.getElementById('cmp-groups').innerHTML = `<thead><tr><th scope="col">Occupation group</th><th scope="col" class="num wrap">Wage bill share, Singapore</th><th scope="col" class="num wrap">Wage bill share, US</th><th scope="col" class="num wrap">AI doing by 2035, Singapore</th><th scope="col" class="num wrap">AI doing by 2035, US</th><th scope="col" class="num wrap">A quarter done by, Singapore</th><th scope="col" class="num wrap">A quarter done by, US</th></tr></thead><tbody>${trs}</tbody>`;
+  })();
+  // outcomes
+  (function(){ const el=document.getElementById('cmp-outcomes'); const parts=[];
+    parts.push(`<p><strong>Singapore: ${esc(sgv)}.</strong> ${oc.headline?`Across ${fmt(oc.n_wages)} occupations, wage growth to June 2025 and vacancy shares since 2023 show no clear relation to AI exposure; across the occupation sub-groups the more exposed groups have grown faster since 2019.`:'Outcome tests not available in this build.'}</p>`);
+    if(uo.tests){ const t=uo.tests.find(x=>x.level.startsWith('detailed')&&x.outcome.startsWith('employment')&&x.signal.startsWith('AI doing'))||uo.tests[0]; const tw=uo.tests.find(x=>x.level.startsWith('detailed')&&x.outcome.startsWith('median wage')&&x.signal.startsWith('AI doing')); const terc=uo.emp_change_by_exposure_tercile||{};
+      parts.push(`<p><strong>United States: ${esc(usv)}.</strong> Across ${fmt(uo.n_soc)} occupations, employment change from May ${uo.years?uo.years[0]:''} to May ${uo.years?uo.years[1]:''} ${t.rho==null?'could not be tested':`has a rank correlation of ${fmt(t.rho,2)} with AI doing by 2035 (${esc(t.reading)})`}${tw&&tw.rho!=null?`; median wage change ${fmt(tw.rho,2)} (${esc(tw.reading)})`:''}. Employment grew ${fmt(terc['least exposed third'],1)}% in the least exposed third of occupations, ${fmt(terc['middle third'],1)}% in the middle third and ${fmt(terc['most exposed third'],1)}% in the most exposed third (all occupations: ${fmt(uo.total_employment_change_pct,1)}%).</p>`); }
+    el.innerHTML=parts.join('');
+  })();
 }
 function leadersRender(){
   const db=(dbOf(ecoW)||ecoW.db||[]), sb=(sbOf(ecoW)||ecoW.sb||[]), hq=ecoW.hq||[], da=m.data_as_of||{}, V=m.validation||{}, ad=m.adoption||{}, oc=m.outcomes||{}; const scn=SCN_NAMES[SCN];
@@ -433,6 +504,7 @@ function makeTable(el, cols, rows, defaultSort){
   render();
 }
 const heat = v => { if(v==null) return '<span class="yc">beyond 2045</span>'; const t=Math.max(0,Math.min(1,(v-2027)/13)); return `<span class="yc" style="background:rgba(${t<0.5?'var(--heat-warm)':'var(--heat-cool)'},${(0.55*Math.abs(t-0.5)*2+0.12).toFixed(2)})">${yr1(v)}</span>`; };
+compareRender();
 const bar = v => `<div class="flexrow" style="gap:6px;flex-wrap:nowrap"><div class="bar" style="flex:1"><i style="width:${Math.min(100,v||0)}%"></i></div><span style="min-width:38px;text-align:right">${pct(v)}</span></div>`;
 function subTable(){
   const w = document.getElementById('sub-weight').value;
@@ -642,7 +714,8 @@ function open(kind,i){
       <dl class="kv"><dt>Employed residents</dt><dd>${fmt(s.emp,1)} thousand <span class="muted small">(group total split evenly across surveyed occupations)</span></dd>
       <dt>Median gross wage</dt><dd>S$${fmt(s.wage)} / month <span class="muted small">(${s.ws==='ows_2025_coded'?'MOM wage survey, June 2025':s.ws==='ows_2024_title_match'?'MOM wage survey 2024, matched by title':'group median, no survey figure'})</span></dd>
       <dt>Barrier index</dt><dd>${s.bi==null?'\u2013':fmt(s.bi,2)} <span class="muted small">(0 = nothing but capability stands in the way, 1 = strongly interpersonal, in person or accountable work)</span></dd>
-      <dt>Microsoft applicability</dt><dd>${s.ai==null?'\u2013':fmt(s.ai,2)} <span class="muted small">(Copilot usage, 0&ndash;1, second opinion)</span></dd></dl>
+      <dt>Microsoft applicability</dt><dd>${s.ai==null?'\u2013':fmt(s.ai,2)} <span class="muted small">(Copilot usage, 0&ndash;1, second opinion)</span></dd>
+      ${s.us?`<dt>In the United States</dt><dd>${esc(s.us[0])}: ${fmt(s.us[1],0)} thousand employed, median US$${fmt(s.us[2])} a year${s.us[6]?' or more':''} <span class="muted small">(BLS, May 2024)</span>. AI doing a quarter of the work by ${yr1(s.us[3][SCN])} there against ${yr1(s.hq?s.hq[SCN]:null)} here; doing ${pct(s.us[4][SCN])} of it by 2035 there against ${pct((dbOf(s)||s.db||[])[I35])} here (${SCN_NAMES[SCN]} case). <a href="#compare" data-view-link="compare">Compare the two countries</a></dd>`:''}</dl>
       <h3 class="sub">Built from these O*NET occupations</h3><p class="small muted">Scores are pulled through the official SSOC&ndash;ISCO&ndash;O*NET code chain; percentages are the weight of each US occupation in this code.</p>
       <ul class="small">${s.onet.map(o=>`<li>${esc(o[0])} <span class="muted">${pct(o[1])}</span></li>`).join('')}</ul>
       ${roles?`<h3 class="sub">Skills Framework roles coded to this occupation</h3><ul class="small">${roles}</ul>`:''}`;
@@ -665,7 +738,7 @@ function open(kind,i){
   el.querySelectorAll('a[data-ssoc]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); const j=D.ssoc.findIndex(s=>s.c===a.dataset.ssoc); if(j>=0){ open('ssoc',j); el.scrollIntoView({behavior:'smooth',block:'start'}); }}));
 }
 
-let rsz; window.addEventListener('resize',()=>{ clearTimeout(rsz); rsz=setTimeout(()=>{ majorChart(); leadersRender(); if(current) open(current.kind,current.i); },200); });
+let rsz; window.addEventListener('resize',()=>{ clearTimeout(rsz); rsz=setTimeout(()=>{ majorChart(); leadersRender(); compareRender(); if(current) open(current.kind,current.i); },200); });
 
 // ---------- sectors
 function sectorTable(){
@@ -691,7 +764,7 @@ function gwaTable(){
   ], D.gwa.map(g=>{ const db=dbOf(g)||g.db; return {name:g.name,n:g.n,so:g.so,oa:g.oa,ms:g.ms,db35:db?db[I35]:null,hq:g.hq?g.hq[SCN]:null,h:g.h[SCN]}; }), ['oa',-1]);
 }
 gwaTable();
-function rerender(){ tilesRender(); leadersRender(); majorChart(); subTable(); sectorTable(); skillTable(); gwaTable(); if(current) open(current.kind,current.i); }
+function rerender(){ tilesRender(); leadersRender(); compareRender(); majorChart(); subTable(); sectorTable(); skillTable(); gwaTable(); if(current) open(current.kind,current.i); }
 
 // ---------- reading the news
 const L = m.ladder||{}, V = m.validation||{};

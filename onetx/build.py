@@ -212,5 +212,48 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
         stats["outcomes"] = {"error": f"outcome files missing: {e}"}
     e = econ[(econ.scope == "economy")].set_index("weighting")
     stats["singapore_economy"] = {w: {"observed_automation": float(e.loc[w, "observed_automation"]), "share_weight_observed": float(e.loc[w, "share_weight_observed"]), "share_by_2030": float(e.loc[w, "share_by_2030"]), "share_by_2035": float(e.loc[w, "share_by_2035"]), "half_year_central": float(e.loc[w, "half_year_central_from_curve"])} for w in ["employment", "wage_value"]}
+    # ---- a second workforce: the United States (BLS OEWS weights, US sector mix, no adoption lead)
+    try:
+        stats["countries"] = build_us(tf, barriers, params, now, tiers, sector_levels, occ, occf, o2s, ssoc_w, econ, fc, ssoc_curve, shifts)
+    except FileNotFoundError as e:
+        stats["countries"] = {"error": f"US files missing: {e}"}
     register_duckdb()
     return stats
+
+
+def build_us(tf, barriers, params, now, tiers, sector_levels, occ, occf, o2s, ssoc_w, econ_sg, fc_sg, ssoc_curve_sg, shifts) -> dict:
+    """US weights and timing, the comparison tables and the gap decomposition. Returns the stats block."""
+    from . import us_economy as ue
+    from . import us_labour as ul
+    from .io import load
+
+    now_y = fcm._frac_year(pd.Timestamp(now))
+    us_w = ul.build_onet_weights(); save(us_w, "us_onet_weights")
+    us_shift, us_mix = ul.onet_sector_shifts(sector_levels); save(us_shift, "us_adoption_shift_onet"); save(us_mix, "us_soc_sector_mix")
+    params_us = fcm.ForecastParams(**{**fcm.asdict(params), "geo": "USA"})
+    fc_us = fcm.forecast_tasks(tf, barriers, params_us, now=now, tiers=tiers, occ_shift=us_shift)
+    occ_curve_us = fcm.disruption_curve(fc_us, "onet_soc_code").merge(occ[["onet_soc_code", "title"]], on="onet_soc_code", how="left"); save(occ_curve_us, "forecast_occupations_us")
+    uwt = ue.onet_weighted_table(occf, occ_curve_us, us_w); save(uwt, "us_onet_weighted")
+    econ_us = ue.economy_exposure(uwt, "USA"); save(econ_us, "us_economy_exposure")
+    # cross runs for the decomposition: Singapore's weights on US timing, US weights on Singapore timing
+    f2s_us = fc_us.merge(o2s[["onet_soc_code", "ssoc_code", "ssoc_title", "weight_rev"]], on="onet_soc_code")
+    f2s_us["w"] = f2s_us.task_weight * f2s_us.weight_rev
+    ssoc_curve_us = fcm.disruption_curve(f2s_us, "ssoc_code", weight="w")
+    econ_x = se.economy_exposure(se.ssoc_weighted_table(load("frontier_ssoc2024"), ssoc_curve_us, ssoc_w))
+    occ_curve_sg = load("forecast_occupations")
+    econ_y = se.economy_exposure(ue.onet_weighted_table(occf, occ_curve_sg, us_w))
+    decomp = {w: ue.decomposition(econ_sg, econ_us, econ_x, econ_y, w) for w in ["wage_value", "employment"]}
+    # rung five for the US: OEWS employment and wage change between the two Mays against exposure
+    try:
+        change = ul.employment_change(2023, 2024); save(change, "us_outcomes_soc")
+        us_out = ue.outcome_tests(change, us_w, occ_curve_us, occf)
+    except FileNotFoundError as e:
+        us_out = {"error": str(e)}
+    e = econ_us[(econ_us.scope == "economy")].set_index("weighting")
+    return {
+        "USA": {"weights": {"employment_thousands_total": float(us_w.employment_thousands.sum()), "wage_bill_usd": float(us_w.wage_value.sum() * 1000), "employment_method": us_w.employment_method.value_counts().to_dict(), "wage_sources": us_w.wage_source.value_counts(dropna=False).to_dict(), "oews_year": int(us_w.edition.iloc[0])},
+                "shift_range": [float(us_shift.adoption_shift_years.min()), float(us_shift.adoption_shift_years.max())], "geo_lead_years": 0.0,
+                "economy": {w: {"observed_automation": float(e.loc[w, "observed_automation"]), "share_weight_observed": float(e.loc[w, "share_weight_observed"]), "done_by_2035": float(e.loc[w, "done_by_2035"]), "share_by_2035": float(e.loc[w, "share_by_2035"]), "quarter_done_year_central": float(e.loc[w, "quarter_done_year_central_from_curve"])} for w in ["employment", "wage_value"]},
+                "outcomes": us_out},
+        "decomposition": decomp,
+    }

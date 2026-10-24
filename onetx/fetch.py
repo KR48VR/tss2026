@@ -59,6 +59,12 @@ SOURCES: dict[str, str] = {
     # (biweekly; refreshed on every fetch once the local copy is two weeks old, see FRESH_DAYS)
     "census/btos_national.xlsx": "https://www.census.gov/hfp/btos/downloads/National.xlsx",
     "census/btos_sector.xlsx": "https://www.census.gov/hfp/btos/downloads/Sector.xlsx",
+    # US Bureau of Labor Statistics, Occupational Employment and Wage Statistics (May 2024 and May 2023):
+    # employment and wages by detailed occupation (national) and by NAICS sector (the in4 bundle; only its
+    # sector file is used). The second workforce the map can be weighted by.
+    "bls/oesm24nat.zip": "https://www.bls.gov/oes/special-requests/oesm24nat.zip",
+    "bls/oesm23nat.zip": "https://www.bls.gov/oes/special-requests/oesm23nat.zip",
+    "bls/oesm24in4.zip": "https://www.bls.gov/oes/special-requests/oesm24in4.zip",
     # reports kept for reference (numbers are hand-transcribed into data/reference/)
     "openai/how_people_use_chatgpt_2025.pdf": "https://cdn.openai.com/pdf/a253471f-8260-40c6-a2cc-aa93fe9f142e/economic-research-chatgpt-usage-paper.pdf",
     "google/GoogleATLASv1.pdf": "https://ai.google/static/documents/GoogleATLASv1.pdf",
