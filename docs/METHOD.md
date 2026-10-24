@@ -90,3 +90,18 @@ Per task: `capable_year_{fast,central,slow}`, `barrier_years_{fast,central,slow}
 6. **Text matches are approximate.** Filter on `score` / `in_mapped_occ`; hand-check the roles that matter to you.
 7. **Capability evidence is still indirect.** "Seen in use" reflects who uses Claude; the 2023 and 2026 ratings are judgements, not demonstrations; the evidence lags are measured on usage coverage, which grows partly because the sample grows. Real-world agent benchmarks (Remote Labor Index, GDPval win rates) would be a better anchor when task-level files are published. The repeat-rating check in the QA log gives the 2026 rating's own reliability.
 8. **One model rating its own kind.** The 2026 rating is Claude's view of what AI can do. Its agreement with the 2023 human raters is the guard, and the measured lag for "newly rated" tasks shows the data are allowed to overrule it.
+
+## 4. Track record and the ladder (`validation.py`, the page's "Reading the news" view)
+
+Every claim about AI and work sits on one rung of a ladder: (1) someone rated the task doable; (2) people have been seen using AI on it; (3) when they do, AI mostly completes it; (4) typical employers have adopted it; (5) the job itself has changed. The map holds data for rungs 1 to 4 and models rung 4; rung 5 is not in it. `validation.rating_validation` scores every rating against what was later observed and measures the conversion between rungs. All figures are on desk (non-physical) tasks, 2023 ratings against usage to May 2026.
+
+| Rating | Tells which tasks will be seen in use (AUC; 0.5 = nothing, 1 = perfect) | Tells, among seen tasks, where AI mostly does the work (AUC) |
+|---|---|---|
+| OpenAI 2023, human raters | 0.59 | 0.50 |
+| OpenAI 2023, GPT-4 | 0.56 | 0.59 |
+| Claude 2026, exposure | 0.59 | 0.48 |
+| Claude 2026, end-to-end autonomy | 0.55 | 0.63 |
+
+Agreement on yes/no: human vs GPT-4 (2023) 82% (kappa 0.64); Claude 2026 vs human 80% (kappa 0.60); Claude 2026 vs GPT-4 84% (kappa 0.69). Repeat run of 300 tasks: same yes/no 89%, same autonomy level 78% (99.7% within one), same barrier 77%. How the 2023 "no" aged: of 1,376 desk tasks both raters called not doable, 26% had been seen in use by 2026 and 25% were rated doable in 2026.
+
+Ladder conversions used by the translator: of desk tasks rated doable in 2023 (either rater), 42% were seen in use by May 2026 (26% of those rated not doable); of seen desk tasks, AI mostly does the work in 41% (mean automation share 48%); the share of Singapore firms using AI is read from IMDA's latest year and the central half-way year from the adoption curve; a "jobs" claim is first scaled by the median share of an occupation's task weight that is seen, among occupations with any seen task (27%). The translator multiplies a claim's number down the ladder from the rung the report is on; it is a historical conversion, not a forecast for that report. The scorecard on the same view lists every source behind the map with its rung, date and track record here.

@@ -78,6 +78,9 @@ svg .axis{stroke:var(--line)} svg .grid{stroke:var(--line);stroke-dasharray:2 3}
 .scn{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden} .scn button{font:inherit;font-size:.85rem;background:var(--panel);border:0;color:var(--muted);padding:5px 10px;cursor:pointer} .scn button[aria-pressed="true"]{background:var(--accent);color:var(--bg);font-weight:600} .scn button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .evbar{display:flex;height:14px;border-radius:4px;overflow:hidden;border:1px solid var(--line);background:var(--line)} .evbar i{display:block;height:100%} .ev-seen{background:var(--doing)} .ev-rated{background:var(--accent-soft)} .ev-newly{background:var(--helping)} .ev-mixed{background:var(--notseen)} .ev-unproven{background:var(--warn)} .ev-physical{background:var(--physical)}
 .evlegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.8rem;color:var(--muted);margin-top:6px} .evlegend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle;border:1px solid var(--line)}
+ol.ladder{margin:8px 0 0;padding-left:1.4em} ol.ladder li{margin:6px 0} ol.ladder .conv{display:block;font-size:.85rem;color:var(--muted);margin:2px 0 0 0}
+.trchain{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:baseline;margin-top:10px} .trchain .big{font-size:1.4rem;font-weight:700;font-variant-numeric:tabular-nums} .trchain .how{font-size:.85rem;color:var(--muted)}
+input[type="number"]{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg)} input[type="number"]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .stale{border-left:3px solid var(--warn);padding:8px 12px;background:var(--panel);font-size:.92rem;margin:8px 0 0}
 details{border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--panel)}
 details summary{cursor:pointer;font-weight:600}
@@ -102,6 +105,7 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
     <button role="tab" data-view="jobs" aria-selected="false" aria-controls="view-jobs" id="tab-jobs">Find a job</button>
     <button role="tab" data-view="sectors" aria-selected="false" aria-controls="view-sectors" id="tab-sectors">Sectors</button>
     <button role="tab" data-view="skills" aria-selected="false" aria-controls="view-skills" id="tab-skills">Skills and activities</button>
+    <button role="tab" data-view="news" aria-selected="false" aria-controls="view-news" id="tab-news">Reading the news</button>
     <button role="tab" data-view="method" aria-selected="false" aria-controls="view-method" id="tab-method">How to read this</button>
   </nav>
 </div></header>
@@ -117,7 +121,7 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
   <div class="panel">
     <div class="eyebrow">Resident workforce, by major occupational group</div>
     <h3>How much of each group's pay sits in work AI already does, and when half of it could be disruptable</h3>
-    <p class="small muted">Bars show the share of the group's wage bill in tasks where AI is already observed doing the work. The dot is the central estimate of the year when half of the group's wage bill becomes disruptable; the line is the fast-to-slow range. A year like 2031.6 means around mid-2031.</p>
+    <p class="small muted">Bars show the share of the group's wage bill in tasks where AI is already observed doing the work. The dot is the year when half of the group's wage bill becomes disruptable in the selected scenario; the line is the fast-to-slow range. "2031 mid" means around the middle of 2031; early is the first third of the year, late the last.</p>
     <div class="tablewrap" tabindex="0" role="region" aria-label="Major group chart, scrolls sideways on small screens"><div id="major-chart" style="min-width:640px"></div></div>
   </div>
   <div class="panel">
@@ -149,7 +153,7 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
   <div class="panel">
     <div class="eyebrow">Skills Framework sectors</div>
     <h2>Sectors, by the typical role's central half-way year</h2>
-    <p class="small muted">Unweighted averages over the roles in each sector's Skills Framework. "Seen in AI use" is the share of a sector's key tasks that already appear in AI usage data; "AI doing it" is how much of that use looks like the AI doing the task rather than helping. Half-way years are shown to one decimal because sectors sit close together; 2031.6 means around mid-2031.</p>
+    <p class="small muted">Unweighted averages over the roles in each sector's Skills Framework. "Seen in AI use" is the share of a sector's key tasks that already appear in AI usage data; "AI doing it" is how much of that use looks like the AI doing the task rather than helping. Half-way years carry a season (early, mid, late) because sectors sit close together.</p>
     <div class="tablewrap" tabindex="0" role="region" aria-label="Sector table, scrolls sideways on small screens"><table id="sector-table"><caption class="sr-only">Skills Framework sectors with exposure and timing</caption></table></div>
   </div>
 </section>
@@ -169,6 +173,35 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
   </div>
 </section>
 
+<section class="view" id="view-news" role="tabpanel" aria-labelledby="tab-news" hidden>
+  <div class="lede">
+    <h2>How to read a new report about AI and jobs</h2>
+    <p>Every claim about AI and work sits on one rung of a ladder. Most headlines sit on the first rung. This page has measured, on 18,796 real tasks, how often a claim on one rung has so far turned into the next. Use the ladder to place a report, then the translator to see what its number has historically meant further down.</p>
+  </div>
+  <div class="panel">
+    <div class="eyebrow">The ladder</div>
+    <ol class="ladder" id="ladder"></ol>
+  </div>
+  <div class="panel">
+    <div class="eyebrow">Translator</div>
+    <h3>What has a claim like this meant so far?</h3>
+    <div class="flexrow small" style="margin:8px 0">
+      <label for="tr-pct">A report says</label><input type="number" id="tr-pct" min="0" max="100" step="1" value="40" style="width:5em" aria-describedby="tr-help"><span>% of</span>
+      <select id="tr-unit" aria-label="Unit of the claim"><option value="tasks">tasks</option><option value="jobs">jobs</option></select>
+      <select id="tr-rung" aria-label="What the claim says about them"><option value="1">could be done by AI (a rating)</option><option value="2">have people using AI on them</option><option value="3">have AI doing most of the work when used</option></select>
+    </div>
+    <p class="small muted" id="tr-help">Pick the rung the report is really on. "Exposed", "at risk", "automatable" and "could be augmented" are all ratings, rung one, unless the report measured actual use.</p>
+    <div id="tr-out"></div>
+  </div>
+  <div class="panel">
+    <div class="eyebrow">Source scorecard</div>
+    <h3>The reports behind this map, and how they have done so far</h3>
+    <p class="small muted">Track record means a test against what was later observed, on this map's own data. A score of 0.50 means a rating told us nothing about which tasks would be seen in use; 1.00 would be perfect. Most honest ratings land near 0.6: real signal, far from certainty.</p>
+    <div class="tablewrap" tabindex="0" role="region" aria-label="Source scorecard, scrolls sideways on small screens"><table id="source-table"><caption class="sr-only">Sources, what they measure and their track record</caption></table></div>
+    <p class="small muted">Two rules that follow from the record: an old "AI can do this" has held up, an old "AI cannot" has not (a quarter of the tasks rated impossible in 2023 had been seen in use by 2026); and a rating that needs AI to be wired into company systems tells you less than one about a plain chatbot, because companies are slower than the technology.</p>
+  </div>
+</section>
+
 <section class="view" id="view-method" role="tabpanel" aria-labelledby="tab-method" hidden>
   <div class="lede">
     <h2>How to read this page</h2>
@@ -177,7 +210,7 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
     <p><strong>What drives the timing.</strong> Adoption: a curve fitted to the US Census survey of firms using AI, refreshed from the Census on every rebuild (latest reading <span id="m-btos-date"></span>, <span id="m-btos-pct"></span> of firms); half of US firms by <span id="m-anchor"></span> in the central case, <span id="m-anchor-fast"></span> fast and <span id="m-anchor-slow"></span> slow. Singapore firms run about <span id="m-lead"></span> years ahead, measured by comparing IMDA's enterprise survey with the US series at matched adoption levels, so half of Singapore firms by <span id="m-sg-anchor"></span>. Each job's industries move its date: from the Census sector series, information and communications firms run about <span id="m-shift-early"></span> years ahead of the Singapore average and accommodation and food services about <span id="m-shift-late"></span> years behind; an occupation takes the employment mix of its industries, and a Skills Framework role takes its sector. Then the capability term: the evidence lags above, a delay for long tasks using the measured doubling of AI task length every <span id="m-doubling"></span> days, and robot-readiness tiers for physical tasks. Then a barrier delay for work that is interpersonal, in person, carries accountability, or that people keep for themselves even with AI around. The fast and slow cases change the adoption speed, the lags and the barrier delay together.</p>
     <p><strong>Where the numbers come from.</strong> Anthropic's Economic Index (seven snapshots, December 2024 to May 2026) is the only source that publishes usage by task. Microsoft's Copilot study gives a second opinion at the activity level. OpenAI's 2023 study rated every task twice (human raters and GPT-4); Claude rated every task again in October 2026 on the same scale, through a re-runnable command in the open-source pipeline, and agrees with each 2023 rater about as often as they agreed with each other. OpenAI and Google also publish occupation-level ratings and lists. Firm adoption comes from the US Census Business Trends and Outlook Survey (national and by sector) and IMDA's Singapore Digital Economy Reports. Singapore employment is from MOM's Labour Force in Singapore 2025 and wages from MOM's Occupational Wage Survey, June 2025.</p>
     <p><strong>What to be careful about.</strong> The usage data reflect who uses Claude, which skews to office and software work, so "unproven" is weaker evidence for hands-on and frontline jobs. The Census reworded its question in late 2025 and the level jumped; the curve carries a step for it, and the old-wording curve would put the US half-way point at <span id="m-anchor-old"></span>. The 2023 ratings are old: a "yes" from then still stands, a "no" is only a flag to look again, which is what the 2026 rating and the usage data do. Within each 2-digit occupation group, employment is split evenly across surveyed occupations because no finer official count exists; group totals are solid, single-occupation wage figures are not. Links between Singapore roles and O*NET are official where SingStat coded them and text-matched elsewhere; each match shows its score.</p>
-    <p><strong>Reading the years.</strong> Tables show half-way years to one decimal place because many jobs sit within a year of each other; 2031.6 means around mid-2031. The headline tiles round to the year.</p>
+    <p><strong>Reading the years.</strong> Tables and job pages show a year with a season, such as "2031 mid": early is the first third of the year, mid the middle third, late the last. That is as precise as the model deserves; many jobs sit within a year of each other, so the season is what separates them. Tables still sort by the exact value. The headline tiles round to the year.</p>
     <p class="small muted">Built from the open-source <code>onetx</code> pipeline. Anyone can rebuild the page or change the assumptions by running the Python code; this page is the no-code way in. <span id="companion-link"></span></p>
   </div>
   <div class="panel" id="method-counts"></div>
@@ -201,7 +234,7 @@ const hOf = e => { if(!e) return null; const h=e.h||e.half; return h ? h[SCN] : 
 const fmt = (v, d=0) => (v==null||Number.isNaN(v)) ? "\u2013" : Number(v).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
 const pct = v => v==null ? "\u2013" : fmt(v)+"%";
 const yr = v => v==null ? "beyond 2045" : String(Math.round(v));           // whole year, no thousands separator
-const yr1 = v => v==null ? "beyond 2045" : (Math.round(v*10)/10).toFixed(1); // decimal year for tables
+const yr1 = v => { if(v==null) return "beyond 2045"; const y=Math.floor(v), f=v-y; return `${y} ${f<1/3?'early':f<2/3?'mid':'late'}`; }; // year + season for tables and labels; sorting uses the raw value
 const MID = "\u00b7", ELL = "\u2026";
 document.documentElement.lang = document.documentElement.lang || "en";
 const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -209,7 +242,7 @@ let ktCache = null, ktLoading = null;
 function loadKT(){ if(ktCache) return Promise.resolve(ktCache); if(!ktLoading){ ktLoading = fetch('kt.json').then(r=>r.json()).then(j=>{ktCache=j;return j;}).catch(()=>null);} return ktLoading; }
 
 // ---------- views
-const views = ["overview","jobs","sectors","skills","method"];
+const views = ["overview","jobs","sectors","skills","news","method"];
 function show(v){ views.forEach(x=>{ document.getElementById('view-'+x).hidden = (x!==v); }); document.querySelectorAll('nav.tabs button').forEach(b=>{ const on=b.dataset.view===v; b.setAttribute('aria-selected', on?'true':'false'); b.tabIndex = on?0:-1; }); try{localStorage.setItem('view',v);}catch(e){} }
 const tabButtons = Array.from(document.querySelectorAll('nav.tabs button'));
 tabButtons.forEach((b,i)=>{ b.addEventListener('click',()=>show(b.dataset.view)); b.addEventListener('keydown',e=>{ if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault(); const j=(i+(e.key==='ArrowRight'?1:-1)+tabButtons.length)%tabButtons.length; tabButtons[j].focus(); show(tabButtons[j].dataset.view); } }); });
@@ -482,6 +515,37 @@ function gwaTable(){
 }
 gwaTable();
 function rerender(){ tilesRender(); majorChart(); subTable(); sectorTable(); skillTable(); gwaTable(); if(current) open(current.kind,current.i); }
+
+// ---------- reading the news
+const L = m.ladder||{}, V = m.validation||{};
+const p1 = v => v==null ? '\u2013' : fmt(v*100,0)+'%';
+(function(){
+  const rungs = [
+    ["Someone rated it doable", "a rating by people or a model; most reports and headlines sit here", L.rated_to_seen!=null ? `So far, ${p1(L.rated_to_seen)} of desk tasks rated doable in 2023 had been seen in real AI use by ${L.usage_to||'May 2026'}. Of tasks rated impossible, ${p1(L.rated_no_to_seen)} were seen anyway.` : ''],
+    ["People have been seen using AI on it", "usage data from Anthropic, Microsoft, OpenAI and Google", L.seen_to_doing!=null ? `When a task is seen in use, AI mostly completes it (rather than helps) in ${p1(L.seen_to_doing)} of cases; on average AI does ${p1(L.seen_mean_automation_share)} of the work.` : ''],
+    ["When they do, AI does most of the work", "the automation share in the usage data", L.adoption_now!=null ? `Today about ${p1(L.adoption_now)} of Singapore firms use AI at all (${L.adoption_now_year||''}); half of firms by ${yr1(L.adoption_half_year)} in the central case.` : ''],
+    ["Typical employers have adopted it", "firm surveys: US Census every two weeks, IMDA yearly", "This is the step the map's years model; what a firm 'using AI' means for a given task is still looser than this ladder implies."],
+    ["The job itself has changed", "vacancies, hiring, wages", "Not in the map yet. Nothing on this page should be read as a measurement of this rung."],
+  ];
+  document.getElementById('ladder').innerHTML = rungs.map(r=>`<li><strong>${esc(r[0])}.</strong> <span class="muted">${esc(r[1])}.</span>${r[2]?`<span class="conv">${esc(r[2])}</span>`:''}</li>`).join('');
+  const out=document.getElementById('tr-out');
+  function translate(){
+    const v=Math.max(0,Math.min(100,+document.getElementById('tr-pct').value||0)), unit=document.getElementById('tr-unit').value, rung=+document.getElementById('tr-rung').value;
+    const rows=[]; let x=v;
+    const jobNote = unit==='jobs' && L.job_task_share!=null ? `<p class="small muted">"${fmt(v)}% of jobs" usually means some tasks in each of those jobs, not whole jobs. In this map, a job that has any task seen in AI use has on average ${p1(L.job_task_share)} of its work seen, so a job claim is worth roughly ${fmt(v*L.job_task_share,0)}% in task terms. The chain below starts from that.</p>` : '';
+    if(unit==='jobs' && L.job_task_share!=null) x = v*L.job_task_share;
+    if(rung<=1){ rows.push([`${fmt(x,0)}%`, `of ${unit==='jobs'?'work in those jobs':'tasks'} rated doable (the claim as made)`]); x = x*(L.rated_to_seen||0); rows.push([`${fmt(x,0)}%`, `seen in real AI use within about three years, if the rating does as well as the 2023 ratings did (${p1(L.rated_to_seen)} of rated tasks were seen)`]); }
+    else if(rung===2){ rows.push([`${fmt(x,0)}%`, `seen in AI use (the claim as made)`]); }
+    if(rung<=2){ x = x*(L.seen_to_doing||0); rows.push([`${fmt(x,1)}%`, `with AI mostly doing the work when used (${p1(L.seen_to_doing)} of seen tasks)`]); }
+    else { rows.push([`${fmt(x,0)}%`, `with AI mostly doing the work when used (the claim as made)`]); }
+    if(L.adoption_now!=null){ const y=x*L.adoption_now; rows.push([`${fmt(y,1)}%`, `of that work inside firms that use AI today (${p1(L.adoption_now)} of Singapore firms, ${L.adoption_now_year||''}); the map's years say when that share of firms reaches half`]); }
+    out.innerHTML = jobNote + `<div class="trchain">${rows.map(r=>`<span class="big">${r[0]}</span><span class="how">${r[1]}</span>`).join('')}</div><p class="small muted" style="margin-top:10px">These are historical conversion rates from this map's own data, not a forecast for the report in question. A report that measured actual use or adoption starts further down the ladder and needs fewer discounts, which is the point.</p>`;
+  }
+  ['tr-pct','tr-unit','tr-rung'].forEach(id=>document.getElementById(id).addEventListener('input',translate)); translate();
+  makeTable(document.getElementById('source-table'), [
+    {k:'name',label:'Source'},{k:'rung',label:'Rung',num:true,fmt:v=>fmt(v)},{k:'what',label:'What it measures'},{k:'unit',label:'Unit'},{k:'date',label:'Data as of'},{k:'record',label:'Track record here'},{k:'caution',label:'Caution'}
+  ], (m.sources||[]), ['rung',1]);
+})();
 
 // ---------- method
 const ad=m.adoption||{}, ev=m.evidence||{}, ss=m.sector_shift||{};

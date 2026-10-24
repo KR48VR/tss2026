@@ -98,3 +98,23 @@ def test_rating_parser_is_strict():
     assert out[0] == {"exposure": "E1", "autonomy": "A2", "barrier": "judgement"}
     assert out[1] is None
     assert out[2] == {"exposure": "E0", "autonomy": "A1", "barrier": "in_person"}
+
+
+def test_validation_ladder_and_agreement():
+    from onetx import validation as val
+
+    n = 400
+    rng = np.random.default_rng(0)
+    seen_n = rng.integers(0, 3, n)
+    tf = pd.DataFrame({"task_id": [str(i) for i in range(n)], "physical": [False] * n, "usage_n_vintages": seen_n, "automation_share": rng.uniform(0, 1, n), "ms_share": np.nan})
+    # a rating that is informative: 'E1' more often when seen
+    human = np.where(rng.uniform(0, 1, n) < np.where(seen_n > 0, 0.8, 0.3), "E1", "E0")
+    labels = pd.DataFrame({"task_id": tf.task_id, "exposure_human_2023": human, "exposure_gpt4_2023": human, "automation_gpt4_2023": "T1", "beta_2023": np.where(human == "E1", 1.0, 0.0)})
+    ratings = pd.DataFrame({"task_id": tf.task_id, "exposure": human, "autonomy": np.where(tf.automation_share > 0.5, "A3", "A1"), "barrier": "none"})
+    out = val.rating_validation(tf, labels, ratings)
+    assert out["auc_seen"]["human_2023"] > 0.6
+    assert out["agreement"]["human_vs_gpt4_2023"]["agree"] == 1.0 and abs(out["agreement"]["human_vs_gpt4_2023"]["kappa"] - 1.0) < 1e-9
+    assert out["auc_doing_given_seen"]["autonomy_2026"] > 0.9
+    lad = out["ladder"]
+    assert 0 < lad["rated_to_seen"] <= 1 and 0 <= lad["rated_no_to_seen"] < lad["rated_to_seen"]
+    assert 0 <= lad["seen_to_doing"] <= 1

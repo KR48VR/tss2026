@@ -56,6 +56,27 @@ def _tiers(row):
     return [_pct(v) for v in vals] if any(pd.notna(v) for v in vals) else None
 
 
+def fmt_int(v):
+    try:
+        return f"{int(round(float(v))):,}"
+    except (TypeError, ValueError):
+        return "\u2013"
+
+
+def _pc(v):
+    try:
+        return f"{round(float(v) * 100)}%"
+    except (TypeError, ValueError):
+        return "\u2013"
+
+
+def fmt1(v):
+    try:
+        return f"{float(v):.1f}"
+    except (TypeError, ValueError):
+        return "\u2013"
+
+
 def _code(mapping, v):
     return mapping.get(v) if isinstance(v, str) else None
 
@@ -133,6 +154,43 @@ def build_data(companion_url: str | None = None) -> dict:
     sector_list = [{"sector": r.sector, "n": _r(r.n_roles), "oat": _pct(r.observed_automation_via_tasks), "sko": _pct(r.share_key_tasks_observed), "skp": _pct(r.share_key_tasks_physical), "sb30": _pct(r.share_by_2030), "sb35": _pct(r.share_by_2035), "sb30f": _pct(r.get("share_by_2030_p10")), "sb30s": _pct(r.get("share_by_2030_p90")), "sb35f": _pct(r.get("share_by_2035_p10")), "sb35s": _pct(r.get("share_by_2035_p90")), "h": [_r(r.get("half_year_p10_median_role"), 1), _r(r.half_year_p50_median_role, 1), _r(r.half_year_p90_median_role, 1)]} for _, r in sectors.iterrows()]
 
     fp = stats.get("forecast_params", {})
+    val = stats.get("validation") or {}
+    lad = dict(val.get("ladder") or {})
+    sg_ad = load("sg_firm_adoption_imda") if (PROCESSED / "sg_firm_adoption_imda.parquet").exists() else None
+    if sg_ad is not None and len(sg_ad):
+        allrows = sg_ad[sg_ad.group == "all"].sort_values("year")
+        lad["adoption_now"] = float(allrows.pct.iloc[-1]) / 100.0
+        lad["adoption_now_year"] = f"IMDA, {int(allrows.year.iloc[-1])}"
+    lad["adoption_half_year"] = (stats.get("adoption_anchor_years") or {}).get("central", 0) - (stats.get("geo_lead_years_central") or 0)
+    lad["usage_to"] = "May 2026"
+    swo = occ.share_weight_observed[occ.share_weight_observed > 0]
+    lad["job_task_share"] = float(swo.median()) if len(swo) else None
+    occ_corr = {}
+    for name, col in [("anthropic", "aei_job_exposure"), ("microsoft", "ai_applicability_score")]:
+        if col in occ.columns:
+            d2 = occ[["observed_automation", col]].dropna()
+            if len(d2) > 30:
+                occ_corr[name] = float(d2.corr().iloc[0, 1])
+    def _a(key, sub):
+        v = (val.get(key) or {}).get(sub)
+        return None if v is None else round(float(v), 2)
+    agr = val.get("agreement") or {}
+    rep_ = val.get("repeat_2026") or {}
+    aging = val.get("aging_of_2023_no") or {}
+    sources = [
+        {"name": "OpenAI, \"GPTs are GPTs\", human raters", "rung": 1, "what": "rated each task: could AI halve the time?", "unit": "task", "date": "2023", "record": f"{_a('auc_seen','human_2023')} at telling which desk tasks would be seen in use by 2026; {_pc(aging.get('share_seen_by_2026'))} of its \"no\" tasks were seen anyway", "caution": "a \"no\" from 2023 is a flag, not a verdict"},
+        {"name": "OpenAI, \"GPTs are GPTs\", GPT-4 ratings", "rung": 1, "what": "the same rubric, rated by GPT-4", "unit": "task", "date": "2023", "record": f"{_a('auc_seen','gpt4_2023')} at seen-in-use; {_a('auc_doing_given_seen','gpt4_2023')} at AI-mostly-doing among seen tasks; agreed with the human raters on {_pc((agr.get('human_vs_gpt4_2023') or {}).get('agree'))} of tasks", "caution": "a model rating its own kind"},
+        {"name": "Claude rating, October 2026 (this project)", "rung": 1, "what": "could AI halve the time; could an agent do it end to end; main barrier", "unit": "task", "date": "Oct 2026", "record": f"{_a('auc_seen','exposure_2026')} at seen-in-use; the end-to-end rating scores {_a('auc_doing_given_seen','autonomy_2026')} at AI-mostly-doing, the best of any rating; agrees with the 2023 human raters on {_pc((agr.get('claude2026_vs_human_2023') or {}).get('agree'))}; a repeat run gave the same yes/no on {_pc(rep_.get('exposure_yes_no_same'))}", "caution": "tasks only this rating calls doable are seen in use least, so they wait the longest lag"},
+        {"name": "Anthropic Economic Index", "rung": 2, "what": "share of Claude conversations by task; whether AI does or helps", "unit": "task", "date": "Dec 2024 to May 2026", "record": "the map's usage base; the other sources are scored against it, so it cannot be scored against itself", "caution": "reflects who uses Claude: office and software work first"},
+        {"name": "Microsoft, \"Working with AI\"", "rung": 2, "what": "Copilot usage by work activity; an applicability score per occupation", "unit": "activity, occupation", "date": "2024 conversations, published 2025", "record": f"occupation scores correlate {round(occ_corr.get('microsoft', float('nan')),2)} with this map's usage-based score" if 'microsoft' in occ_corr else "second opinion at activity level", "caution": "activity level, not task level; a different user base"},
+        {"name": "OpenAI, \"How people use ChatGPT\"", "rung": 2, "what": "shares of messages by work activity", "unit": "activity", "date": "Jul 2025", "record": "not testable at task level; used as a second opinion on which activities dominate", "caution": "consumer ChatGPT, mostly non-work use"},
+        {"name": "Google ATLAS", "rung": 2, "what": "lists of occupations over- and under-represented in Gemini use", "unit": "occupation", "date": "Jul 2026", "record": f"one of four providers in the agreement count; {fmt_int((stats.get('provider_consensus_counts') or {}).get('3',0)+(stats.get('provider_consensus_counts') or {}).get('4',0))} occupations have three or more providers agreeing", "caution": "lists only, no numbers per task"},
+        {"name": "Anthropic occupation exposure", "rung": 2, "what": "occupation-level observed exposure", "unit": "occupation", "date": "2026", "record": f"correlates {round(occ_corr.get('anthropic', float('nan')),2)} with this map's task-weighted score (same data, different method)" if 'anthropic' in occ_corr else "same data, different method", "caution": "shares the usage base's blind spots"},
+        {"name": "US Census Business Trends and Outlook Survey", "rung": 4, "what": "share of firms using AI in the last two weeks, every two weeks", "unit": "firm", "date": (stats.get('data_as_of') or {}).get('btos_latest_reading', ''), "record": "a copy frozen at Aug 2025 predicted 15% of firms for Oct 2026; the Census reported 24.6%. Now refreshed on every rebuild", "caution": "the question was reworded in Nov 2025; the fit carries a step"},
+        {"name": "IMDA Singapore Digital Economy Reports", "rung": 4, "what": "share of Singapore firms that used AI in the year", "unit": "firm", "date": "2023 to 2025", "record": f"sets Singapore's measured lead over the US ({fmt1(stats.get('geo_lead_years_central'))} years); its sector ordering agrees with the Census sector series (rank correlation {abs(round(((stats.get('sector_adoption') or {}).get('imda_check') or {}).get('spearman_imda2023_vs_us_shift', 0),2))})", "caution": "three yearly points; a looser question than the Census's"},
+        {"name": "METR time horizons", "rung": 1, "what": "how long a task AI agents can complete, by model release", "unit": "benchmark", "date": "models to 2026", "record": f"sets the capability doubling time ({fmt_int(fp.get('doubling_days_central'))} days); not testable against usage here", "caution": "software and research tasks, not the whole economy"},
+        {"name": "Headlines: \"X% of jobs exposed\"", "rung": 1, "what": "usually a rating applied to occupations", "unit": "occupation", "date": "varies", "record": "use the translator above: a rung-one job claim has historically meant a fraction of that in work actually seen, and less again with AI doing it", "caution": "check whether the report measured use or rated possibility"},
+    ]
     meta = {
         "built": date.today().isoformat(), "now": stats.get("now"), "years": YEARS,
         "adoption_anchor": {k: _r(v, 1) for k, v in stats.get("adoption_anchor_years", {}).items()},
@@ -148,6 +206,7 @@ def build_data(companion_url: str | None = None) -> dict:
         "adoption": {"us_half": {k: _r(v, 1) for k, v in stats.get("adoption_anchor_years", {}).items()}, "sg_half": {k: _r(v - (stats.get("geo_lead_years_central") or 0), 1) for k, v in stats.get("adoption_anchor_years", {}).items()}, "lead": _r(stats.get("geo_lead_years_central"), 1), "lead_years_used": (stats.get("singapore_firm_lead") or {}).get("years_used"), "btos_last_pct": (stats.get("btos_adoption_fit") or {}).get("last_pct"), "btos_last_date": (stats.get("btos_adoption_fit") or {}).get("last_ref_end"), "half_old_wording": _r((stats.get("btos_adoption_fit") or {}).get("year_cross_50pct_old_wording"), 1), "sg_own_half": _r((stats.get("singapore_firm_lead") or {}).get("sg_year_cross_50pct"), 1)},
         "evidence": {"tiers": (stats.get("evidence") or {}).get("tiers", {}), "lag_unproven": _r(((stats.get("evidence") or {}).get("evidence_lag_years", {}).get("unproven") or [None, None, None])[1], 1), "lag_mixed": _r(((stats.get("evidence") or {}).get("evidence_lag_years", {}).get("mixed") or [None, None, None])[1], 1), "lag_newly": _r(((stats.get("evidence") or {}).get("evidence_lag_years", {}).get("newly_rated") or [None, None, None])[1], 1), "ratings_2026_used": (stats.get("evidence") or {}).get("ratings_2026_used", False)},
         "sector_shift": (stats.get("sector_adoption") or {}).get("industry_shift_years", {}),
+        "ladder": lad, "validation": {k: val.get(k) for k in ["auc_seen", "auc_doing_given_seen", "agreement", "repeat_2026", "aging_of_2023_no", "aging_of_2023_yes"]}, "sources": sources,
         "sector_labels": {"J": "Information & communications", "K": "Financial & insurance services", "M": "Professional services", "OP": "Public administration & education", "L": "Real estate services", "Q": "Health & social services", "N": "Administrative & support services", "R": "Arts, entertainment & recreation", "C": "Manufacturing", "G": "Wholesale & retail trade", "F": "Construction", "SU": "Other community, social & personal services", "ABDE": "Agriculture, mining, utilities", "H": "Transportation & storage", "I": "Accommodation & food services"},
     }
     return {"meta": meta, "economy": economy, "ssoc": ssoc_list, "roles": role_list, "onet": onet_list, "skills": skills_list, "gwa": gwa_list, "sectors": sector_list, "_key_tasks": key_tasks}
