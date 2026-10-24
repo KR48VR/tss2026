@@ -41,6 +41,10 @@ section.view{display:flex;flex-direction:column;gap:18px;margin-top:18px}
 section.view[hidden]{display:none}
 .split{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,2fr);gap:16px}
 @media (max-width:760px){.split{grid-template-columns:1fr}}
+.xhead{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(300px,1fr);gap:16px;align-items:start;margin-bottom:12px} .xhead .lede{max-width:none} @media (max-width:860px){.xhead{grid-template-columns:1fr}}
+.scn-table{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:8px} .scn-table th{cursor:default;font-size:.68rem;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);line-height:1.2;vertical-align:bottom;white-space:normal} @media (max-width:420px){.scn-table{font-size:.82rem} .scn-table td{padding:3px 4px}} .scn-table th.num{text-align:right} .scn-table td:first-child{white-space:normal} .scn-table td{padding:3px 6px;white-space:nowrap;border-bottom:1px solid var(--line);vertical-align:middle} .scn-table tr{--c:var(--muted)} .scn-table tr[data-scn="0"]{--c:var(--fast)} .scn-table tr[data-scn="1"]{--c:var(--central)} .scn-table tr[data-scn="2"]{--c:var(--slow)} .scn-table tr.sel{background:color-mix(in srgb,var(--c) 12%,var(--panel))} .scn-table td:first-child{border-left:4px solid var(--c);padding-left:8px}
+.scn-pick{font:inherit;background:none;border:0;color:var(--fg);cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px 0;font-weight:600;width:100%;text-align:left} .scn-pick i{width:12px;height:12px;border-radius:50%;background:var(--c);display:inline-block;flex:0 0 12px} .scn-pick .pace{display:block;font-weight:400;font-size:.76rem;color:var(--muted);line-height:1.1} .scn-pick:hover{text-decoration:underline} .scn-pick:focus-visible{outline:2px solid var(--accent);outline-offset:2px} .scn-pick[aria-pressed="true"]::after{content:"\2713";margin-left:auto;color:var(--c);font-weight:700}
+.cmp{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;color:var(--fg)} .cmp input{accent-color:var(--accent);width:16px;height:16px;margin:0}
 @media (max-width:720px){nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-left:0;width:100%;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,#000 92%,transparent)} nav.tabs::-webkit-scrollbar{display:none} nav.tabs button{white-space:nowrap;flex:0 0 auto} header.top{position:static}}
 .scn-more summary{cursor:pointer;color:var(--accent);font-weight:600;margin:2px 0 6px} @media (min-width:721px){.scn-more summary{display:none}}
 input[type="search"],select{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:9px 12px;width:100%}
@@ -151,10 +155,13 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
 </section>
 
 <section class="view" id="view-leaders" role="tabpanel" aria-labelledby="tab-leaders" hidden>
-  <div class="lede">
-    <h2>Executive summary</h2>
-    <p class="small muted">For leaders who need the shape of the answer in five minutes. Every number on this page is live from the current build and follows the scenario selected at the top (Central unless you change it); the dates of the evidence are on the Overview.</p>
-    <p class="callout"><strong>In one breath.</strong> <span id="x-breath"></span></p>
+  <div class="xhead">
+    <div class="lede">
+      <h2>Executive summary</h2>
+      <p class="small muted">For leaders who need the shape of the answer in five minutes. Every number on this page is live from the current build and follows one of three scenarios, Fast, Central or Slow, chosen at the top of the page (Central unless you change it). The panel alongside shows all three; the dates of the evidence are on the Overview.</p>
+      <p class="callout"><strong>In one breath.</strong> <span id="x-breath"></span></p>
+    </div>
+    <div class="panel" id="x-scn"></div>
   </div>
   <div class="panel"><div class="eyebrow">Singapore's wage bill: the work AI could be doing, and be involved in, by year</div><div id="x-chart"></div></div>
   <div class="grid tiles" id="x-tiles" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))"></div>
@@ -313,6 +320,10 @@ show(start);
 const scnButtons = Array.from(document.querySelectorAll('.scn button'));
 function paintScn(){ scnButtons.forEach(b=>b.setAttribute('aria-pressed', +b.dataset.scn===SCN?'true':'false')); document.documentElement.dataset.scn=String(SCN); }
 function setScn(v){ SCN=v; try{localStorage.setItem('scn',String(v));}catch(e){} paintScn(); rerender(); }
+let CMP = false; try{ CMP = localStorage.getItem('cmp')==='1'; }catch(e){}
+function setCmp(v){ CMP=!!v; try{localStorage.setItem('cmp',CMP?'1':'0');}catch(e){} rerender(); }
+document.addEventListener('change', ev=>{ if(ev.target && ev.target.classList && ev.target.classList.contains('cmp-toggle')) setCmp(ev.target.checked); });
+document.addEventListener('click', ev=>{ const b=ev.target.closest && ev.target.closest('.scn-pick'); if(b) setScn(+b.dataset.scn); });
 scnButtons.forEach(b=>b.addEventListener('click',()=>setScn(+b.dataset.scn)));
 paintScn();
 
@@ -360,7 +371,7 @@ function leadersRender(){
   set('x-ssoc-linked', fmt(cw.ssoc_covered)); set('x-ssoc', fmt(D.ssoc.length)); set('x-roles', fmt(cw.sfw_roles||D.roles.length)); set('x-roles-coded', fmt(cw.sfw_roles_from_singstat)); set('x-lead', fmt(m.geo_lead,1));
   set('x-auc', fmt(((V.auc_seen||{}).human_2023||0),2));
   const verdict = oc.headline ? ((Math.abs((oc.headline.occupation||{}).median_signed_rho||0)<0.15 && ((oc.headline.submajor||{}).median_signed_rho||0)>=0) ? 'not yet' : 'not clearly') : 'not tested';
-  document.getElementById('x-breath').textContent = `By 2035 AI could be involved in ${pct(sb[I35])} of Singapore's paid work but doing about ${pct(db[I35])} of it (${scn} case). It reaches a quarter of the wage bill around ${yr1(hq[SCN])} (fast ${yr1(hq[0])}, central ${yr1(hq[1])}, slow ${yr1(hq[2])}). Singapore firms run ${fmt(m.geo_lead,1)} years ahead of US firms in adopting AI. In the job market itself there is ${verdict==='not yet'?'no sign of it yet':'no clear sign of it'}: the more exposed jobs have so far grown faster.`;
+  document.getElementById('x-breath').textContent = `By 2035 AI could be involved in ${pct(sb[I35])} of Singapore's paid work but doing about ${pct(db[I35])} of it (${scn} case). It reaches a quarter of the wage bill around ${yr1(hq[SCN])} in the ${scn} case; the other two cases are in the table alongside. Singapore firms run ${fmt(m.geo_lead,1)} years ahead of US firms in adopting AI. In the job market itself there is ${verdict==='not yet'?'no sign of it yet':'no clear sign of it'}: the more exposed jobs have so far grown faster.`;
   const tiles=[
     [`By 2035, AI could be doing (${scn} case)`, pct(db[I35]), `of the wage bill's work; involved in ${pct(sb[I35])}`],
     [`AI doing a quarter of the wage bill by (${scn})`, yr1(hq[SCN]), `fast ${yr1(hq[0])} ${MID} central ${yr1(hq[1])} ${MID} slow ${yr1(hq[2])}`],
@@ -379,6 +390,11 @@ function leadersRender(){
     `<strong>Ranges, not points.</strong> Every year is given fast, central and slow. The honest statement is the range.`,
   ];
   document.getElementById('x-trust').innerHTML = trust.map(t=>`<li>${t}</li>`).join('');
+  const xs=document.getElementById('x-scn'); if(xs){ const sc=m.scenario||{adoption_mult:[1.5,1,0.6]}, am=sc.adoption_mult; const names=['Fast','Central','Slow'], pace=[`${fmt(am[0],1)}\u00d7 pace`,'measured pace',`${fmt(am[2],1)}\u00d7 pace`];
+    const dbk=[ecoW.db10||ecoW.db, ecoW.db, ecoW.db90||ecoW.db], sbk=[ecoW.sb10||ecoW.sb, ecoW.sb, ecoW.sb90||ecoW.sb];
+    xs.innerHTML = `<div class="eyebrow">Three scenarios, one switch</div><p class="small muted" style="margin:6px 0 0">Every number on this page follows the scenario chosen at the top. Pick one here too, or show all three on the chart below.</p>
+      <div style="overflow-x:auto"><table class="scn-table"><thead><tr><th scope="col">Scenario</th><th scope="col" class="num">A quarter done by</th><th scope="col" class="num">AI doing, 2035</th><th scope="col" class="num">AI involved, 2035</th></tr></thead><tbody>${[0,1,2].map(k=>`<tr data-scn="${k}" class="${k===SCN?'sel':''}"><td><button type="button" class="scn-pick" data-scn="${k}" aria-pressed="${k===SCN}"><i></i><span>${names[k]}<span class="pace">${pace[k]}</span></span></button></td><td class="num">${yr1(hq[k])}</td><td class="num">${pct(dbk[k][I35])}</td><td class="num">${pct(sbk[k][I35])}</td></tr>`).join('')}</tbody></table></div>
+      <p style="margin:10px 0 0"><label class="cmp"><input type="checkbox" class="cmp-toggle" ${CMP?'checked':''}> Show all three on the chart</label></p>`; }
   const xc=document.getElementById('x-chart'); if(xc) xc.innerHTML = timeline(ecoW, 'Share of the wage bill AI could be doing, and be involved in, by year', 'x-chart');
   const xl=document.getElementById('x-ladder'); if(xl) xl.innerHTML = ladderSvg(true);
 }
@@ -536,17 +552,33 @@ document.getElementById('examples').querySelectorAll('a').forEach(a=>a.addEventL
 function timeline(e, label, containerId){
   const sb = sbOf(e); if(!sb) return '<p class="muted small">No timing available (no O*NET tasks linked).</p>';
   const db = dbOf(e)||e.db; const lo = db ? (e.db10||db) : (e.sb10||sb), hi = db ? (e.db90||db) : (e.sb90||sb); const hq = e.hq||[null,null,null];
-  const panel=document.getElementById(containerId||'job-detail'); const W=Math.max(300, Math.min(760, (panel.clientWidth||640)-34)),H=Math.round(W*0.25)+40,l=36,r=12,t=14,b=28; const xs=i=>l+i/(Y.length-1)*(W-l-r), ys=v=>t+(1-v/100)*(H-t-b);
-  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(label)}">`;
+  const series = db ? [e.db10||e.db, e.db, e.db90||e.db] : [e.sb10||e.sb, e.sb, e.sb90||e.sb]; const cmp = CMP && series[0]!==series[1];
+  const panel=document.getElementById(containerId||'job-detail'); const W=Math.max(300, Math.min(760, (panel.clientWidth||640)-34)),H=Math.round(W*0.25)+40,l=36,r=cmp?52:12,t=14,b=28; const xs=i=>l+i/(Y.length-1)*(W-l-r), ys=v=>t+(1-v/100)*(H-t-b);
+  const cols=['var(--fast)','var(--central)','var(--slow)'];
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(label)}${cmp?' (fast, central and slow cases compared)':''}">`;
   [0,50,100].forEach(v=>{ s+=`<line class="grid" x1="${l}" x2="${W-r}" y1="${ys(v)}" y2="${ys(v)}"/><text x="${l-6}" y="${ys(v)+4}" font-size="11" text-anchor="end">${v}%</text>`; });
   Y.forEach((y,i)=>{ if(y%2===0) s+=`<text x="${xs(i)}" y="${H-8}" font-size="11" text-anchor="middle">${y}</text>`; });
   const main = db||sb; const pts = main.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' ');
-  if(lo!==hi){ const band = lo.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' ') + ' ' + hi.map((v,i)=>`${xs(Y.length-1-i)},${ys(hi[Y.length-1-i]||0)}`).join(' '); s+=`<polygon points="${band}" fill="var(--scn)" opacity=".13"/>`; }
-  if(db){ const inv = sb.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' '); s+=`<polyline points="${inv}" fill="none" stroke="var(--involved)" stroke-width="2" stroke-dasharray="6 4"/>`; if(e.cap!=null){ s+=`<line x1="${l}" x2="${W-r}" y1="${ys(e.cap)}" y2="${ys(e.cap)}" stroke="var(--warn)" stroke-width="1.2" stroke-dasharray="2 3"/><text x="${W-r}" y="${ys(e.cap)-3}" font-size="10" text-anchor="end" fill="var(--warn)">ceiling ${pct(e.cap)}</text>`; } }
-  s+=`<polyline points="${pts}" fill="none" stroke="var(--scn)" stroke-width="3"/>`;
+  if(!cmp && lo!==hi){ const band = lo.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' ') + ' ' + hi.map((v,i)=>`${xs(Y.length-1-i)},${ys(hi[Y.length-1-i]||0)}`).join(' '); s+=`<polygon points="${band}" fill="var(--scn)" opacity=".13"/>`; }
+  if(db && !cmp){ const inv = sb.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' '); s+=`<polyline points="${inv}" fill="none" stroke="var(--involved)" stroke-width="2" stroke-dasharray="6 4"/>`; }
+  if(db && e.cap!=null){ s+=`<line x1="${l}" x2="${W-r}" y1="${ys(e.cap)}" y2="${ys(e.cap)}" stroke="var(--warn)" stroke-width="1.2" stroke-dasharray="2 3"/><text x="${W-r}" y="${ys(e.cap)-3}" font-size="10" text-anchor="end" fill="var(--warn)">ceiling ${pct(e.cap)}</text>`; }
+  if(cmp){
+    const ends=[]; [0,1,2].forEach(k=>{ const q=series[k].map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' '); s+=`<polyline points="${q}" fill="none" stroke="${cols[k]}" stroke-width="${k===SCN?3.5:2}" opacity="${k===SCN?1:.85}"/>`; ends.push([k, ys(series[k][Y.length-1]||0)]); });
+    ends.sort((a,b)=>a[1]-b[1]); for(let j=1;j<ends.length;j++){ if(ends[j][1]-ends[j-1][1]<12) ends[j][1]=ends[j-1][1]+12; }
+    ends.forEach(([k,y])=>{ s+=`<text x="${W-r+5}" y="${y+4}" font-size="11" font-weight="${k===SCN?700:500}" fill="${cols[k]}">${SCN_NAMES[k]}</text>`; });
+    const hk = db ? hq : (e.h||e.half||[null,null,null]);
+    [0,1,2].forEach(k=>{ const v=hk[k]; if(v==null) return; const i=(v-Y[0])/(Y[Y.length-1]-Y[0])*(Y.length-1); if(i>=0&&i<=Y.length-1) s+=`<circle cx="${xs(i)}" cy="${ys(db?25:50)}" r="${k===SCN?5:4}" fill="${cols[k]}"/>`; });
+  } else {
+    s+=`<polyline points="${pts}" fill="none" stroke="var(--scn)" stroke-width="3"/>`;
+  }
   const hc = db ? hq[SCN] : (e.h||e.half||[null,null,null])[SCN];
-  if(hc!=null){ const i=(hc-Y[0])/(Y[Y.length-1]-Y[0])*(Y.length-1); if(i>=0&&i<=Y.length-1){ s+=`<line x1="${xs(i)}" x2="${xs(i)}" y1="${t}" y2="${H-b}" stroke="var(--scn)" stroke-dasharray="4 3"/><circle cx="${xs(i)}" cy="${ys(db?25:50)}" r="5" fill="var(--scn)"/><text x="${xs(i)+6}" y="${t+10}" font-size="11" fill="var(--fg)">${db?'a quarter done':'half-way'} ${yr1(hc)} (${SCN_NAMES[SCN]})</text>`; } }
-  s+=`</svg>`; return `<div class="timeline">${s}</div><div class="evlegend" style="margin:2px 0 8px"><span><i style="background:var(--scn)"></i>AI doing (${SCN_NAMES[SCN]} case)</span><span><i style="background:var(--involved)"></i>AI involved</span><span><i style="background:var(--warn)"></i>ceiling on today's patterns</span><span><i style="background:var(--scn);opacity:.25"></i>fast to slow band</span></div>`;
+  if(hc!=null){ const i=(hc-Y[0])/(Y[Y.length-1]-Y[0])*(Y.length-1); if(i>=0&&i<=Y.length-1){ s+=`<line x1="${xs(i)}" x2="${xs(i)}" y1="${t}" y2="${H-b}" stroke="var(--scn)" stroke-dasharray="4 3"/>${cmp?'':`<circle cx="${xs(i)}" cy="${ys(db?25:50)}" r="5" fill="var(--scn)"/>`}<text x="${xs(i)+6}" y="${t+10}" font-size="11" fill="var(--fg)">${db?'a quarter done':'half-way'} ${yr1(hc)} (${SCN_NAMES[SCN]})</text>`; } }
+  s+=`</svg>`;
+  const what = db ? 'AI doing' : 'AI involved';
+  const legend = cmp
+    ? `<span><i style="background:var(--fast)"></i>${what}, fast case</span><span><i style="background:var(--central)"></i>${what}, central case</span><span><i style="background:var(--slow)"></i>${what}, slow case</span>${db&&e.cap!=null?`<span><i style="background:var(--warn)"></i>ceiling on today's patterns</span>`:''}<span>dots: a ${db?'quarter':'half'} done in each case</span>`
+    : `<span><i style="background:var(--scn)"></i>${what} (${SCN_NAMES[SCN]} case)</span>${db?`<span><i style="background:var(--involved)"></i>AI involved</span>`:''}${db&&e.cap!=null?`<span><i style="background:var(--warn)"></i>ceiling on today's patterns</span>`:''}<span><i style="background:var(--scn);opacity:.25"></i>fast to slow band</span>`;
+  return `<div class="timeline">${s}</div><div class="evlegend" style="margin:2px 0 8px;align-items:center">${legend}<label class="cmp" style="margin-left:auto"><input type="checkbox" class="cmp-toggle" ${CMP?'checked':''}> compare all three</label></div>`;
 }
 function spark(vals, years){
   if(!vals||!vals.length) return ''; const v=vals.map(x=>x==null?null:x); const ok=v.filter(x=>x!=null); if(ok.length<2) return '';
