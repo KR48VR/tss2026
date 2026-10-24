@@ -24,3 +24,5 @@ site/emb.bin.txt
 site/emb_scales.bin.txt
 site/server.log
 site/us_tasks.json
+site/aus_tasks.json
+site/gbr_tasks.json
