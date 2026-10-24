@@ -44,7 +44,7 @@ section.view[hidden]{display:none}
 .xhead{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(300px,1fr);gap:16px;align-items:start;margin-bottom:12px} .xhead .lede{max-width:none} @media (max-width:860px){.xhead{grid-template-columns:1fr}}
 .scn-table{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:8px} .scn-table th{cursor:default;font-size:.68rem;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);line-height:1.2;vertical-align:bottom;white-space:normal} @media (max-width:420px){.scn-table{font-size:.82rem} .scn-table td{padding:3px 4px}} .scn-table th.num{text-align:right} .scn-table td:first-child{white-space:normal} .scn-table td{padding:3px 6px;white-space:nowrap;border-bottom:1px solid var(--line);vertical-align:middle} .scn-table tr{--c:var(--muted)} .scn-table tr[data-scn="0"]{--c:var(--fast)} .scn-table tr[data-scn="1"]{--c:var(--central)} .scn-table tr[data-scn="2"]{--c:var(--slow)} .scn-table tr.sel{background:color-mix(in srgb,var(--c) 12%,var(--panel))} .scn-table td:first-child{border-left:4px solid var(--c);padding-left:8px}
 .scn-pick{font:inherit;background:none;border:0;color:var(--fg);cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px 0;font-weight:600;width:100%;text-align:left} .scn-pick i{width:12px;height:12px;border-radius:50%;background:var(--c);display:inline-block;flex:0 0 12px} .scn-pick .pace{display:block;font-weight:400;font-size:.76rem;color:var(--muted);line-height:1.1} .scn-pick:hover{text-decoration:underline} .scn-pick:focus-visible{outline:2px solid var(--accent);outline-offset:2px} .scn-pick[aria-pressed="true"]::after{content:"\2713";margin-left:auto;color:var(--c);font-weight:700}
-.cmp{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;color:var(--fg)} .cmp input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.cmp{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;color:var(--fg)} .evlegend .sw{width:24px;height:12px;margin-right:5px;vertical-align:-1px;flex:0 0 24px} .evlegend span{display:inline-flex;align-items:center} .chart-note{margin:0 0 10px;max-width:80ch} .cmp input{accent-color:var(--accent);width:16px;height:16px;margin:0}
 @media (max-width:720px){nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-left:0;width:100%;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,#000 92%,transparent)} nav.tabs::-webkit-scrollbar{display:none} nav.tabs button{white-space:nowrap;flex:0 0 auto} header.top{position:static}}
 .scn-more summary{cursor:pointer;color:var(--accent);font-weight:600;margin:2px 0 6px} @media (min-width:721px){.scn-more summary{display:none}}
 input[type="search"],select{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:9px 12px;width:100%}
@@ -395,7 +395,7 @@ function leadersRender(){
     xs.innerHTML = `<div class="eyebrow">Three scenarios, one switch</div><p class="small muted" style="margin:6px 0 0">Every number on this page follows the scenario chosen at the top. Pick one here too, or show all three on the chart below.</p>
       <div style="overflow-x:auto"><table class="scn-table"><thead><tr><th scope="col">Scenario</th><th scope="col" class="num">A quarter done by</th><th scope="col" class="num">AI doing, 2035</th><th scope="col" class="num">AI involved, 2035</th></tr></thead><tbody>${[0,1,2].map(k=>`<tr data-scn="${k}" class="${k===SCN?'sel':''}"><td><button type="button" class="scn-pick" data-scn="${k}" aria-pressed="${k===SCN}"><i></i><span>${names[k]}<span class="pace">${pace[k]}</span></span></button></td><td class="num">${yr1(hq[k])}</td><td class="num">${pct(dbk[k][I35])}</td><td class="num">${pct(sbk[k][I35])}</td></tr>`).join('')}</tbody></table></div>
       <p style="margin:10px 0 0"><label class="cmp"><input type="checkbox" class="cmp-toggle" ${CMP?'checked':''}> Show all three on the chart</label></p>`; }
-  const xc=document.getElementById('x-chart'); if(xc) xc.innerHTML = timeline(ecoW, 'Share of the wage bill AI could be doing, and be involved in, by year', 'x-chart');
+  const xc=document.getElementById('x-chart'); if(xc) xc.innerHTML = timeline(ecoW, 'Share of the wage bill AI could be doing, and be involved in, by year', 'x-chart', "Singapore's total pay (the wage bill)");
   const xl=document.getElementById('x-ladder'); if(xl) xl.innerHTML = ladderSvg(true);
 }
 leadersRender();
@@ -549,15 +549,15 @@ document.getElementById('examples').querySelectorAll('a').forEach(a=>a.addEventL
   });
 })();
 
-function timeline(e, label, containerId){
+function timeline(e, label, containerId, subject){ subject = subject || 'this work';
   const sb = sbOf(e); if(!sb) return '<p class="muted small">No timing available (no O*NET tasks linked).</p>';
   const db = dbOf(e)||e.db; const lo = db ? (e.db10||db) : (e.sb10||sb), hi = db ? (e.db90||db) : (e.sb90||sb); const hq = e.hq||[null,null,null];
   const series = db ? [e.db10||e.db, e.db, e.db90||e.db] : [e.sb10||e.sb, e.sb, e.sb90||e.sb]; const cmp = CMP && series[0]!==series[1];
-  const panel=document.getElementById(containerId||'job-detail'); const W=Math.max(300, Math.min(760, (panel.clientWidth||640)-34)),H=Math.round(W*0.25)+40,l=36,r=cmp?52:12,t=14,b=28; const xs=i=>l+i/(Y.length-1)*(W-l-r), ys=v=>t+(1-v/100)*(H-t-b);
+  const panel=document.getElementById(containerId||'job-detail'); const W=Math.max(300, Math.min(760, (panel.clientWidth||640)-34)),H=Math.round(W*0.25)+40,l=36,r=60,t=14,b=28; const xs=i=>l+i/(Y.length-1)*(W-l-r), ys=v=>t+(1-v/100)*(H-t-b);
   const cols=['var(--fast)','var(--central)','var(--slow)'];
   let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(label)}${cmp?' (fast, central and slow cases compared)':''}">`;
   [0,50,100].forEach(v=>{ s+=`<line class="grid" x1="${l}" x2="${W-r}" y1="${ys(v)}" y2="${ys(v)}"/><text x="${l-6}" y="${ys(v)+4}" font-size="11" text-anchor="end">${v}%</text>`; });
-  Y.forEach((y,i)=>{ if(y%2===0) s+=`<text x="${xs(i)}" y="${H-8}" font-size="11" text-anchor="middle">${y}</text>`; });
+  const step = W<480 ? 4 : 2; Y.forEach((y,i)=>{ if((y-Y[0])%step===0) s+=`<text x="${xs(i)}" y="${H-8}" font-size="11" text-anchor="middle">${y}</text>`; });
   const main = db||sb; const pts = main.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' ');
   if(!cmp && lo!==hi){ const band = lo.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' ') + ' ' + hi.map((v,i)=>`${xs(Y.length-1-i)},${ys(hi[Y.length-1-i]||0)}`).join(' '); s+=`<polygon points="${band}" fill="var(--scn)" opacity=".13"/>`; }
   if(db && !cmp){ const inv = sb.map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' '); s+=`<polyline points="${inv}" fill="none" stroke="var(--involved)" stroke-width="2" stroke-dasharray="6 4"/>`; }
@@ -570,15 +570,23 @@ function timeline(e, label, containerId){
     [0,1,2].forEach(k=>{ const v=hk[k]; if(v==null) return; const i=(v-Y[0])/(Y[Y.length-1]-Y[0])*(Y.length-1); if(i>=0&&i<=Y.length-1) s+=`<circle cx="${xs(i)}" cy="${ys(db?25:50)}" r="${k===SCN?5:4}" fill="${cols[k]}"/>`; });
   } else {
     s+=`<polyline points="${pts}" fill="none" stroke="var(--scn)" stroke-width="3"/>`;
+    const ends=[[ 'var(--scn)', db?'doing':'involved', ys(main[Y.length-1]||0), 700 ]]; if(db) ends.push(['var(--involved)','involved',ys(sb[Y.length-1]||0),500]);
+    ends.sort((a,b)=>a[2]-b[2]); for(let j=1;j<ends.length;j++){ if(ends[j][2]-ends[j-1][2]<12) ends[j][2]=ends[j-1][2]+12; }
+    ends.forEach(([c,txt,y,w])=>{ s+=`<text x="${W-r+5}" y="${y+4}" font-size="10.5" font-weight="${w}" fill="${c}">${txt}</text>`; });
   }
   const hc = db ? hq[SCN] : (e.h||e.half||[null,null,null])[SCN];
-  if(hc!=null){ const i=(hc-Y[0])/(Y[Y.length-1]-Y[0])*(Y.length-1); if(i>=0&&i<=Y.length-1){ s+=`<line x1="${xs(i)}" x2="${xs(i)}" y1="${t}" y2="${H-b}" stroke="var(--scn)" stroke-dasharray="4 3"/>${cmp?'':`<circle cx="${xs(i)}" cy="${ys(db?25:50)}" r="5" fill="var(--scn)"/>`}<text x="${xs(i)+6}" y="${t+10}" font-size="11" fill="var(--fg)">${db?'a quarter done':'half-way'} ${yr1(hc)} (${SCN_NAMES[SCN]})</text>`; } }
+  if(hc!=null){ const i=(hc-Y[0])/(Y[Y.length-1]-Y[0])*(Y.length-1); if(i>=0&&i<=Y.length-1){ s+=`<line x1="${xs(i)}" x2="${xs(i)}" y1="${t}" y2="${H-b}" stroke="var(--scn)" stroke-dasharray="4 3"/>${cmp?'':`<circle cx="${xs(i)}" cy="${ys(db?25:50)}" r="5" fill="var(--scn)"/>`}${(()=>{ const txt = W<480 ? `${db?'quarter done':'half-way'} ${yr1(hc)}` : `${db?'a quarter done':'half-way'} ${yr1(hc)} (${SCN_NAMES[SCN]})`; const tw=txt.length*6.2; const flip = xs(i)+6+tw > W-r && xs(i)-6-tw >= 0; return `<text x="${flip?xs(i)-6:xs(i)+6}" y="${t+10}" font-size="11" text-anchor="${flip?'end':'start'}" fill="var(--fg)">${txt}</text>`; })()}`; } }
   s+=`</svg>`;
   const what = db ? 'AI doing' : 'AI involved';
+  const sw = (kind, col) => kind==='band' ? `<svg class="sw" viewBox="0 0 24 12" aria-hidden="true"><rect x="0" y="1" width="24" height="10" fill="${col}" opacity=".2"/></svg>` : `<svg class="sw" viewBox="0 0 24 12" aria-hidden="true"><line x1="0" x2="24" y1="6" y2="6" stroke="${col}" stroke-width="${kind==='solid'?3:2}" ${kind==='dashed'?'stroke-dasharray="6 3"':kind==='dotted'?'stroke-dasharray="2 3"':''}/></svg>`;
+  const quarter = db ? 'a quarter' : 'half';
   const legend = cmp
-    ? `<span><i style="background:var(--fast)"></i>${what}, fast case</span><span><i style="background:var(--central)"></i>${what}, central case</span><span><i style="background:var(--slow)"></i>${what}, slow case</span>${db&&e.cap!=null?`<span><i style="background:var(--warn)"></i>ceiling on today's patterns</span>`:''}<span>dots: a ${db?'quarter':'half'} done in each case</span>`
-    : `<span><i style="background:var(--scn)"></i>${what} (${SCN_NAMES[SCN]} case)</span>${db?`<span><i style="background:var(--involved)"></i>AI involved</span>`:''}${db&&e.cap!=null?`<span><i style="background:var(--warn)"></i>ceiling on today's patterns</span>`:''}<span><i style="background:var(--scn);opacity:.25"></i>fast to slow band</span>`;
-  return `<div class="timeline">${s}</div><div class="evlegend" style="margin:2px 0 8px;align-items:center">${legend}<label class="cmp" style="margin-left:auto"><input type="checkbox" class="cmp-toggle" ${CMP?'checked':''}> compare all three</label></div>`;
+    ? `<span>${sw('solid','var(--fast)')}${what}, fast case</span><span>${sw('solid','var(--central)')}${what}, central case</span><span>${sw('solid','var(--slow)')}${what}, slow case</span>${db&&e.cap!=null?`<span>${sw('dotted','var(--warn)')}ceiling: the most AI could do on today's patterns</span>`:''}<span>dots: where each case reaches ${quarter}</span>`
+    : `<span>${sw('solid','var(--scn)')}${db?'AI doing the work':'AI involved in the work'} (${SCN_NAMES[SCN]} case)</span>${db?`<span>${sw('dashed','var(--involved)')}AI involved in the work (doing or helping)</span>`:''}${db&&e.cap!=null?`<span>${sw('dotted','var(--warn)')}ceiling: the most AI could do on today's patterns</span>`:''}<span>${sw('band','var(--scn)')}range from the fast case to the slow case</span>`;
+  const note = cmp
+    ? `<strong>Reading the chart.</strong> Each line is the share of ${subject} that AI itself could be doing, year by year, in one of the three cases; the dots mark where each case reaches ${quarter}.${db&&e.cap!=null?` The red dotted line is the most AI could ever do here, ${pct(e.cap)}, if every task were adopted, given how much of each task AI does when people use it today.`:''}`
+    : `<strong>Reading the chart.</strong> The solid line is the share of ${subject} that AI itself could be doing, year by year, in the ${SCN_NAMES[SCN]} case.${db?` The dashed line counts work AI is involved in at all, doing it or only helping; it is always higher.`:''} The shaded area is where the solid line would sit in the fast and slow cases.${db&&e.cap!=null?` The red dotted line is the most AI could ever do here, ${pct(e.cap)}, if every task were adopted, given how much of each task AI does when people use it today.`:''}`;
+  return `<div class="timeline">${s}</div><div class="evlegend" style="margin:2px 0 4px;align-items:center">${legend}<label class="cmp" style="margin-left:auto"><input type="checkbox" class="cmp-toggle" ${CMP?'checked':''}> compare all three</label></div><p class="small muted chart-note">${note}</p>`;
 }
 function spark(vals, years){
   if(!vals||!vals.length) return ''; const v=vals.map(x=>x==null?null:x); const ok=v.filter(x=>x!=null); if(ok.length<2) return '';
@@ -628,7 +636,7 @@ function open(kind,i){
     const roles = (s.roles||[]).map(ri=>`<li><a href="#jobs" data-kind="role" data-i="${ri}">${esc(D.roles[ri].role)}</a> <span class="muted small">(${esc(D.roles[ri].sector)})</span></li>`).join('');
     el.innerHTML = `<div class="eyebrow">SSOC 2024 ${MID} ${esc(s.c)} ${MID} ${esc(s.smn||'')}</div><h2>${esc(s.t)}</h2>
       ${headline(s.h,s.oa,s.so,s.sp,'ssoc',s)}
-      ${timeline(s,'Share of this occupation\'s work AI could be doing, and be involved in, by year')}
+      ${timeline(s,'Share of this occupation\'s work AI could be doing, and be involved in, by year', null, "this occupation's work")}
       ${evidence(s,'ssoc')}
       ${outcomesBlock(s.oc, s.smn)}
       <dl class="kv"><dt>Employed residents</dt><dd>${fmt(s.emp,1)} thousand <span class="muted small">(group total split evenly across surveyed occupations)</span></dd>
@@ -642,7 +650,7 @@ function open(kind,i){
     const r=D.roles[i];
     el.innerHTML = `<div class="eyebrow">Skills Framework ${MID} ${esc(r.sector)}${r.track?' '+MID+' '+esc(r.track):''}</div><h2>${esc(r.role)}</h2><p class="small muted">${esc(r.desc)}</p>
       ${headline(r.h,r.oat,r.sko,r.skp,'role',r)}
-      ${timeline(r,'Share of this role\'s work AI could be doing, and be involved in, by year')}
+      ${timeline(r,'Share of this role\'s work AI could be doing, and be involved in, by year', null, "this role's work")}
       ${evidence(r,'role')}
       ${(function(){ const c=(r.ssoc||[]).map(x=>D.ssoc.findIndex(s=>s.c===x[0])).find(i=>i>=0&&D.ssoc[i].oc); return c!=null&&c>=0 ? outcomesBlock(D.ssoc[c].oc, D.ssoc[c].smn, D.ssoc[c].t) : ''; })()}
       <dl class="kv"><dt>Key tasks</dt><dd>${fmt(r.nk)} <span class="muted small">(each matched to its closest O*NET task; average match score ${r.ms==null?'\u2013':fmt(r.ms,2)} out of 1)</span></dd>
