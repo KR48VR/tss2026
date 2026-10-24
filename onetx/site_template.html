@@ -428,7 +428,8 @@ const wageBillLabel = () => isUS() ? 'Wage bill (US$m / year)' : CTY==='AUS' ? '
 let ecoE, ecoW; function pickEco(){ const E=ECO(); ecoE=E.find(e=>e.scope==='economy'&&e.w==='emp'); ecoW=E.find(e=>e.scope==='economy'&&e.w==='wage'); } pickEco();
 const CNAME = () => isUS() ? 'the United States' : isNat() ? CC().name : 'Singapore';
 const CADJ = () => isUS() ? 'US' : isNat() ? CC().adj : 'Singapore';
-const CPOSS = () => isUS() ? "the United States'" : isNat() ? CC().name+"'s" : "Singapore's";
+const POSS = c => c.code==='GBR' ? "the UK's" : c.name+"'s";
+const CPOSS = () => isUS() ? "the United States'" : isNat() ? POSS(CC()) : "Singapore's";
 const ORIG = {}; ['ov-h2','ov-intro','ov-major-eyebrow','ov-sub-eyebrow','x-chart-eyebrow'].forEach(id=>{ const el=document.getElementById(id); if(el) ORIG[id]=el.innerHTML; });
 const USTXT = {
   'ov-h2': "Where AI is doing the United States' work, and when the rest could follow",
@@ -438,13 +439,13 @@ const USTXT = {
   'x-chart-eyebrow': "The United States' wage bill: the work AI could be doing, and be involved in, by year",
 };
 function natText(){ const c=CC(); if(!c) return {}; const au=c.code==='AUS'; const sysName = au?'ANZSCO':'SOC 2020'; const nsub=new Set(c.economy.filter(e=>e.level==='submajor_group').map(e=>e.scope)).size;
-  return {'ov-h2': `Where AI is doing ${esc(c.name)}'s work, and when the rest could follow`,
-    'ov-intro': `This page weights the US O*NET database of jobs and tasks by ${au?"the Australian Bureau of Statistics' employment and earnings for every ANZSCO unit group":"the Office for National Statistics' employee jobs and pay for every SOC 2020 unit group"}, then lays real AI-usage evidence on top: which tasks people already hand to AI, which they only get help with, and which stay physical or in person. A timing model turns that into a year by which a quarter of a job's work could be done by AI and adopted by typical employers, with ${esc(c.name)}'s own firm survey (${esc(c.adoption_source)}) setting where it sits on the adoption curve and each occupation's industries carrying their own reading. Every number is a planning signal with a range, not a prediction of job loss.`,
+  return {'ov-h2': `Where AI is doing ${esc(POSS(c))} work, and when the rest could follow`,
+    'ov-intro': `This page weights the US O*NET database of jobs and tasks by ${au?"the Australian Bureau of Statistics' employment and earnings for every ANZSCO unit group":"the Office for National Statistics' employee jobs and pay for every SOC 2020 unit group"}, then lays real AI-usage evidence on top: which tasks people already hand to AI, which they only get help with, and which stay physical or in person. A timing model turns that into a year by which a quarter of a job's work could be done by AI and adopted by typical employers, with ${esc(POSS(c))} own firm survey (${esc(c.adoption_source)}) setting where it sits on the adoption curve and each occupation's industries carrying their own reading. Every number is a planning signal with a range, not a prediction of job loss.`,
     'ov-major-eyebrow': `${esc(c.adj)} workforce, by major occupational group (${sysName} major groups)`,
     'ov-sub-eyebrow': `${fmt(nsub)} occupation sub-groups (${sysName} sub-major groups)`,
-    'x-chart-eyebrow': `${esc(c.name)}'s wage bill: the work AI could be doing, and be involved in, by year`}; }
+    'x-chart-eyebrow': `${esc(POSS(c).charAt(0).toUpperCase()+POSS(c).slice(1))} wage bill: the work AI could be doing, and be involved in, by year`}; }
 function applyCountryText(){ const NT=natText(); for(const id in ORIG){ const el=document.getElementById(id); if(el) el.innerHTML = (isUS()&&USTXT[id]) ? USTXT[id] : (isNat()&&NT[id]) ? NT[id] : ORIG[id]; } metaLine(); }
-function metaLine(){ const el=document.getElementById('meta-line'); if(!el) return; const c=CC(); const extra = c ? ` ${c.name} firm adoption to ${c.adoption_now_date!=null?dfmtY(c.adoption_now_date):''} (${c.adoption_source}); employment ${c.emp_label}; pay ${c.wage_label}.` : '';
+function metaLine(){ const el=document.getElementById('meta-line'); if(!el) return; const c=CC(); const extra = c ? ` ${c.name} firm adoption to ${c.adoption_now_text||dfmtY(c.adoption_now_date)} (${c.adoption_source}); ${c.emp_label}; ${c.wage_label}.` : '';
   el.textContent = `Evidence as of: AI usage data to ${dfmt(da.aei_latest_vintage)||'May 2026'}; US firm adoption to ${dfmt(da.btos_latest_reading)||'the last Census reading'}; Singapore firm adoption ${da.imda_latest_year||''}; task ratings 2023 and ${dfmt(da.ratings_2026)||'2026'}; MOM employment 2025, wages June 2025.${extra} Timing computed with "today" = ${dfmt(m.now)}. Page built ${dfmt(m.built)}.`; }
 const dfmtY = y => { if(y==null) return ''; const yr=Math.floor(y), mo=Math.min(11,Math.max(0,Math.round((y-yr)*12-0.5))); return `${MON[mo]} ${yr}`; };
 applyCountryText();
@@ -480,9 +481,9 @@ function ladderSvg(compact){
 }
 function cmpList(){ const C=D.compare; return C ? ['SGP','USA','AUS','GBR'].filter(k=>C.countries[k]) : []; }
 let CMPA='SGP', CMPB='USA'; try{ const a=localStorage.getItem('cmpa'), b=localStorage.getItem('cmpb'); if(a&&D.compare&&D.compare.countries[a]) CMPA=a; if(b&&D.compare&&D.compare.countries[b]) CMPB=b; }catch(e){} if(CMPA===CMPB) CMPB = CMPA==='USA'?'SGP':'USA';
-function cname(k){ return k==='SGP'?'Singapore':k==='USA'?'the United States':((D.compare.countries[k]||{}).name||k); }
+function cname(k){ return k==='SGP'?'Singapore':k==='USA'?'the United States':k==='GBR'?'the United Kingdom':((D.compare.countries[k]||{}).name||k); }
 function cshort(k){ return k==='SGP'?'Singapore':k==='USA'?'United States':((D.compare.countries[k]||{}).name||k); }
-function cposs(k){ return k==='USA'?"the United States'":cshort(k)+"'s"; }
+function cposs(k){ return k==='USA'?"the United States'":k==='GBR'?"the UK's":cshort(k)+"'s"; }
 function cadjK(k){ return k==='SGP'?'Singapore':k==='USA'?'US':(D.c&&D.c[k]?D.c[k].adj:k); }
 function cLead(k){ const c=D.compare.countries[k]; return k==='USA'?0:(c.lead!=null?c.lead:null); }
 function cHalf(k){ const c=D.compare.countries[k]; if(c.half_firms!=null) return c.half_firms; const l=cLead(k); const us=((m.adoption||{}).us_half||{}).central; return (l==null||us==null)?null:us-l; }
@@ -507,9 +508,9 @@ function compareRender(){
   const sgW=row(SG,'economy','wage'), usW=row(US,'economy','wage'), sgE=row(SG,'economy','emp'), usE=row(US,'economy','emp');
   const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
   const nA=cshort(A), nB=cshort(B); const lA=cLead(A), lB=cLead(B);
-  set('cmp-h2', `${nA} and ${nB}, side by side`);
+  set('cmp-h2', `${cname(A).charAt(0).toUpperCase()+cname(A).slice(1)} and ${cname(B)}, side by side`);
   const leadWord = (k,l) => l==null ? `${cposs(k)} position on the adoption curve could not be measured` : k==='USA' ? `US firms sit on the Census adoption curve itself` : `${cadjK(k)} firms run ${fmt(Math.abs(l),1)} years ${l>=0?'ahead of':'behind'} the US curve`;
-  const srcWord = k => k==='SGP' ? "MOM employment and wages by SSOC code" : k==='USA' ? "the Bureau of Labor Statistics' employment and wages by occupation" : `${(C.countries[k].emp_label||'').replace(/\(.*\)/,'').trim()} and ${(C.countries[k].wage_label||'').replace(/\(.*\)/,'').trim()} by ${D.c&&D.c[k]?D.c[k].cls:'occupation'} (${(C.countries[k].wage_label.match(/\((.*)\)/)||[])[1]||''})`;
+  const srcWord = k => k==='SGP' ? "MOM employment and wages by SSOC code" : k==='USA' ? "the Bureau of Labor Statistics' employment and wages by occupation" : k==='AUS' ? "the Australian Bureau of Statistics' employment and earnings by ANZSCO unit group" : "the Office for National Statistics' employee jobs and pay by SOC 2020 unit group";
   const el=document.getElementById('cmp-lede'); if(el) el.textContent = `The same 18,796 tasks, the same AI evidence and the same timing model, weighted by two workforces. ${cposs(A).charAt(0).toUpperCase()+cposs(A).slice(1)} figures use ${srcWord(A)}; ${cposs(B)} use ${srcWord(B)}. Timing differs in two measured ways: ${leadWord(A,lA)} and ${leadWord(B,lB)}; and each occupation's industries carry their own country's survey readings through its job-by-industry mix.`;
   const empPhrase = (k,e) => k==='SGP' ? `${fmt(e.total,0)} thousand ${C.countries[k].emp_label}` : `${fmt(e.total/1000,1)} million ${C.countries[k].emp_label}`;
   set('cmp-note', `${nA}: ${empPhrase(A,sgE)}. ${nB}: ${empPhrase(B,usE)}. Every figure below follows the ${scn} case chosen at the top.`);
@@ -579,7 +580,7 @@ function leadersRender(){
     [`AI doing a quarter of the wage bill by (${scn})`, yr1(hq[SCN]), `fast ${yr1(hq[0])} ${MID} central ${yr1(hq[1])} ${MID} slow ${yr1(hq[2])}`],
     ['Ceiling on today\'s patterns', pct(ecoW.cap), 'what AI would be doing if every task were disrupted; it helps with the rest'],
     ['Already seen in AI use', pct(ecoE.so), `share of ${isUS()||isNat()?'all':"residents'"} work seen in real AI use in any release since December 2024`],
-    isUS() ? ['Half of US firms using AI by', yr(usHalf), 'the Census survey curve itself; Singapore runs '+fmt(m.geo_lead,1)+' years ahead of it'] : nc ? [`${nc.adj} firms using AI now`, nc.adoption_now!=null?pct(nc.adoption_now):'\u2013', `${nc.adoption_source}, ${dfmtY(nc.adoption_now_date)}; ${nc.lead==null?'position on the US curve not measured':fmt(Math.abs(nc.lead),1)+' years '+(nc.lead>=0?'ahead of':'behind')+' the US curve, so half of firms by '+yr(usHalf-nc.lead)}`] : ['Half of Singapore firms using AI by', yr((ad.sg_half||{}).central), `measured lead of ${fmt(m.geo_lead,1)} years over the US curve`],
+    isUS() ? ['Half of US firms using AI by', yr(usHalf), 'the Census survey curve itself; Singapore runs '+fmt(m.geo_lead,1)+' years ahead of it'] : nc ? [`${nc.adj} firms using AI now`, nc.adoption_now!=null?pct(nc.adoption_now):'\u2013', `${nc.adoption_source}, ${nc.adoption_now_text||dfmtY(nc.adoption_now_date)}; ${nc.lead==null?'position on the US curve not measured':fmt(Math.abs(nc.lead),1)+' years '+(nc.lead>=0?'ahead of':'behind')+' the US curve, so half of firms by '+yr(usHalf-nc.lead)}`] : ['Half of Singapore firms using AI by', yr((ad.sg_half||{}).central), `measured lead of ${fmt(m.geo_lead,1)} years over the US curve`],
     isUS() ? ['Showing up in jobs yet?', uv.charAt(0).toUpperCase()+uv.slice(1), 'employment and median wages by occupation, May 2023 to May 2024, from the BLS'] : nc ? ['Showing up in jobs yet?', nv.charAt(0).toUpperCase()+nv.slice(1), `${(nc.outcomes&&nc.outcomes.labels)?nc.outcomes.labels.emp+'; '+nc.outcomes.labels.wage:'employment and pay change by occupation'}`] : ['Showing up in jobs yet?', verdict.charAt(0).toUpperCase()+verdict.slice(1), 'wages 2024 to 2025, vacancies 2023 to 2025, employment 2019 to 2025, from MOM'],
   ];
   document.getElementById('x-tiles').innerHTML = tiles.map(t=>`<div class="panel tile"><div class="lbl">${esc(t[0])}</div><div class="num">${esc(t[1])}</div><div class="small muted">${esc(t[2])}</div></div>`).join('');
@@ -681,7 +682,8 @@ let mode='jobs', filter='all', current=null;
 const resEl = document.getElementById('job-results'), inp = document.getElementById('job-search');
 function keywordJobs(q){ const terms=words(q); if(!terms.length) return [];
   const hits=[]; for(const it of pool()){ if(!isUS()&&!isNat()&&filter!=='all'&&it.kind!==filter) continue; let score=0, ok=true; for(const t of terms){ const m=termMatch(t,it); if(!m){ok=false;break;} score+=m; } if(!ok) continue; if(it.key.startsWith(norm(q))) score+=3; hits.push({it,score}); }
-  hits.sort((a,b)=>b.score-a.score || a.it.title.length-b.it.title.length);
+  const kr = it => it.kind==='std' ? 1 : 0;
+  hits.sort((a,b)=>b.score-a.score || kr(a.it)-kr(b.it) || a.it.title.length-b.it.title.length);
   const seen=new Set(); const out=[]; for(const h of hits){ const id=h.it.kind+':'+h.it.i; if(seen.has(id)) continue; seen.add(id); out.push(h.it); if(out.length>=60) break; } return out; }
 function keywordTasks(q){ if(!taskIndex) return null; const terms=words(q); if(!terms.length) return [];
   let hits=taskIndex.filter(t=>terms.every(x=>t.key.includes(x)));
@@ -716,12 +718,12 @@ async function search(){
     if(!Meaning.ready()){ resEl.innerHTML='<li class="muted small" style="padding:8px">Loading the meaning-search model (about 18 MB, once)\u2026</li>'; const ok=await Meaning.load(); if(!ok){ resEl.innerHTML='<li class="muted small" style="padding:8px">The meaning-search model could not be loaded. Keyword search still works.</li>'; return; } await loadSearchData(); if(seq!==searchSeq) return; }
     const hits=Meaning.search(q, 400); const seen=new Set(); const jobs=[], tasks=[], js=[], ts=[];
     for(const h of hits){ const r=refToItem(h.ref); if(!r.it) continue; const id=r.group==='job'?(r.it.kind+':'+r.it.i):(r.it.kind+':'+(r.it.oi!=null?r.it.oi:(r.it.ri+':'+r.it.gi+':'+r.it.ti))); if(seen.has(id)) continue; seen.add(id);
-      if(r.group==='job'){ const want = isUS() ? r.it.kind==='onet' : isNat() ? r.it.kind==='nat' : (r.it.kind!=='onet'&&r.it.kind!=='nat'&&(filter==='all'||r.it.kind===filter)); if(!want) continue; if(mode==='jobs'&&jobs.length<40){jobs.push(r.it);js.push(h.score);} } else { if(mode==='jobs'&&isUS()&&r.it.kind==='onet'&&r.it.ui!=null){ const id2='onet:'+r.it.ui; if(!seen.has(id2)&&jobs.length<40){ seen.add(id2); jobs.push({kind:'onet', i:r.it.ui, title:U.occ[r.it.ui].t, sub:`matched on a task: "${r.it.text.slice(0,70)}"`}); js.push(h.score); } } else if(mode==='jobs'&&isNat()&&r.it.kind==='onet'&&natOf(r.it.ui)!=null){ const nj=natOf(r.it.ui); const id2='nat:'+nj; if(!seen.has(id2)&&jobs.length<40){ seen.add(id2); jobs.push({kind:'nat', i:nj, title:CC().occ[nj].t, sub:`matched on an O*NET task: "${r.it.text.slice(0,70)}"`}); js.push(h.score); } } else if(mode==='tasks'&&tasks.length<60){tasks.push(r.it);ts.push(h.score);} } }
+      if(r.group==='job'){ const want = isUS() ? r.it.kind==='onet' : isNat() ? r.it.kind==='nat' : (r.it.kind!=='onet'&&r.it.kind!=='nat'&&(filter==='all'||r.it.kind===filter)); if(!want) continue; if(mode==='jobs'&&jobs.length<40){jobs.push(r.it);js.push(h.score);} } else { if(mode==='jobs'&&isUS()&&r.it.kind==='onet'&&r.it.ui!=null){ const id2='onet:'+r.it.ui; if(!seen.has(id2)&&jobs.length<40){ seen.add(id2); jobs.push({kind:'onet', i:r.it.ui, title:U.occ[r.it.ui].t, sub:`matched on a task: "${r.it.text.slice(0,70)}"`}); js.push(h.score); } } else if(mode==='jobs'&&isNat()&&r.it.kind==='onet'&&natOf(r.it.ui)!=null){ const nj=natOf(r.it.ui); const id2='nat:'+nj; if(!seen.has(id2)&&jobs.length<40){ seen.add(id2); jobs.push({kind:'nat', i:nj, title:CC().occ[nj].t, sub:`matched on an O*NET task: "${r.it.text.slice(0,70)}"`}); js.push(h.score); } } else if(mode==='tasks'&&tasks.length<60){ if(r.it.kind==='kt'&&(isUS()||isNat())) continue; tasks.push(r.it);ts.push(h.score);} } }
     if(mode==='jobs') renderJobHits(jobs, js); else renderTaskHits(tasks, ts);
     return;
   }
   if(mode==='jobs'){ renderJobHits(keywordJobs(q)); }
-  else { if(!taskIndex){ resEl.innerHTML='<li class="muted small" style="padding:8px">Loading the task index\u2026</li>'; await loadSearchData(); if(seq!==searchSeq) return; } renderTaskHits(keywordTasks(q)||[]); }
+  else { if(!taskIndex){ resEl.innerHTML='<li class="muted small" style="padding:8px">Loading the task index\u2026</li>'; await loadSearchData(); if(seq!==searchSeq) return; } renderTaskHits((keywordTasks(q)||[]).filter(t=>t.kind!=='kt'||(!isUS()&&!isNat()))); }
 }
 let searchTimer; inp.addEventListener('input', ()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(search, 120); });
 document.getElementById('meaning-toggle').addEventListener('change', search);
@@ -990,9 +992,9 @@ function openStd(j){ const c=CC(); if(!c||!c.standards) return; const s=c.standa
     <p class="small muted">Level ${s.lvl}${s.dur?`, typically ${s.dur} months`:''}. ${s.nd} duties, ${s.nk} knowledge, ${s.ns} skills and ${s.nb} behaviours statements.${s.url?` <a href="${esc(s.url)}" target="_blank" rel="noopener">Read the standard at Skills England</a>.`:''}</p><div id="std-sum"></div>
     ${lead?`<p class="callout" style="margin:8px 0"><strong>Through its occupation code</strong> (${esc(lead.t)}): AI could be doing ${pct((dbOf(lead)||lead.db||[])[I35])} of the work by 2035 and a quarter of it by ${yr1(lead.hq?lead.hq[SCN]:null)} (${SCN_NAMES[SCN]} case). Open the code for the full picture.</p>`:''}
     <dl class="kv"><dt>Leads to</dt><dd>${socs||'<span class="muted">no SOC code matched</span>'}</dd><dt>How matched</dt><dd>${s.m==='title'?'typical job titles found in the ONS coding index':'by description (no typical job title appears in the coding index)'}</dd></dl>
-    <h3 class="sub">The standard's duties, earliest first</h3><p class="small muted">Each duty is matched to its closest O*NET task; label and year come from that task on UK timing (${SCN_NAMES[SCN]} case). A standard's level is a qualification level for the whole apprenticeship, not a proficiency level per duty.</p><div id="std-duties"><p class="muted small">Loading…</p></div><div id="std-ksb"></div>`;
+    <h3 class="sub">The standard's duties, earliest first</h3><p class="small muted">${s.nd?`Each duty is matched to its closest O*NET task; label and year come from that task on UK timing (${SCN_NAMES[SCN]} case). A standard's level is a qualification level for the whole apprenticeship, not a proficiency level per duty.`:'This standard was written on an earlier template that lists no duties, so there is nothing to time task by task here; its occupation code above carries the timing, and the knowledge, skills and behaviours it requires are below.'}</p><div id="std-duties">${s.nd?'<p class="muted small">Loading\u2026</p>':''}</div><div id="std-ksb"></div>`;
   loadNat(c.code).then(j2=>{ if(!current||current.kind!=='std'||current.i!==j) return; const d=j2&&j2.std?j2.std[s.ref]:null; const du=document.getElementById('std-duties'), ks=document.getElementById('std-ksb'), su=document.getElementById('std-sum'); if(!d){ if(du) du.innerHTML='<p class="muted small">Detail could not be loaded.</p>'; return; }
-    if(su&&d.sum) su.innerHTML=`<p class="small">${esc(d.sum)}</p>`; if(du) du.innerHTML = ktList(d.d,'duty');
+    if(su&&d.sum) su.innerHTML=`<p class="small">${esc(d.sum)}</p>`; if(du&&s.nd) du.innerHTML = ktList(d.d,'duty');
     if(ks) ks.innerHTML = [['Knowledge',d.k],['Skills',d.s],['Behaviours',d.b]].map(([h,l])=>l&&l.length?`<details class="more"><summary>${h} the apprentice must show (${l.length})</summary><ul class="kb">${l.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`:'').join(''); });
   el.scrollIntoView({behavior:'smooth',block:'start'}); }
 function natSectorTable(){ const c=CC(); if(!c) return; const au=c.code==='AUS';

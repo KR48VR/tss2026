@@ -315,7 +315,7 @@ def build_data(companion_url: str | None = None) -> dict:
         }
     if compare is not None and country_payloads:
         for code, cp in country_payloads.items():
-            compare["countries"][code] = {"name": cp["name"], "econ": [e for e in cp["economy"] if e["level"] in ("economy", "major_group")], "adoption_now": (cp["adoption_now"] / 100.0) if cp.get("adoption_now") is not None else None, "adoption_now_label": f"{cp['adoption_source']}, {_date_label(cp.get('adoption_now_date'))}", "half_firms": None, "lead": cp.get("lead"), "emp_label": cp["emp_label"], "wage_label": cp["wage_label"], "shift_range": [_r(v, 1) for v in (cp.get("shift_range") or [None, None])], "outcomes": cp.get("outcomes") or {}, "major_names": cp.get("major_names")}
+            compare["countries"][code] = {"name": cp["name"], "econ": [e for e in cp["economy"] if e["level"] in ("economy", "major_group")], "adoption_now": (cp["adoption_now"] / 100.0) if cp.get("adoption_now") is not None else None, "adoption_now_label": f"{cp['adoption_source']}, {cp.get('adoption_now_text') or _date_label(cp.get('adoption_now_date'))}", "half_firms": None, "lead": cp.get("lead"), "emp_label": cp["emp_label"], "wage_label": cp["wage_label"], "shift_range": [_r(v, 1) for v in (cp.get("shift_range") or [None, None])], "outcomes": cp.get("outcomes") or {}, "major_names": cp.get("major_names")}
         cs = stats.get("countries") or {}
         pairs = {}
         for code in country_payloads:
@@ -366,15 +366,19 @@ def build_us_payload(occ, o2s, us_w, focc_us, us_econ, onet_list, stats, ssoc_li
     cl_by_occ = clusters.groupby("onet_soc_code").cluster_code.apply(list).to_dict() if clusters is not None else {}
     cl_names = clusters.drop_duplicates("cluster_code").set_index("cluster_code").cluster.to_dict() if clusters is not None else {}
     ssoc_idx = {e["c"]: i for i, e in enumerate(ssoc_list)}
-    # Singapore counterpart: the SSOC code accounting for the most Singapore workers in this occupation
-    # (resident employment x the share of the occupation that maps to the code), mirroring the US pick
+    # Singapore counterpart: the SSOC code with the largest overlap with this occupation, measured as the
+    # share of the occupation that maps to the code (the forward crosswalk weight) times the code's resident
+    # employment, so Accountants and Auditors lands on Accountant rather than on the larger but more
+    # loosely linked Assistant accountant
     sg_emp = {e["c"]: (e.get("emp") or 0.0) for e in ssoc_list}
+    sg_title = {e["c"]: e["t"] for e in ssoc_list}
+    occ_title_us = {e["c"]: e["t"] for e in onet_list}
     sg_top = {}
     for c, g in o2s.groupby("onet_soc_code"):
-        best, best_k = None, -1.0
-        for code, wr in zip(g.ssoc_code, g.weight_rev.fillna(0)):
+        best, best_k = None, (-1, -1.0)
+        for code, wr in zip(g.ssoc_code, g.weight.fillna(0)):
             if code in ssoc_idx:
-                k = float(sg_emp.get(code, 0.0)) * float(wr)
+                k = (_title_overlap(occ_title_us.get(c, ""), sg_title.get(code, "")), float(sg_emp.get(code, 0.0)) * float(wr))
                 if k > best_k:
                     best, best_k = ssoc_idx[code], k
         if best is not None:
@@ -564,6 +568,18 @@ def _levels_payload(levels, lcorr):
     return {"index": band_rows(ix), "index_rho": _r(cr.rho_level_vs_done_2035, 2) if cr is not None else None, "index_rho_seen": _r(cr.rho_level_vs_seen, 2) if cr is not None else None, "index_n": _r(cr.n_occupations) if cr is not None else None, "skills": skills, "bands": [["L", "low or not needed (level below 2.5)"], ["M", "middle (2.5 to 4.5)"], ["H", "high (4.5 and above)"]]}
 
 
+_TITLE_STOP = {"and", "or", "of", "the", "in", "for", "to", "a", "an", "other", "all", "general", "nec", "n.e.c.", "not", "elsewhere", "classified", "workers", "worker", "occupations", "occupation", "professionals", "professional", "related", "except", "including", "assistants", "managers", "manager", "technicians", "technician", "specialists", "specialist", "services", "service"}
+
+
+def _title_overlap(a: str, b: str) -> int:
+    """1 when the two titles share a content word (one word a prefix of the other, four letters or more, so
+    'sales' meets 'salespersons' and 'nurse' meets 'nurses'), else 0; the tie-break for counterparts."""
+    import re as _re
+    words = lambda s: [w for w in _re.findall(r"[a-z]+", str(s).lower()) if w not in _TITLE_STOP and len(w) > 3]
+    wa, wb = words(a), words(b)
+    return 1 if any(x.startswith(y) or y.startswith(x) for x in wa for y in wb) else 0
+
+
 def _task_item(text, f, score, onet_text, extra=None):
     """One matched task line in the key-task shape the page already renders:
     [text, status, central year, barrier, match score, O*NET task text, tier, autonomy, rubric barrier, AI share, ...extra]."""
@@ -606,9 +622,16 @@ def build_country_payload(spec, onet_list, ssoc_list, stats, us_payload):
     us_occ = (us_payload or {}).get("occ") or []
     # the heaviest O*NET occupations in each code (by the share of the code's workers), and counterparts
     top_onet, top_code = {}, {}
+    us_emp = {e["c"]: (e.get("emp") or 0.0) for e in us_occ}
+    nat_title = dict(zip(t.nat_code, t.nat_title))
     for c, g in xw.sort_values("weight_rev", ascending=False).groupby("nat_code"):
         top_onet[c] = [[occ_title.get(o, o), _pct(w)] for o, w in zip(g.onet_soc_code.head(4), g.weight_rev.head(4))]
-        top_code[c] = g.onet_soc_code.iloc[0]
+        # the counterpart: among the O*NET occupations whose title shares a word with the code's title (when
+        # any does), the one whose workers overlap this code the most (US employment times the share of that
+        # occupation which maps to the code); so UK "Chefs" lands on Chefs and Head Cooks, not on the much
+        # larger food-preparation supervisors the ISCO chain also links it to
+        cands = [(_title_overlap(nat_title.get(c, ""), occ_title.get(o, "")), 1 if str(o).endswith(".00") else 0, round(float(us_emp.get(o, 0.0)) * float(w), 1), -i, o) for i, (o, w) in enumerate(zip(g.onet_soc_code, g.weight.fillna(0)))]
+        top_code[c] = max(cands)[4]   # a shared title word first, then a base occupation over its specialisations (OEWS splits a code's employment evenly across them), then overlap
     n_tasks = tasks.groupby("nat_code").size().to_dict() if tasks is not None else {}
     std_by_soc = {}
     standards, routes = None, None
@@ -642,7 +665,7 @@ def build_country_payload(spec, onet_list, ssoc_list, stats, us_payload):
     industries = None
     if iv is not None:
         industries = [{"code": r.industry, "name": r.label, "es": _pct(r.employment_share), "ai": _r(r.ai_use_latest_pct, 1) if pd.notna(r.ai_use_latest_pct) else None, "aid": _r(r.ai_use_latest_date, 2) if pd.notna(r.ai_use_latest_date) else None, "ai0": _r(r.ai_use_first_pct, 1) if pd.notna(r.ai_use_first_pct) else None, "aid0": _r(r.ai_use_first_date, 2) if pd.notna(r.ai_use_first_date) else None, "shift": _r(r.anchor_shift_years, 1), "sv": bool(r.surveyed),
-                       "oa": _pct(r.get("observed_automation")), "so": _pct(r.get("share_weight_observed")), "sp": _pct(r.get("share_weight_physical")), "db30": _pct(r.get("done_by_2030")), "db35": _pct(r.get("done_by_2035")), "db35f": _pct(r.get("done_by_2035_p10")), "db35s": _pct(r.get("done_by_2035_p90")), "sb35": _pct(r.get("share_by_2035")), "cap": _pct(r.get("ceiling_ai_share")), "hq": [_r(r.get("quarter_done_year_p10"), 1), _r(r.get("quarter_done_year_p50"), 1), _r(r.get("quarter_done_year_p90"), 1)]} for r in iv.itertuples()]
+                       "oa": _pct(r.get("observed_automation")), "so": _pct(r.get("share_weight_observed")), "sp": _pct(r.get("share_weight_physical")), "db30": _pct(r.get("done_by_2030")), "db35": _pct(r.get("done_by_2035")), "db35f": _pct(r.get("done_by_2035_p10")), "db35s": _pct(r.get("done_by_2035_p90")), "sb35": _pct(r.get("share_by_2035")), "cap": _pct(r.get("ceiling_ai_share")), "hq": [_r(r.get("quarter_done_year_p10"), 1), _r(r.get("quarter_done_year_p50"), 1), _r(r.get("quarter_done_year_p90"), 1)]} for _, r in iv.iterrows()]
     levels_national = None
     if bands is not None:
         bs = cs.get("skill_levels_national") or {}
@@ -655,11 +678,12 @@ def build_country_payload(spec, onet_list, ssoc_list, stats, us_payload):
     emp_of = {r["c"]: (r["emp"] or 0.0) for r in occ_rows}
     best = {}
     for o, g in xw.groupby("onet_soc_code"):
-        k = max(((emp_of.get(c, 0.0) * float(w), c) for c, w in zip(g.nat_code, g.weight_rev.fillna(0))), default=None)
-        if k and k[1] in nat_idx:
-            best[o] = nat_idx[k[1]]
+        k = max(((_title_overlap(occ_title.get(o, ""), nat_title.get(c, "")), emp_of.get(c, 0.0) * float(w), c) for c, w in zip(g.nat_code, g.weight.fillna(0))), default=None)
+        if k and k[2] in nat_idx:
+            best[o] = nat_idx[k[2]]
     o2n = [best.get(e["c"]) for e in onet_list]
-    payload = {"code": spec.code, "name": spec.name, "adj": spec.adjective, "cls": spec.classification, "cur": spec.currency, "emp_label": spec.emp_label, "wage_label": spec.wage_label, "wage_period": spec.wage_period, "adoption_source": spec.adoption_source, "industry_label": spec.industry_label, "major_names": spec.major_names,
+    adoption_now_text = (lead.get("points") or [{}])[-1].get("label") if spec.code == "AUS" else None
+    payload = {"code": spec.code, "name": spec.name, "adj": spec.adjective, "adoption_now_text": (f"{adoption_now_text} financial year" if adoption_now_text else None), "cls": spec.classification, "cur": spec.currency, "emp_label": spec.emp_label, "wage_label": spec.wage_label, "wage_period": spec.wage_period, "adoption_source": spec.adoption_source, "industry_label": spec.industry_label, "major_names": spec.major_names,
                "occ": occ_rows, "economy": economy, "industries": industries, "levels_national": levels_national, "levels": _levels_payload(levels, lcorr), "outcomes": cs.get("outcomes") or {}, "weights": cs.get("weights") or {}, "shift_range": cs.get("shift_range"), "lead": _r(lead.get("lead_years"), 1) if lead.get("lead_years") is not None else None, "lead_points_used": lead.get("n_points_used"), "adoption": adoption, "adoption_now": _r(lead.get("latest_pct"), 1) if lead.get("latest_pct") is not None else None, "adoption_now_date": _r(lead.get("latest_date"), 2) if lead.get("latest_date") is not None else None,
                "standards": standards, "routes": routes, "industry_shifts": cs.get("industry_shifts") or {}, "o2n": o2n}
     # on-demand file: the official task list per code, matched to O*NET tasks, on this country's timing

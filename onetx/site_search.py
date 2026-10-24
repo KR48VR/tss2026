@@ -136,10 +136,17 @@ def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: l
         occ_titles = load("onet_occupations").set_index("onet_soc_code").title
         for c in onet_order:
             texts.append(str(occ_titles.get(c, c))); refs.append([5, onet_idx[c]])
+    # national titles are all embedded; alternative titles up to 12 per code (the UK coding index has 29,000,
+    # which would push the vector file past the 16 MB the artifact host allows per file); keyword search
+    # still covers every alternative title through search.json
     for k, code in enumerate(nat_codes):
         for i, t in enumerate(nat_titles.get(code, [])):
             texts.append(t); refs.append([6, k, i])
+        per_code: dict[int, int] = {}
         for i, (ni, t) in enumerate(nat_alt.get(code, [])):
+            if per_code.get(ni, 0) >= 12:
+                continue
+            per_code[ni] = per_code.get(ni, 0) + 1
             texts.append(t); refs.append([7, k, i])
     vecs = m.encode(texts, normalize=True).astype(np.float32)
     q, sc = _quantise(vecs)

@@ -287,7 +287,11 @@ def skill_level_bands(t: pd.DataFrame, spec: CountrySpec) -> tuple[pd.DataFrame,
     dd = d.dropna(subset=["done_by_2035"])
     rho, n = _spearman(dd.skill_level, dd.done_by_2035)
     rho_seen, _ = _spearman(dd.skill_level, dd.share_weight_observed)
-    return pd.DataFrame(rows), {"rho_level_vs_done_2035": rho, "rho_level_vs_seen": rho_seen, "n_codes": n, "reading": _reading(rho, n, 1)}
+    # ANZSCO counts down (1 = highest skill), SOC counts up (4 = highest): read the sign accordingly
+    higher_first = (rho is not None) and ((rho < -0.15) if spec.code == "AUS" else (rho > 0.15))
+    lower_first = (rho is not None) and ((rho > 0.15) if spec.code == "AUS" else (rho < -0.15))
+    reading = "no clear pattern across skill levels" if rho is None or (not higher_first and not lower_first) else ("AI reaches the higher-skilled work first" if higher_first else "AI reaches the lower-skilled work first")
+    return pd.DataFrame(rows), {"rho_level_vs_done_2035": rho, "rho_level_vs_seen": rho_seen, "n_codes": n, "reading": reading}
 
 
 def industry_view(mix: pd.DataFrame, ind_shift: pd.DataFrame, points: pd.DataFrame, t: pd.DataFrame, spec: CountrySpec) -> pd.DataFrame:
@@ -308,7 +312,9 @@ def industry_view(mix: pd.DataFrame, ind_shift: pd.DataFrame, points: pd.DataFra
         row = {"industry": ind, "label": spec.industry_names.get(ind, ind), "employment_share": float(g.employed.sum() / tot) if tot else np.nan}
         gg = g.merge(grp, left_on="_g", right_index=True, how="left")
         for c in cols:
-            row[c] = float(np.nansum(gg.share_in_industry * gg[c])) if gg[c].notna().any() else np.nan
+            ok = gg[c].notna()
+            row[c] = float(np.average(gg.loc[ok, c], weights=gg.loc[ok, "share_in_industry"])) if ok.any() and gg.loc[ok, "share_in_industry"].sum() > 0 else np.nan
+        row["share_of_groups_scored"] = float(gg.loc[gg[cols[0]].notna(), "share_in_industry"].sum()) if cols else np.nan
         p = pts[pts.industry == ind]
         row["ai_use_latest_pct"] = float(p.pct.iloc[-1]) if len(p) else np.nan
         row["ai_use_latest_date"] = float(p.date.iloc[-1]) if len(p) else np.nan
