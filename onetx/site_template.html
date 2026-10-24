@@ -187,8 +187,8 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
     <h3>What has a claim like this meant so far?</h3>
     <div class="flexrow small" style="margin:8px 0">
       <label for="tr-pct">A report says</label><input type="number" id="tr-pct" min="0" max="100" step="1" value="40" style="width:5em" aria-describedby="tr-help"><span>% of</span>
-      <select id="tr-unit" aria-label="Unit of the claim"><option value="tasks">tasks</option><option value="jobs">jobs</option></select>
-      <select id="tr-rung" aria-label="What the claim says about them"><option value="1">could be done by AI (a rating)</option><option value="2">have people using AI on them</option><option value="3">have AI doing most of the work when used</option></select>
+      <select id="tr-unit" aria-label="Unit of the claim" style="width:auto"><option value="tasks">tasks</option><option value="jobs">jobs</option></select>
+      <select id="tr-rung" aria-label="What the claim says about them" style="width:auto"><option value="1">could be done by AI (a rating)</option><option value="2">have people using AI on them</option><option value="3">have AI doing most of the work when used</option></select>
     </div>
     <p class="small muted" id="tr-help">Pick the rung the report is really on. "Exposed", "at risk", "automatable" and "could be augmented" are all ratings, rung one, unless the report measured actual use.</p>
     <div id="tr-out"></div>
