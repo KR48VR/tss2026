@@ -366,6 +366,9 @@ def build_us_payload(occ, o2s, us_w, focc_us, us_econ, onet_list, stats, ssoc_li
         return {"scope": r.scope, "level": r.level, "name": r.scope_name, "w": "emp" if r.weighting == "employment" else "wage", "total": _r(r.weight_total / (1 if r.weighting == "employment" else 1000), 1), "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "sb": _sb(r), "sb10": [_pct(r.get(f"share_by_{y}_p10")) for y in YEARS], "sb90": [_pct(r.get(f"share_by_{y}_p90")) for y in YEARS], "half": [_r(r.get("half_year_fast_from_curve", r.half_year_p10), 1), _r(r.half_year_central_from_curve, 1), _r(r.get("half_year_slow_from_curve", r.half_year_p90), 1)],
                 "db": _db(r), "db10": _db(r, "p10"), "db90": _db(r, "p90"), "cap": _pct(r.get("ceiling_ai_share")), "hq": [_r(r.get("quarter_done_year_fast_from_curve"), 1), _r(r.get("quarter_done_year_central_from_curve"), 1), _r(r.get("quarter_done_year_slow_from_curve"), 1)], "hd": [_r(r.get("half_done_year_fast_from_curve"), 1), _r(r.get("half_done_year_central_from_curve"), 1), _r(r.get("half_done_year_slow_from_curve"), 1)], "ech": None}
     economy = [_row(r) for _, r in us_econ.iterrows()]
+    for e in economy:
+        if e["level"] == "submajor_group" and str(e["name"]).endswith(" nan"):
+            e["name"] = e["name"][:-4] + " (no published group title)"
     # clusters with their occupations and the matched competency models
     cl_list, cmc_blocks = [], {}
     if cl_view is not None:
@@ -379,7 +382,7 @@ def build_us_payload(occ, o2s, us_w, focc_us, us_econ, onet_list, stats, ssoc_li
         for _, r in cl_view.iterrows():
             code = str(r.cluster_code)
             occs = clusters[clusters.cluster_code == code].onet_soc_code
-            occs = sorted([c for c in occs if c in idx], key=lambda c: -(float(emp_by.get(c, 0)) if pd.notna(emp_by.get(c, np.nan)) else 0.0))
+            occs = sorted([c for c in occs if c in idx and pd.notna(emp_by.get(c, np.nan)) and float(emp_by.get(c, 0)) > 0], key=lambda c: -float(emp_by.get(c, 0)))
             model_names = xw[xw.cluster_code == code].model_name.tolist() if xw is not None else []
             cl_list.append({"code": code, "name": r.cluster, "n": _r(r.n_occupations), "emp": _r(r.employment_thousands, 1), "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "sb30": _pct(r.share_by_2030), "sb35": _pct(r.share_by_2035), "sb35f": _pct(r.get("share_by_2035_p10")), "sb35s": _pct(r.get("share_by_2035_p90")), "db30": _pct(r.done_by_2030), "db30f": _pct(r.get("done_by_2030_p10")), "db30s": _pct(r.get("done_by_2030_p90")), "db35": _pct(r.done_by_2035), "db35f": _pct(r.get("done_by_2035_p10")), "db35s": _pct(r.get("done_by_2035_p90")), "cap": _pct(r.ceiling_ai_share), "hq": [_r(r.get("quarter_done_year_fast_from_curve"), 1), _r(r.get("quarter_done_year_central_from_curve"), 1), _r(r.get("quarter_done_year_slow_from_curve"), 1)], "h": [_r(r.get("half_year_fast_from_curve"), 1), _r(r.get("half_year_central_from_curve"), 1), _r(r.get("half_year_slow_from_curve"), 1)], "occ": [idx[c] for c in occs], "models": model_names})
             if models is not None and model_names:

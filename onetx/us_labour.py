@@ -118,10 +118,19 @@ def build_onet_weights(year: int = 2024) -> pd.DataFrame:
     t = t.merge(mg[["onet_soc_code", "major_group"]], on="onet_soc_code", how="left")
     # military and a few residual codes have no ISCO route; keep them out of group tables but in the total
     t["major_group"] = t.major_group.fillna("X")
-    # SOC minor groups (the US counterpart of Singapore's sub-major groups), named from the OEWS file
+    # SOC minor groups (the US counterpart of Singapore's sub-major groups), named from the OEWS file.
+    # Minor codes end in zeros at different depths (15-2000 but 15-1200, 31-1100, 51-5100), so each detailed
+    # code takes the longest minor code whose non-zero prefix it starts with.
     minor = load_oews_minor_groups(year)
-    t["submajor_label"] = t.soc_2018.str[:4] + "000"   # SOC minor group: major digits plus the first digit after the hyphen
-    t["submajor_name"] = t.submajor_label.map(minor.set_index("soc_minor").title)
+    prefixes = sorted(((str(c).rstrip("0"), str(c)) for c in minor.soc_minor), key=lambda x: -len(x[0]))
+
+    def _minor(code):
+        for pre, full in prefixes:
+            if str(code).startswith(pre):
+                return full
+        return str(code)[:4] + "000"
+    t["submajor_label"] = t.soc_2018.map(_minor)
+    t["submajor_name"] = t.submajor_label.map(minor.set_index("soc_minor").title).fillna(t.submajor_label.map(lambda x: f"SOC group {x} (no published title)"))
     t["edition"] = year
     cols = ["onet_soc_code", "onet_title", "soc_2018", "soc_title", "major_group", "submajor_label", "submajor_name", "employment_thousands", "employment_method", "wage_median", "wage_source", "wage_top_coded", "wage_value", "edition"]
     return t[cols].reset_index(drop=True)
