@@ -9,3 +9,5 @@ Small tables typed in from reports that publish numbers only inside PDFs. Each f
 
 * `singapore_ai_adoption_imda.csv`: AI adoption rate of Singapore enterprises by year (all, SMEs, non-SMEs, sectors), hand-transcribed from IMDA's Singapore Digital Economy Reports 2024, 2025 and 2026 with a source per row. The 2023 all-enterprise figure is derived (SMEs are about 99% of enterprises) and marked as such.
 * `ai_task_ratings_2026.10a.csv`: Claude's October 2026 rating of every O*NET task on `onetx/rubric_2026.md` (exposure E0/E1/E2, autonomy A0-A3, main barrier), produced by `python -m onetx rate` and committed so a build is reproducible without re-rating. Validation is in `docs/METHOD.md`.
+
+- `onet_career_clusters_2026.csv`: O*NET OnLine "Browse by Career Cluster" (National Career Clusters Framework, 14 clusters), collected from the 14 cluster pages on 24 Oct 2026: 1,264 cluster-to-occupation links covering 997 of the 1,016 O*NET occupations (the 19 without a cluster are military); 186 occupations sit in more than one cluster. Not part of the O*NET database download, so refresh by re-collecting the pages. O*NET content is CC BY 4.0.
