@@ -6,11 +6,11 @@
 :root{
   --bg:#f6f4ee; --panel:#ffffff; --fg:#1d2426; --muted:#5d6a6e; --line:#d9d4c8; --accent:#0e6b67; --accent-soft:#d9ece9;
   --doing:#0e6b67; --helping:#8f5a10; --physical:#5a6b7d; --notseen:#8a9497; --warn:#a33a2b;
-  --involved:#6fa8a3; --rated:#2f7d32; --mixed:#6b4fa0; --fast:#a3571a; --central:#0e6b67; --slow:#3f5f8a; --scn:#0e6b67; --zebra:#f3f1ea; --heat-warm:233,167,156; --heat-cool:188,208,234;
+  --involved:#6fa8a3; --involved-text:#3a746e; --rated:#2f7d32; --mixed:#6b4fa0; --fast:#a3571a; --central:#0e6b67; --slow:#3f5f8a; --scn:#0e6b67; --zebra:#f3f1ea; --heat-warm:233,167,156; --heat-cool:188,208,234;
   --font-display:"Newsreader", Georgia, "Times New Roman", serif; --font-body:"Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif; --font-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#141a1b; --panel:#1c2426; --fg:#e8e9e4; --muted:#a4adaf; --line:#2f3a3c; --accent:#5fc0b9; --accent-soft:#1f3836; --doing:#5fc0b9; --helping:#e0a04e; --physical:#9db0c2; --notseen:#6c777a; --warn:#e07a68; --involved:#3d8a85; --rated:#7fcb7f; --mixed:#b79bea; --fast:#e0a04e; --central:#5fc0b9; --slow:#8fb0e0; --scn:#5fc0b9; --zebra:#202a2c; --heat-warm:150,70,55; --heat-cool:55,80,120; --on-scn:#141a1b; color-scheme:dark } }
-:root[data-theme="dark"]{ --bg:#141a1b; --panel:#1c2426; --fg:#e8e9e4; --muted:#a4adaf; --line:#2f3a3c; --accent:#5fc0b9; --accent-soft:#1f3836; --doing:#5fc0b9; --helping:#e0a04e; --physical:#9db0c2; --notseen:#6c777a; --warn:#e07a68; --involved:#3d8a85; --rated:#7fcb7f; --mixed:#b79bea; --fast:#e0a04e; --central:#5fc0b9; --slow:#8fb0e0; --scn:#5fc0b9; --zebra:#202a2c; --heat-warm:150,70,55; --heat-cool:55,80,120; --on-scn:#141a1b; color-scheme:dark }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#141a1b; --panel:#1c2426; --fg:#e8e9e4; --muted:#a4adaf; --line:#2f3a3c; --accent:#5fc0b9; --accent-soft:#1f3836; --doing:#5fc0b9; --helping:#e0a04e; --physical:#9db0c2; --notseen:#6c777a; --warn:#e07a68; --involved:#3d8a85; --involved-text:#8ccfc8; --rated:#7fcb7f; --mixed:#b79bea; --fast:#e0a04e; --central:#5fc0b9; --slow:#8fb0e0; --scn:#5fc0b9; --zebra:#202a2c; --heat-warm:150,70,55; --heat-cool:55,80,120; --on-scn:#141a1b; color-scheme:dark } }
+:root[data-theme="dark"]{ --bg:#141a1b; --panel:#1c2426; --fg:#e8e9e4; --muted:#a4adaf; --line:#2f3a3c; --accent:#5fc0b9; --accent-soft:#1f3836; --doing:#5fc0b9; --helping:#e0a04e; --physical:#9db0c2; --notseen:#6c777a; --warn:#e07a68; --involved:#3d8a85; --involved-text:#8ccfc8; --rated:#7fcb7f; --mixed:#b79bea; --fast:#e0a04e; --central:#5fc0b9; --slow:#8fb0e0; --scn:#5fc0b9; --zebra:#202a2c; --heat-warm:150,70,55; --heat-cool:55,80,120; --on-scn:#141a1b; color-scheme:dark }
 :root[data-scn="0"]{--scn:var(--fast)} :root[data-scn="1"]{--scn:var(--central)} :root[data-scn="2"]{--scn:var(--slow)}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;margin:0}
@@ -88,7 +88,7 @@ details.more{border:1px solid var(--line);border-radius:8px;padding:8px 14px;mar
 .bar i{display:block;height:100%;background:var(--accent)}
 .legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:.85rem;color:var(--muted)}
 .legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--c)}
-svg text{fill:var(--fg);font-family:var(--font-body);font-size:12px}
+svg text{font-family:var(--font-body);font-size:12px} svg text:not([fill]){fill:var(--fg)}
 svg .axis{stroke:var(--line)} svg .grid{stroke:var(--line);stroke-dasharray:2 3}
 .range{font-family:var(--font-mono);font-size:.85rem;color:var(--muted)}
 .pill.s4{background:transparent;border-color:var(--rated);color:var(--rated)} .pill.s5{background:transparent;border-color:var(--helping);color:var(--helping)} .pill.s6{background:transparent;border-color:var(--mixed);color:var(--mixed)} .pill.s7{background:transparent;border-color:var(--warn);color:var(--warn)}
@@ -565,12 +565,12 @@ function timeline(e, label, containerId, subject){ subject = subject || 'this wo
   if(cmp){
     const ends=[]; [0,1,2].forEach(k=>{ const q=series[k].map((v,i)=>`${xs(i)},${ys(v||0)}`).join(' '); s+=`<polyline points="${q}" fill="none" stroke="${cols[k]}" stroke-width="${k===SCN?3.5:2}" opacity="${k===SCN?1:.85}"/>`; ends.push([k, ys(series[k][Y.length-1]||0)]); });
     ends.sort((a,b)=>a[1]-b[1]); for(let j=1;j<ends.length;j++){ if(ends[j][1]-ends[j-1][1]<12) ends[j][1]=ends[j-1][1]+12; }
-    ends.forEach(([k,y])=>{ s+=`<text x="${W-r+5}" y="${y+4}" font-size="11" font-weight="${k===SCN?700:500}" fill="${cols[k]}">${SCN_NAMES[k]}</text>`; });
+    ends.forEach(([k,y])=>{ const y0=ys(series[k][Y.length-1]||0); s+=`<line x1="${W-r}" x2="${W-r+4}" y1="${y0}" y2="${y}" stroke="${cols[k]}" stroke-width="1.5"/><text x="${W-r+6}" y="${y+4}" font-size="11" font-weight="${k===SCN?700:500}" fill="${cols[k]}">${SCN_NAMES[k]}</text>`; });
     const hk = db ? hq : (e.h||e.half||[null,null,null]);
-    [0,1,2].forEach(k=>{ const v=hk[k]; if(v==null) return; const i=(v-Y[0])/(Y[Y.length-1]-Y[0])*(Y.length-1); if(i>=0&&i<=Y.length-1) s+=`<circle cx="${xs(i)}" cy="${ys(db?25:50)}" r="${k===SCN?5:4}" fill="${cols[k]}"/>`; });
+    [0,1,2].forEach(k=>{ const v=hk[k]; if(v==null) return; const i=(v-Y[0])/(Y[Y.length-1]-Y[0])*(Y.length-1); if(i>=0&&i<=Y.length-1){ const cy=ys(db?25:50); s+=`<circle cx="${xs(i)}" cy="${cy}" r="${k===SCN?5:4}" fill="${cols[k]}"/>`; if(W>=480) s+=`<text x="${xs(i)}" y="${cy+18}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${cols[k]}">${SCN_NAMES[k]} ${yr1(v)}</text>`; } });
   } else {
     s+=`<polyline points="${pts}" fill="none" stroke="var(--scn)" stroke-width="3"/>`;
-    const ends=[[ 'var(--scn)', db?'doing':'involved', ys(main[Y.length-1]||0), 700 ]]; if(db) ends.push(['var(--involved)','involved',ys(sb[Y.length-1]||0),500]);
+    const ends=[[ 'var(--scn)', db?'doing':'involved', ys(main[Y.length-1]||0), 700 ]]; if(db) ends.push(['var(--involved-text)','involved',ys(sb[Y.length-1]||0),500]);
     ends.sort((a,b)=>a[2]-b[2]); for(let j=1;j<ends.length;j++){ if(ends[j][2]-ends[j-1][2]<12) ends[j][2]=ends[j-1][2]+12; }
     ends.forEach(([c,txt,y,w])=>{ s+=`<text x="${W-r+5}" y="${y+4}" font-size="10.5" font-weight="${w}" fill="${c}">${txt}</text>`; });
   }
