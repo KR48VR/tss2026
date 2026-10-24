@@ -81,6 +81,8 @@ svg .axis{stroke:var(--line)} svg .grid{stroke:var(--line);stroke-dasharray:2 3}
 ol.ladder{margin:8px 0 0;padding-left:1.4em} ol.ladder li{margin:6px 0} ol.ladder .conv{display:block;font-size:.85rem;color:var(--muted);margin:2px 0 0 0}
 .trchain{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:baseline;margin-top:10px} .trchain .big{font-size:1.4rem;font-weight:700;font-variant-numeric:tabular-nums} .trchain .how{font-size:.85rem;color:var(--muted)}
 input[type="number"]{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg)} input[type="number"]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.xcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px;margin-top:10px} .xcard{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--panel)} .xcard h3{margin:0 0 6px;font-size:1.05rem} .xcard .k{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:10px 0 2px} .xcard p,.xcard ul{margin:0;font-size:.92rem} .xcard ul{padding-left:1.1em} .xcard li{margin:3px 0}
+ul.xlist{margin:8px 0 0;padding-left:1.2em} ul.xlist li{margin:6px 0}
 .outc{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:8px 0} .outc .cell{border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--panel)} .outc .cell .lbl{font-size:.78rem;color:var(--muted)} .outc .cell .val{font-size:1.15rem;font-weight:700;font-variant-numeric:tabular-nums} .outc .cell .sub{font-size:.78rem;color:var(--muted)} .spark{display:block;width:100%;height:36px;margin-top:4px}
 .stale{border-left:3px solid var(--warn);padding:8px 12px;background:var(--panel);font-size:.92rem;margin:8px 0 0}
 details{border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--panel)}
@@ -103,6 +105,7 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
   <div class="flexrow small" style="margin:2px 0 6px"><span id="scn-label">Scenario</span><div class="scn" role="group" aria-labelledby="scn-label"><button type="button" data-scn="0" aria-pressed="false">Fast</button><button type="button" data-scn="1" aria-pressed="true">Central</button><button type="button" data-scn="2" aria-pressed="false">Slow</button></div><span class="muted">changes every year and curve on this page</span></div>
   <nav class="tabs" role="tablist" aria-label="Views">
     <button role="tab" data-view="overview" aria-selected="true" aria-controls="view-overview" id="tab-overview">Overview</button>
+    <button role="tab" data-view="leaders" aria-selected="false" aria-controls="view-leaders" id="tab-leaders">For leaders</button>
     <button role="tab" data-view="jobs" aria-selected="false" aria-controls="view-jobs" id="tab-jobs">Find a job</button>
     <button role="tab" data-view="sectors" aria-selected="false" aria-controls="view-sectors" id="tab-sectors">Sectors</button>
     <button role="tab" data-view="skills" aria-selected="false" aria-controls="view-skills" id="tab-skills">Skills and activities</button>
@@ -131,6 +134,42 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
     <div class="flexrow small"><label for="sub-weight">Weight by</label><select id="sub-weight" style="width:auto"><option value="wage">wage bill</option><option value="emp">employment</option></select></div>
     <div class="tablewrap" tabindex="0" role="region" aria-label="Sub-group table, scrolls sideways on small screens"><table id="sub-table"><caption class="sr-only">Occupation sub-groups with exposure and timing</caption></table></div>
   </div>
+</section>
+
+<section class="view" id="view-leaders" role="tabpanel" aria-labelledby="tab-leaders" hidden>
+  <div class="lede">
+    <h2>Executive summary</h2>
+    <p class="small muted">For leaders who need the shape of the answer in five minutes. Every number on this page is live from the current build; the dates of the evidence are on the Overview.</p>
+    <p><strong>In one breath.</strong> <span id="x-breath"></span></p>
+  </div>
+  <div class="grid tiles" id="x-tiles"></div>
+  <div class="panel">
+    <div class="eyebrow">What we built on, and what we added</div>
+    <div class="xcards">
+      <div class="xcard"><h3>O*NET, the US map of work</h3>
+        <div class="k">What exists</div><p>The US Department of Labor describes <span id="x-onet-occ"></span> occupations as <span id="x-onet-tasks"></span> tasks, with the activities and skills behind each. It is the most detailed public map of work there is. It is American, and it says nothing about AI.</p>
+        <div class="k">What we added</div><ul><li>Linked every occupation to Singapore's own codes through official correspondence tables (<span id="x-ssoc-linked"></span> of <span id="x-ssoc"></span> SSOC codes), then to the Skills Framework.</li><li>Put evidence on every task: seen in real AI use, rated doable by human raters in 2023 and by Claude in 2026, raters disagree, unproven, or physical.</li><li>Gave every task a measured share of the work AI does when it is used, so "involved" and "doing" are kept apart.</li><li>A timing model with fast, central and slow cases, driven by measured adoption rather than assumed lags.</li></ul>
+        <div class="k">Why it matters</div><p>Singapore gets a task-level map it never had, and "exposure" becomes something you can trace task by task instead of a single score per job.</p></div>
+      <div class="xcard"><h3>Singapore's own data</h3>
+        <div class="k">What exists</div><p>SingStat's occupation codes, SkillsFuture's Skills Framework (<span id="x-roles"></span> roles and their key tasks), MOM's wages, employment, vacancies and retrenchments, and IMDA's adoption surveys. Rich and official, but published separately and never joined to each other or to AI evidence.</p>
+        <div class="k">What we added</div><ul><li>Joined them into one map: <span id="x-roles-coded"></span> roles carry SingStat's own occupation code, the rest are matched by description with the match score shown.</li><li>Weighted everything by resident employment and by the wage bill, so the headline is about Singapore's pay, not US proxies.</li><li>Measured Singapore firms' adoption lead over the US from IMDA's surveys (<span id="x-lead"></span> years), and gave each industry its own adoption date.</li><li>Added what has actually happened to each job since 2023 (vacancies, wages, employment, retrenchments) and test the map against it on every rebuild.</li></ul>
+        <div class="k">Why it matters</div><p>Numbers for Singapore's workforce, and a built-in reality check that will show whether the forecast is right as the years come in.</p></div>
+      <div class="xcard"><h3>Reports from AI and tech companies</h3>
+        <div class="k">What exists</div><p>Anthropic's usage data by task, Microsoft's Copilot study, OpenAI's ratings and usage shares, Google's lists, METR's capability trend, the US Census adoption survey. Each covers one company's users, one unit, one date. They cannot be added up, and most headlines come from the weakest kind of evidence, a rating.</p>
+        <div class="k">What we added</div><ul><li>Put all of them on the same task map, in the same units.</li><li>Refresh the adoption survey live; a frozen copy had been running a year behind reality.</li><li>Graded every source on a five-rung ladder, from "rated doable" to "the job changed", with its date and its measured track record: the 2023 ratings scored <span id="x-auc"></span> at telling which tasks would be seen in use (0.50 is a coin toss), and our 2026 rating agrees with human raters as well as they agree with each other.</li><li>A translator that turns any headline number into what it has historically meant further down the ladder.</li></ul>
+        <div class="k">Why it matters</div><p>One view instead of a dozen incompatible reports, and a way to size the next headline before reacting to it.</p></div>
+    </div>
+  </div>
+  <div class="panel"><div class="eyebrow">How far to trust it</div><ul class="xlist" id="x-trust"></ul></div>
+  <div class="panel"><div class="eyebrow">What to use it for</div>
+    <ul class="xlist">
+      <li><strong>Workforce planning, job by job.</strong> Open any job and see which tasks AI already does, helps with, or cannot touch yet, and the year by which a quarter of the work could be AI's. The "AI helping" tasks stay with people but change; that is where reskilling pays.</li>
+      <li><strong>Sector and skills comparisons.</strong> The Sectors tab ranks the Skills Framework sectors; the Skills tab shows which skills sit in the most exposed jobs.</li>
+      <li><strong>Reading the next report.</strong> Place it on the ladder and run its number through the translator before reacting.</li>
+      <li><strong>Stress tests and budgets.</strong> The scenario switch at the top changes every number: use the fast case to stress-test, the slow case to budget.</li>
+    </ul></div>
+  <div class="panel"><div class="eyebrow">What it is not</div>
+    <p>Not a prediction of job losses: a job whose tasks are disruptable changes, it does not disappear, and nothing here measures a single firm. Not a verdict on capability: "unproven" means nobody has shown it yet. On today's patterns AI does under half of almost any job even when every task is disrupted, which is why the headline year is "a quarter". The 2026 rating is a model rating its own kind; its agreement with human raters and a repeat run are the guards, and the usage data are allowed to overrule it.</p></div>
 </section>
 
 <section class="view" id="view-jobs" role="tabpanel" aria-labelledby="tab-jobs" hidden>
@@ -246,7 +285,7 @@ let ktCache = null, ktLoading = null;
 function loadKT(){ if(ktCache) return Promise.resolve(ktCache); if(!ktLoading){ ktLoading = fetch('kt.json').then(r=>r.json()).then(j=>{ktCache=j;return j;}).catch(()=>null);} return ktLoading; }
 
 // ---------- views
-const views = ["overview","jobs","sectors","skills","news","method"];
+const views = ["overview","leaders","jobs","sectors","skills","news","method"];
 function show(v){ views.forEach(x=>{ document.getElementById('view-'+x).hidden = (x!==v); }); document.querySelectorAll('nav.tabs button').forEach(b=>{ const on=b.dataset.view===v; b.setAttribute('aria-selected', on?'true':'false'); b.tabIndex = on?0:-1; }); try{localStorage.setItem('view',v);}catch(e){} }
 const tabButtons = Array.from(document.querySelectorAll('nav.tabs button'));
 tabButtons.forEach((b,i)=>{ b.addEventListener('click',()=>show(b.dataset.view)); b.addEventListener('keydown',e=>{ if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault(); const j=(i+(e.key==='ArrowRight'?1:-1)+tabButtons.length)%tabButtons.length; tabButtons[j].focus(); show(tabButtons[j].dataset.view); } }); });
@@ -278,6 +317,34 @@ function tilesRender(){
   document.getElementById('econ-tiles').innerHTML = tiles.map(t=>`<div class="panel tile"><div class="lbl">${esc(t[0])}</div><div class="num">${esc(t[1])}</div><div class="small muted">${esc(t[2])}</div></div>`).join('');
 }
 tilesRender();
+(function leaders(){
+  const db=(ecoW.db||[]), sb=ecoW.sb||[], hq=ecoW.hq||[], da=m.data_as_of||{}, V=m.validation||{}, ad=m.adoption||{}, oc=m.outcomes||{};
+  const cw=m.crosswalk||{}, ts=m.task_status||{};
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('x-onet-occ', fmt(D.onet.length)); set('x-onet-tasks', fmt((ts.observed_automation||0)+(ts.observed_augmentation||0)+(ts.physical_robotics||0)+(ts.not_observed||0)));
+  set('x-ssoc-linked', fmt(cw.ssoc_covered)); set('x-ssoc', fmt(D.ssoc.length)); set('x-roles', fmt(cw.sfw_roles||D.roles.length)); set('x-roles-coded', fmt(cw.sfw_roles_from_singstat)); set('x-lead', fmt(m.geo_lead,1));
+  set('x-auc', fmt(((V.auc_seen||{}).human_2023||0),2));
+  const verdict = oc.headline ? ((Math.abs((oc.headline.occupation||{}).median_signed_rho||0)<0.15 && ((oc.headline.submajor||{}).median_signed_rho||0)>=0) ? 'not yet' : 'not clearly') : 'not tested';
+  document.getElementById('x-breath').textContent = `By 2035 AI could be involved in ${pct(sb[I35])} of Singapore's paid work but doing about ${pct(db[I35])} of it. It reaches a quarter of the wage bill around ${yr(hq[1])} in the central case (fast ${yr(hq[0])}, slow ${yr(hq[2])}). Singapore firms run ${fmt(m.geo_lead,1)} years ahead of US firms in adopting AI. In the job market itself there is ${verdict==='not yet'?'no sign of it yet':'no clear sign of it'}: the more exposed jobs have so far grown faster.`;
+  const tiles=[
+    ['By 2035, AI could be doing', pct(db[I35]), `of the wage bill's work (central case); involved in ${pct(sb[I35])}`],
+    ['AI doing a quarter of the wage bill by', yr(hq[1]), `fast ${yr(hq[0])} ${MID} slow ${yr(hq[2])}`],
+    ['Ceiling on today\'s patterns', pct(ecoW.cap), 'what AI would be doing if every task were disrupted; it helps with the rest'],
+    ['Already seen in AI use', pct(ecoE.so), 'share of residents\' work seen in real AI use in any release since December 2024'],
+    ['Half of Singapore firms using AI by', yr((ad.sg_half||{}).central), `measured lead of ${fmt(m.geo_lead,1)} years over the US curve`],
+    ['Showing up in jobs yet?', verdict.charAt(0).toUpperCase()+verdict.slice(1), 'wages 2024 to 2025, vacancies 2023 to 2025, employment 2019 to 2025, from MOM'],
+  ];
+  document.getElementById('x-tiles').innerHTML = tiles.map(t=>`<div class="panel tile"><div class="lbl">${esc(t[0])}</div><div class="num">${esc(t[1])}</div><div class="small muted">${esc(t[2])}</div></div>`).join('');
+  const rp=V.repeat_2026||{}, ag=V.agreement||{};
+  const trust=[
+    `<strong>Every input carries its date.</strong> AI usage data to ${dfmt(da.aei_latest_vintage)||'May 2026'}; US firm adoption to ${dfmt(da.btos_latest_reading)}; Singapore firm adoption ${da.imda_latest_year||''}; task ratings 2023 and ${dfmt(da.ratings_2026)}; MOM vacancies ${da.mom_vacancies||''}, employment ${da.mom_employment_by_occupation||''}. The page warns when a build is more than three months old.`,
+    `<strong>Ratings are scored against what later happened.</strong> The 2023 human ratings told which tasks would be seen in use at ${fmt((V.auc_seen||{}).human_2023,2)} on a scale where 0.50 is nothing; a quarter of the tasks they called impossible were seen in use anyway. Our 2026 rating agrees with them on ${pct(((ag.claude2026_vs_human_2023||{}).agree||0)*100)} of tasks and gives the same answer ${pct((rp.exposure_yes_no_same||0)*100)} of the time when asked again.`,
+    `<strong>Adoption is measured, not assumed.</strong> The US Census survey is downloaded on every rebuild; IMDA's surveys set Singapore's lead; each industry carries its own date. Where a measurement cut against the model, the measurement won: tasks only the 2026 rating calls doable wait the longest.`,
+    `<strong>The job market is the final check.</strong> Vacancies, wages, employment and retrenchments by occupation are tested against the map on every rebuild. Two years of outcomes against a forecast that mostly starts in 2029 is a baseline, not a verdict.`,
+    `<strong>Ranges, not points.</strong> Every year is given fast, central and slow. The honest statement is the range.`,
+  ];
+  document.getElementById('x-trust').innerHTML = trust.map(t=>`<li>${t}</li>`).join('');
+})();
 
 function majorChart(){
   const rows = D.economy.filter(e=>e.level==='major_group'&&e.w==='wage').map(e=>({...e, hqv:(e.hq&&e.hq[SCN]!=null)?e.hq[SCN]:null})).sort((a,b)=>(a.hqv||9999)-(b.hqv||9999));
