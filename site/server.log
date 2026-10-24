@@ -7,3 +7,24 @@ Serving HTTP on 127.0.0.1 port 8765 (http://127.0.0.1:8765/) ...
 127.0.0.1 - - [24/Oct/2026 04:40:50] "GET /index.html HTTP/1.1" 200 -
 127.0.0.1 - - [24/Oct/2026 04:40:50] "GET /kt.json HTTP/1.1" 200 -
 127.0.0.1 - - [24/Oct/2026 04:40:50] "GET /search.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:47:38] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:47:40] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:47:40] code 404, message File not found
+127.0.0.1 - - [24/Oct/2026 04:47:40] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [24/Oct/2026 04:47:43] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:48:39] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:48:39] "GET /kt.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:48:39] "GET /search.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:48:40] code 404, message File not found
+127.0.0.1 - - [24/Oct/2026 04:48:40] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [24/Oct/2026 04:48:43] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:48:43] "GET /kt.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:48:43] "GET /search.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:50:03] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:50:04] "GET /kt.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:50:04] "GET /search.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:50:04] code 404, message File not found
+127.0.0.1 - - [24/Oct/2026 04:50:04] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [24/Oct/2026 04:50:11] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:50:12] "GET /kt.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 04:50:12] "GET /search.json HTTP/1.1" 200 -

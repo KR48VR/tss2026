@@ -75,7 +75,7 @@ svg text{fill:var(--fg);font-family:var(--font-body);font-size:12px}
 svg .axis{stroke:var(--line)} svg .grid{stroke:var(--line);stroke-dasharray:2 3}
 .range{font-family:var(--font-mono);font-size:.85rem;color:var(--muted)}
 .pill.s4{background:transparent;border-color:var(--accent);color:var(--accent)} .pill.s5{background:transparent;border-color:var(--helping);color:var(--helping)} .pill.s6{background:transparent;border-color:var(--muted);border-style:dashed;color:var(--muted)} .pill.s7{background:transparent;border-color:var(--warn);color:var(--warn)}
-.scn{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden} .scn button{font:inherit;font-size:.85rem;background:var(--panel);border:0;color:var(--muted);padding:5px 10px;cursor:pointer} .scn button[aria-pressed="true"]{background:var(--accent);color:var(--bg);font-weight:600} .scn button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.scn{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden} .scn button{font:inherit;font-size:.85rem;background:var(--panel);border:0;color:var(--muted);padding:5px 10px;cursor:pointer} .scn button[aria-pressed="true"]{background:var(--accent);color:var(--bg);font-weight:600} .scn .pace{font-weight:400;font-size:.78rem} .scn button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .evbar{display:flex;height:14px;border-radius:4px;overflow:hidden;border:1px solid var(--line);background:var(--line)} .evbar i{display:block;height:100%} .ev-seen{background:var(--doing)} .ev-rated{background:var(--accent-soft)} .ev-newly{background:var(--helping)} .ev-mixed{background:var(--notseen)} .ev-unproven{background:var(--warn)} .ev-physical{background:var(--physical)}
 .evlegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.8rem;color:var(--muted);margin-top:6px} .evlegend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle;border:1px solid var(--line)}
 ol.ladder{margin:8px 0 0;padding-left:1.4em} ol.ladder li{margin:6px 0} ol.ladder .conv{display:block;font-size:.85rem;color:var(--muted);margin:2px 0 0 0}
@@ -102,10 +102,11 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
 
 <header class="top"><div class="wrap">
   <h1 class="brand">Singapore Work and AI Map</h1>
-  <div class="flexrow small" style="margin:2px 0 6px"><span id="scn-label">Scenario</span><div class="scn" role="group" aria-labelledby="scn-label"><button type="button" data-scn="0" aria-pressed="false">Fast</button><button type="button" data-scn="1" aria-pressed="true">Central</button><button type="button" data-scn="2" aria-pressed="false">Slow</button></div><span class="muted">changes every year and curve on this page</span></div>
+  <div class="flexrow small" style="margin:2px 0 4px"><span id="scn-label">Scenario</span><div class="scn" role="group" aria-labelledby="scn-label"><button type="button" data-scn="0" aria-pressed="false">Fast <span class="pace" id="pace-0"></span></button><button type="button" data-scn="1" aria-pressed="true">Central <span class="pace" id="pace-1"></span></button><button type="button" data-scn="2" aria-pressed="false">Slow <span class="pace" id="pace-2"></span></button></div></div>
+  <p class="small muted" id="scn-explain" style="margin:0 0 6px;max-width:72rem"></p>
   <nav class="tabs" role="tablist" aria-label="Views">
-    <button role="tab" data-view="overview" aria-selected="true" aria-controls="view-overview" id="tab-overview">Overview</button>
-    <button role="tab" data-view="leaders" aria-selected="false" aria-controls="view-leaders" id="tab-leaders">For leaders</button>
+    <button role="tab" data-view="leaders" aria-selected="true" aria-controls="view-leaders" id="tab-leaders">Executive summary</button>
+    <button role="tab" data-view="overview" aria-selected="false" aria-controls="view-overview" id="tab-overview">Overview</button>
     <button role="tab" data-view="jobs" aria-selected="false" aria-controls="view-jobs" id="tab-jobs">Find a job</button>
     <button role="tab" data-view="sectors" aria-selected="false" aria-controls="view-sectors" id="tab-sectors">Sectors</button>
     <button role="tab" data-view="skills" aria-selected="false" aria-controls="view-skills" id="tab-skills">Skills and activities</button>
@@ -139,7 +140,7 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
 <section class="view" id="view-leaders" role="tabpanel" aria-labelledby="tab-leaders" hidden>
   <div class="lede">
     <h2>Executive summary</h2>
-    <p class="small muted">For leaders who need the shape of the answer in five minutes. Every number on this page is live from the current build; the dates of the evidence are on the Overview.</p>
+    <p class="small muted">For leaders who need the shape of the answer in five minutes. Every number on this page is live from the current build and follows the scenario selected at the top (Central unless you change it); the dates of the evidence are on the Overview.</p>
     <p><strong>In one breath.</strong> <span id="x-breath"></span></p>
   </div>
   <div class="grid tiles" id="x-tiles"></div>
@@ -285,11 +286,11 @@ let ktCache = null, ktLoading = null;
 function loadKT(){ if(ktCache) return Promise.resolve(ktCache); if(!ktLoading){ ktLoading = fetch('kt.json').then(r=>r.json()).then(j=>{ktCache=j;return j;}).catch(()=>null);} return ktLoading; }
 
 // ---------- views
-const views = ["overview","leaders","jobs","sectors","skills","news","method"];
+const views = ["leaders","overview","jobs","sectors","skills","news","method"];
 function show(v){ views.forEach(x=>{ document.getElementById('view-'+x).hidden = (x!==v); }); document.querySelectorAll('nav.tabs button').forEach(b=>{ const on=b.dataset.view===v; b.setAttribute('aria-selected', on?'true':'false'); b.tabIndex = on?0:-1; }); try{localStorage.setItem('view',v);}catch(e){} }
 const tabButtons = Array.from(document.querySelectorAll('nav.tabs button'));
 tabButtons.forEach((b,i)=>{ b.addEventListener('click',()=>show(b.dataset.view)); b.addEventListener('keydown',e=>{ if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault(); const j=(i+(e.key==='ArrowRight'?1:-1)+tabButtons.length)%tabButtons.length; tabButtons[j].focus(); show(tabButtons[j].dataset.view); } }); });
-let start = (location.hash||"").replace('#',''); if(!views.includes(start)){ try{ start = localStorage.getItem('view')||'overview'; }catch(e){ start='overview'; } if(!views.includes(start)) start='overview'; }
+let start = (location.hash||"").replace('#',''); if(!views.includes(start)){ try{ start = localStorage.getItem('view')||'leaders'; }catch(e){ start='leaders'; } if(!views.includes(start)) start='leaders'; }
 show(start);
 const scnButtons = Array.from(document.querySelectorAll('.scn button'));
 function paintScn(){ scnButtons.forEach(b=>b.setAttribute('aria-pressed', +b.dataset.scn===SCN?'true':'false')); }
@@ -299,6 +300,10 @@ paintScn();
 
 // ---------- overview
 const m = D.meta;
+(function(){ const sc=m.scenario||{adoption_mult:[1.5,1,0.6],barrier_years:[2,4,6],lag_mult:[0.5,1,2]}; const am=sc.adoption_mult, by=sc.barrier_years;
+  const lab=[`${fmt(am[0],1)}\u00d7 pace`, 'measured pace', `${fmt(am[2],1)}\u00d7 pace`]; lab.forEach((t,i)=>{ const el=document.getElementById('pace-'+i); if(el) el.textContent=t; });
+  document.getElementById('scn-explain').textContent = `Central follows the measured pace: the rate at which firms are adopting AI in the Census and IMDA surveys, the measured waiting times before unproven tasks count as capable, and a barrier delay of up to ${fmt(by[1])} years for human-facing work. Fast runs adoption at ${fmt(am[0],1)} times that pace with waiting times halved and barriers up to ${fmt(by[0])} years; Slow runs it at ${fmt(am[2],1)} times the pace with waiting times doubled and barriers up to ${fmt(by[2])} years. The switch changes every year and curve on this page: use Central to plan, Fast to stress-test, Slow to budget.`;
+})();
 const da = m.data_as_of||{};
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const dfmt = v => { if(!v) return ''; const p=String(v).split('-'); if(p.length===3) return `${+p[2]} ${MON[+p[1]-1]} ${p[0]}`; if(p.length===2) return `${MON[+p[1]-1]} ${p[0]}`; return String(v); };
@@ -317,18 +322,18 @@ function tilesRender(){
   document.getElementById('econ-tiles').innerHTML = tiles.map(t=>`<div class="panel tile"><div class="lbl">${esc(t[0])}</div><div class="num">${esc(t[1])}</div><div class="small muted">${esc(t[2])}</div></div>`).join('');
 }
 tilesRender();
-(function leaders(){
-  const db=(ecoW.db||[]), sb=ecoW.sb||[], hq=ecoW.hq||[], da=m.data_as_of||{}, V=m.validation||{}, ad=m.adoption||{}, oc=m.outcomes||{};
+function leadersRender(){
+  const db=(dbOf(ecoW)||ecoW.db||[]), sb=(sbOf(ecoW)||ecoW.sb||[]), hq=ecoW.hq||[], da=m.data_as_of||{}, V=m.validation||{}, ad=m.adoption||{}, oc=m.outcomes||{}; const scn=SCN_NAMES[SCN];
   const cw=m.crosswalk||{}, ts=m.task_status||{};
   const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
   set('x-onet-occ', fmt(D.onet.length)); set('x-onet-tasks', fmt((ts.observed_automation||0)+(ts.observed_augmentation||0)+(ts.physical_robotics||0)+(ts.not_observed||0)));
   set('x-ssoc-linked', fmt(cw.ssoc_covered)); set('x-ssoc', fmt(D.ssoc.length)); set('x-roles', fmt(cw.sfw_roles||D.roles.length)); set('x-roles-coded', fmt(cw.sfw_roles_from_singstat)); set('x-lead', fmt(m.geo_lead,1));
   set('x-auc', fmt(((V.auc_seen||{}).human_2023||0),2));
   const verdict = oc.headline ? ((Math.abs((oc.headline.occupation||{}).median_signed_rho||0)<0.15 && ((oc.headline.submajor||{}).median_signed_rho||0)>=0) ? 'not yet' : 'not clearly') : 'not tested';
-  document.getElementById('x-breath').textContent = `By 2035 AI could be involved in ${pct(sb[I35])} of Singapore's paid work but doing about ${pct(db[I35])} of it. It reaches a quarter of the wage bill around ${yr(hq[1])} in the central case (fast ${yr(hq[0])}, slow ${yr(hq[2])}). Singapore firms run ${fmt(m.geo_lead,1)} years ahead of US firms in adopting AI. In the job market itself there is ${verdict==='not yet'?'no sign of it yet':'no clear sign of it'}: the more exposed jobs have so far grown faster.`;
+  document.getElementById('x-breath').textContent = `By 2035 AI could be involved in ${pct(sb[I35])} of Singapore's paid work but doing about ${pct(db[I35])} of it (${scn} case). It reaches a quarter of the wage bill around ${yr(hq[SCN])} (fast ${yr(hq[0])}, central ${yr(hq[1])}, slow ${yr(hq[2])}). Singapore firms run ${fmt(m.geo_lead,1)} years ahead of US firms in adopting AI. In the job market itself there is ${verdict==='not yet'?'no sign of it yet':'no clear sign of it'}: the more exposed jobs have so far grown faster.`;
   const tiles=[
-    ['By 2035, AI could be doing', pct(db[I35]), `of the wage bill's work (central case); involved in ${pct(sb[I35])}`],
-    ['AI doing a quarter of the wage bill by', yr(hq[1]), `fast ${yr(hq[0])} ${MID} slow ${yr(hq[2])}`],
+    [`By 2035, AI could be doing (${scn} case)`, pct(db[I35]), `of the wage bill's work; involved in ${pct(sb[I35])}`],
+    [`AI doing a quarter of the wage bill by (${scn})`, yr(hq[SCN]), `fast ${yr(hq[0])} ${MID} central ${yr(hq[1])} ${MID} slow ${yr(hq[2])}`],
     ['Ceiling on today\'s patterns', pct(ecoW.cap), 'what AI would be doing if every task were disrupted; it helps with the rest'],
     ['Already seen in AI use', pct(ecoE.so), 'share of residents\' work seen in real AI use in any release since December 2024'],
     ['Half of Singapore firms using AI by', yr((ad.sg_half||{}).central), `measured lead of ${fmt(m.geo_lead,1)} years over the US curve`],
@@ -344,7 +349,8 @@ tilesRender();
     `<strong>Ranges, not points.</strong> Every year is given fast, central and slow. The honest statement is the range.`,
   ];
   document.getElementById('x-trust').innerHTML = trust.map(t=>`<li>${t}</li>`).join('');
-})();
+}
+leadersRender();
 
 function majorChart(){
   const rows = D.economy.filter(e=>e.level==='major_group'&&e.w==='wage').map(e=>({...e, hqv:(e.hq&&e.hq[SCN]!=null)?e.hq[SCN]:null})).sort((a,b)=>(a.hqv||9999)-(b.hqv||9999));
@@ -612,7 +618,7 @@ function gwaTable(){
   ], D.gwa.map(g=>{ const db=dbOf(g)||g.db; return {name:g.name,n:g.n,so:g.so,oa:g.oa,ms:g.ms,db35:db?db[I35]:null,hq:g.hq?g.hq[SCN]:null,h:g.h[SCN]}; }), ['oa',-1]);
 }
 gwaTable();
-function rerender(){ tilesRender(); majorChart(); subTable(); sectorTable(); skillTable(); gwaTable(); if(current) open(current.kind,current.i); }
+function rerender(){ tilesRender(); leadersRender(); majorChart(); subTable(); sectorTable(); skillTable(); gwaTable(); if(current) open(current.kind,current.i); }
 
 // ---------- reading the news
 const L = m.ladder||{}, V = m.validation||{};

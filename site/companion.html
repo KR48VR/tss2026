@@ -136,6 +136,7 @@ flowchart LR
 
   <h3>11. A tab for leaders</h3>
   <p>King asked for an executive summary on the map itself: how the work built on and improved O*NET, Singapore's data and the AI companies' reports. The new "For leaders" tab answers that in three cards (what exists, what we added, why it matters), a one-breath summary and six tiles that are live from the build, a "how far to trust it" list with the dates and track-record numbers, four uses, and a plain statement of what the map is not. Nothing on it is typed in by hand: every figure is read from the same data as the rest of the page, so it cannot drift from the detail views.</p>
+  <p>King then asked for the summary to come first, for the scenario switch to be explained where it sits, and for plainer names for the three settings. The executive summary is now the landing tab; the switch reads "Fast 1.5× pace", "Central measured pace", "Slow 0.6× pace", with the multipliers read from the model; and a line under it says what each setting does to adoption, waiting times and barriers, and which to use for planning, stress tests and budgets. The summary's own figures follow the switch.</p>
 </section>
 
 <section id="qa">
@@ -170,6 +171,7 @@ flowchart LR
       <tr><td>Doing (round 5)</td><td>Two candidate measures of how much of a task AI does, tested on the 4,192 seen tasks that carry both: time saved by AI and the share of use where AI completes the task. The new "doing" curves on a synthetic four-task case (unit test); the economy, sub-group, sector, skills and activity tables; the job headline tiles, the two-line timeline with the ceiling, the key task rows; scenario switch; accessibility; desktop and phone.</td><td>Time saved rejected (median 90%, barely varying by rating; correlation with the completion share 0.01). Completion share kept (rises from 41% for tasks rated not doable end to end to 59% for tasks rated fully doable). Everything renders; 0 accessibility violations; no overflow; no errors. The quarter-done and half-involved years often coincide, as the arithmetic implies when AI does about half of each task.</td></tr>
       <tr><td>Outcomes (round 6)</td><td>Loaders for seven new MOM files against their spreadsheets (group labels, year columns, SSOC editions); the 2023-to-2025 vacancy comparison on a common basis (shares within group, SSOC 2020 carried to 2024 minor groups); the outcome tests on synthetic data (unit test); an accuracy audit of the page against the tables: 12 occupations, 8 roles, 6 sectors, the economy tiles, the ladder numbers and the outcome figures, 70 checks; browser run on desktop (light) and phone (dark) with the accessibility audit on all six views; keyboard operation of the scenario switch; the search and news checks re-run.</td><td>All loaders parse; 0 accuracy problems; 0 accessibility violations on every view; no overflow or console errors; keyboard works. Finding kept as found: the more exposed occupation groups have grown faster, not slower.</td></tr>
       <tr><td>Leaders tab (round 7)</td><td>Every live field on the new tab checked for empty, "undefined" or "NaN" values on desktop and phone; accessibility audit on the view; the tab in the keyboard order of the tab list; overflow and console errors.</td><td>All fields filled from the build; 0 violations; no overflow; no errors.</td></tr>
+      <tr><td>Header (round 8)</td><td>Landing view and tab order; the scenario labels and explainer filled from the model; the summary's figures under each scenario; accessibility audit after a first version failed on contrast (faded pace labels).</td><td>Executive summary lands first; labels and explainer filled; figures change with the switch; contrast fixed by dropping the fade; 0 violations on the summary, overview, jobs and news views in light and dark mode.</td></tr>
       <tr><td>Not covered</td><td>Screen-reader walkthrough, real devices, colour-blind simulation; the Ask Claude button cannot be exercised outside a Claude viewer; the hand-made maps from Census sectors to MOM industries and from Skills Framework sectors to industries; the 2023 all-enterprise adoption figure for Singapore is derived from the SME and non-SME rates rather than published.</td><td>Open. The first reader to press Ask Claude inside Claude is the live test. The two sector maps are listed in <code>onetx/sector_adoption.py</code> for anyone to correct.</td></tr>
     </tbody>
   </table>
@@ -182,16 +184,16 @@ flowchart LR
   <p>How King and Claude worked together, step by step. The record covers the sixteen exchanges so far, including the ten after this page was first published. Claude did the building; King set the question, judged the results and decided what came next. The interactions are typed three ways, as King asked: <span class="tag tool">as a tool</span> King gave an instruction and Claude carried it out; <span class="tag team">as a teammate</span> the two reasoned together and the answer changed what happened next; <span class="tag indep">independently</span> one side worked alone for a stretch without the other.</p>
 
   <div class="grid">
-    <div class="tile"><div class="lbl">Tasks executed by Claude</div><div class="num">49</div><div class="small muted">research, download, build, calibrate, document, QA</div></div>
+    <div class="tile"><div class="lbl">Tasks executed by Claude</div><div class="num">50</div><div class="small muted">research, download, build, calibrate, document, QA</div></div>
     <div class="tile"><div class="lbl">Tasks executed by King</div><div class="num">15</div><div class="small muted">set the question, judge, prioritise, redirect, challenge the sources, delegate the order, choose formats</div></div>
-    <div class="tile"><div class="lbl">Interactions</div><div class="num">28</div><div class="small muted">counted per request or question, not per message</div></div>
+    <div class="tile"><div class="lbl">Interactions</div><div class="num">29</div><div class="small muted">counted per request or question, not per message</div></div>
     <div class="tile"><div class="lbl">Independent stretches</div><div class="num">12 + 11</div><div class="small muted">Claude building alone; King reviewing alone (inferred)</div></div>
   </div>
   <div class="panel">
     <div class="eyebrow">Interaction types</div>
     <div class="bars" style="margin-top:8px">
-      <span>Tool</span><div class="bar"><i style="width:46%;background:var(--tool)"></i></div><span>13</span>
-      <span>Teammate</span><div class="bar"><i style="width:54%;background:var(--team)"></i></div><span>15</span>
+      <span>Tool</span><div class="bar"><i style="width:48%;background:var(--tool)"></i></div><span>14</span>
+      <span>Teammate</span><div class="bar"><i style="width:52%;background:var(--team)"></i></div><span>15</span>
       <span>Independent (Claude)</span><div class="bar"><i style="width:52%;background:var(--indep)"></i></div><span>12 stretches</span>
       <span>Independent (King)</span><div class="bar"><i style="width:48%;background:var(--indep);opacity:.6"></i></div><span>11 stretches, inferred</span>
     </div>
@@ -254,6 +256,7 @@ flowchart LR
       <tr><td>47</td><td>Choose the fifth rung, ask for a thorough QA and both pages updated, and plan a test with a few readers afterwards.</td><td class="who">King</td><td><blockquote>"Let's do one. And then after you are done, do a thorough QA. And update the two artifacts. And then we can test this out with a few"<cite>King, message 20</cite></blockquote></td><td><span class="tag tool">Tool</span></td></tr>
       <tr><td>48</td><td>Find and load MOM's vacancy, employment, wage and retrenchment tables by occupation; build the outcome table and the tests; add "What has happened so far" to every job page, the fifth tile and the fifth rung; run the accuracy and accessibility audits; update notes and both pages.</td><td class="who">Claude</td><td>No exchange; follow-through on task 47.</td><td><span class="tag indep">Independent</span></td></tr>
       <tr><td>49</td><td>Add a "For leaders" tab: an executive summary of what was built on and what was added for each of the three source families, with live figures, a trust list and the uses.</td><td class="who">Claude, instructed by King</td><td><blockquote>"can you include a new tab - an executive summary for c-suite on how we built on and improved on what is in the onet, the singapore data, and the reports from AI/tech companies etc?"<cite>King, message 21</cite></blockquote></td><td><span class="tag tool">Tool</span></td></tr>
+      <tr><td>50</td><td>Put the executive summary first, explain fast, central and slow in the header, and relabel them by pace relative to the measured trend.</td><td class="who">Claude, instructed by King</td><td>King sent a screenshot of the header with the request. <blockquote>"exec summary should come first? and some explanation of fast, central, slow is needed upfront in the tab space itself. And consider other formulations that make it easier to understand e.g. Central could be median pace, fast could be 2x/1.5x median, slow could be 0.5x etc"<cite>King, message 22</cite></blockquote></td><td><span class="tag tool">Tool</span></td></tr>
     </tbody>
   </table>
   </div>
@@ -261,7 +264,7 @@ flowchart LR
   <h3>The three kinds of interaction, with examples</h3>
   <div class="panel">
     <p><span class="tag tool">King worked with Claude as a tool</span></p>
-    <p>King named an outcome and Claude produced it without further discussion. Thirteen of the twenty-eight interactions were of this kind, and they carried most of the volume of work.</p>
+    <p>King named an outcome and Claude produced it without further discussion. Fourteen of the twenty-nine interactions were of this kind, and they carried most of the volume of work.</p>
     <ul>
       <li>"please pull in the wages and employment data" (message 3) became tasks 14, 17 and 18: three tables found, 523 occupations coded to wages, 43 employment groups.</li>
       <li>"can we try to get the downloads again?" (message 4) became task 17: three approaches tried, the third worked.</li>
@@ -299,6 +302,6 @@ flowchart LR
   </div>
 
   <h3>What the pattern says</h3>
-  <p>By count, Claude executed 49 of the 64 tasks and worked alone for most of the elapsed time. By influence, the fifteen teammate exchanges mattered most: every one redirected the work, and four of them ("is 1 better now?", "offer both options", "is it found by keyword matching", "how useful are these given how fast AI is moving?") improved the honesty or reach of the result in ways the tool-style requests did not. A pattern worth naming: King's sharpest questions came after he had used the output himself. The tool-style requests were efficient because they were specific and came with a yes-or-no test of completion, such as whether the download succeeded. The open items King chose to defer, the model weaknesses 2 and 3, are still waiting for the teammate conversation he asked to return to.</p>
+  <p>By count, Claude executed 50 of the 65 tasks and worked alone for most of the elapsed time. By influence, the fifteen teammate exchanges mattered most: every one redirected the work, and four of them ("is 1 better now?", "offer both options", "is it found by keyword matching", "how useful are these given how fast AI is moving?") improved the honesty or reach of the result in ways the tool-style requests did not. A pattern worth naming: King's sharpest questions came after he had used the output himself. The tool-style requests were efficient because they were specific and came with a yes-or-no test of completion, such as whether the download succeeded. The open items King chose to defer, the model weaknesses 2 and 3, are still waiting for the teammate conversation he asked to return to.</p>
 </section>
 </main>
