@@ -142,13 +142,16 @@ def build(forecast_params: fcm.ForecastParams | None = None, now: str = "2026-10
     return stats
 
 
-def build_country_bases() -> dict:
-    """Weights, crosswalks, industry mix, adoption readings and official-task matches for Australia and
-    the United Kingdom (`python -m onetx countries`). Each country is skipped when its raw files are absent."""
+def build_country_bases(only: list | None = None) -> dict:
+    """Weights, crosswalks, industry mix, adoption readings and official-task matches for the further
+    workforces (`python -m onetx countries`). Each country is skipped when its raw files are absent;
+    `only` restricts the build to the listed country codes."""
     from . import countries as cn
 
     out = {}
     for code, spec in cn.SPECS.items():
+        if only and code not in only:
+            continue
         try:
             out[code] = cn.build_base(spec)
             print(f"ok    {code} base tables")

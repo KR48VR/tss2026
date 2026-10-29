@@ -109,6 +109,17 @@ def build_search_assets(ssoc_order: list[str], role_ids: list[str], key_tasks: l
                 if r.soc_code in idx and (r.soc_code, r.key) not in seen_n and r.title.casefold() != str(w.get(r.soc_code, "")).casefold():
                     seen_n.add((r.soc_code, r.key)); rows.append([idx[r.soc_code], r.title])
             nat_titles[code] = [str(w.get(c, c)) for c in order]
+        else:
+            # any further country with a titles table (code column first, then title)
+            from . import countries as cn
+            spec = cn.SPECS[code]
+            w = load(f"{spec.prefix}weights").set_index(spec.code_col)[spec.title_col]
+            if load.__module__ and (ROOT / "data" / "processed" / f"{spec.prefix}titles.parquet").exists():
+                for _, r in load(f"{spec.prefix}titles").iterrows():
+                    c = str(r[spec.code_col]); t = str(r.title).strip()
+                    if c in idx and (c, t.casefold()) not in seen_n and t.casefold() != str(w.get(c, "")).casefold():
+                        seen_n.add((c, t.casefold())); rows.append([idx[c], t])
+            nat_titles[code] = [str(w.get(c, c)) for c in order]
         nat_alt[code] = rows
     (SITE / "search.json").write_text(json.dumps({"alt": alt, "onet": onet_tasks, "us": us_alt, "nat": nat_alt}, ensure_ascii=True, separators=(",", ":")))
 

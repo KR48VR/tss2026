@@ -171,3 +171,39 @@ def test_pair_decomposition_adds_up_and_is_symmetric_in_names():
         assert abs(part["gap"] - (part["job_mix"] + part["timing"])) < 1e-9, key
         assert "AUS" in part and "GBR" in part
     assert abs(d["by_year"]["central_2035"]["gap"] - 0.06) < 1e-9
+
+
+# ---------------------------------------------------------------------------- Canada: a direct O*NET link and the national ratings test
+def test_direct_onet_link_is_used_when_the_spec_has_one(monkeypatch):
+    spec = cn.SPECS["CAN"]
+    link = pd.DataFrame({"onet_soc_code": ["a", "a", "b"], "nat_code": ["11100", "11101", "11100"], "weight": [0.5, 0.5, 1.0]})
+    spec2 = cn.CountrySpec(**{**spec.__dict__, "onet_link": lambda codes: link})
+    monkeypatch.setattr(cn.io, "load", lambda name: (_ for _ in ()).throw(AssertionError("ISCO table must not be read")))
+    xw = cn.national_crosswalk(spec2, {"11100", "11101"})
+    assert np.allclose(xw.groupby("onet_soc_code").weight.sum(), 1.0) and np.allclose(xw.groupby("nat_code").weight_rev.sum(), 1.0)
+    assert xw[(xw.onet_soc_code == "a") & (xw.nat_code == "11100")].weight_rev.iloc[0] == 1 / 3
+
+
+def test_rating_level_exposure_bands_and_direction():
+    spec = cn.SPECS["CAN"]
+    codes = [f"{i:05d}" for i in range(30)]
+    levels = np.linspace(0, 5, 30)
+    t = pd.DataFrame({"nat_code": codes, "employment_thousands": 10.0, "share_weight_observed": levels / 5, "observed_automation": levels / 10, "done_by_2035": levels / 6, "done_by_2035_p10": levels / 5, "done_by_2035_p90": levels / 7, "quarter_done_year_p10": 2030.0, "quarter_done_year_p50": 2032.0, "quarter_done_year_p90": 2035.0})
+    ratings = pd.DataFrame({"noc_code": codes * 2, "family": ["skill"] * 60, "element_name": ["Numeracy"] * 30 + ["Writing"] * 30, "level": list(levels) + list(levels[::-1])})
+    out = cn.rating_level_exposure(t, ratings, spec)
+    b = out["bands"]; c = out["correlations"].set_index("element_name")
+    assert set(b.band) == {"L", "M", "H"} and "index" in set(b.family)
+    num = b[b.element_name == "Numeracy"].set_index("band")
+    assert num.loc["H", "done_by_2035"] > num.loc["M", "done_by_2035"] > num.loc["L", "done_by_2035"]
+    assert c.loc["Numeracy", "rho_level_vs_done_2035"] > 0.9 and c.loc["Writing", "rho_level_vs_done_2035"] < -0.9
+
+
+def test_group_len_drives_the_mix_key():
+    spec = cn.SPECS["CAN"]
+    mix = pd.DataFrame({"minor": ["1110", "1110", "2110"], "industry": ["52", "54", "54"], "employed": [300.0, 100.0, 50.0]})
+    ind = pd.DataFrame({"industry": ["52", "54"], "anchor_shift_years": [-2.0, 2.0]})
+    natw = pd.DataFrame({"noc_code": ["11100", "21101"], "employment_thousands": [1.0, 1.0]})
+    xw = pd.DataFrame({"onet_soc_code": ["a", "a"], "nat_code": ["11100", "21101"], "weight_rev": [1.0, 1.0]})
+    grp, nat, onet = cn.occupation_shifts(mix, ind, natw, xw, spec)
+    s = nat.set_index("nat_code").adoption_shift_years
+    assert abs(s["11100"] - (-2.0 * 0.75 + 2.0 * 0.25)) < 1e-9 and abs(s["21101"] - 2.0) < 1e-9

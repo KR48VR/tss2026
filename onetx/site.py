@@ -683,15 +683,33 @@ def build_country_payload(spec, onet_list, ssoc_list, stats, us_payload):
             best[o] = nat_idx[k[2]]
     o2n = [best.get(e["c"]) for e in onet_list]
     adoption_now_text = (lead.get("points") or [{}])[-1].get("label") if spec.code == "AUS" else None
-    payload = {"code": spec.code, "name": spec.name, "adj": spec.adjective, "adoption_now_text": (f"{adoption_now_text} financial year" if adoption_now_text else None), "cls": spec.classification, "cur": spec.currency, "emp_label": spec.emp_label, "wage_label": spec.wage_label, "wage_period": spec.wage_period, "adoption_source": spec.adoption_source, "industry_label": spec.industry_label, "major_names": spec.major_names,
+    rlev = load(f"{p}rating_level_exposure") if _exists(f"{p}rating_level_exposure") else None
+    rcorr = load(f"{p}rating_level_correlations") if _exists(f"{p}rating_level_correlations") else None
+    levels_nat = None
+    if rlev is not None and len(rlev):
+        lv_r = rlev.rename(columns={"n_occupations": "n_occupations"})
+        levels_nat = _levels_payload(lv_r, rcorr)
+        idxname = next((n for n in rlev.element_name.unique() if n.startswith("All ")), None)
+        if idxname and rcorr is not None and idxname in set(rcorr.element_name):
+            cr = rcorr.set_index("element_name").loc[idxname]
+            levels_nat["index_rho"] = _r(cr.rho_level_vs_done_2035, 2) if pd.notna(cr.rho_level_vs_done_2035) else None
+            levels_nat["index_rho_seen"] = _r(cr.rho_level_vs_seen, 2) if pd.notna(cr.rho_level_vs_seen) else None
+            levels_nat["index_n"] = _r(cr.n_occupations)
+        levels_nat["index_name"] = idxname
+        levels_nat["bands"] = [[b, name] for b, name, lo, hi in spec.rating_bands]
+        levels_nat["framework"] = spec.framework_name
+    office = {"AUS": "ABS", "GBR": "ONS", "CAN": "OaSIS"}.get(spec.code, spec.name)
+    payload = {"code": spec.code, "name": spec.name, "adj": spec.adjective, "adoption_now_text": (f"{adoption_now_text} financial year" if adoption_now_text else None), "office": office, "lvl_desc": spec.level_descending, "levels_nat": levels_nat, "framework": spec.framework_name, "sys": {"AUS": "ANZSCO", "GBR": "SOC 2020", "CAN": "NOC 2021"}.get(spec.code, spec.classification), "cls": spec.classification, "cur": spec.currency, "emp_label": spec.emp_label, "wage_label": spec.wage_label, "wage_period": spec.wage_period, "adoption_source": spec.adoption_source, "industry_label": spec.industry_label, "major_names": spec.major_names,
                "occ": occ_rows, "economy": economy, "industries": industries, "levels_national": levels_national, "levels": _levels_payload(levels, lcorr), "outcomes": cs.get("outcomes") or {}, "weights": cs.get("weights") or {}, "shift_range": cs.get("shift_range"), "lead": _r(lead.get("lead_years"), 1) if lead.get("lead_years") is not None else None, "lead_points_used": lead.get("n_points_used"), "adoption": adoption, "adoption_now": _r(lead.get("latest_pct"), 1) if lead.get("latest_pct") is not None else None, "adoption_now_date": _r(lead.get("latest_date"), 2) if lead.get("latest_date") is not None else None,
                "standards": standards, "routes": routes, "industry_shifts": cs.get("industry_shifts") or {}, "o2n": o2n}
     # on-demand file: the official task list per code, matched to O*NET tasks, on this country's timing
     files = {"occ": {}, "std": {}}
     if tasks is not None and links is not None:
         top_links = links[links["rank"] == 1].set_index(["nat_code", "task_seq"])
-        desc = load("au_descriptions").set_index("anzsco_code") if (spec.code == "AUS" and _exists("au_descriptions")) else None
+        desc = load(f"{p}descriptions").set_index(spec.code_col) if _exists(f"{p}descriptions") else None
         st_desc = load("uk_structure").set_index("soc_code") if (spec.code == "GBR" and _exists("uk_structure")) else None
+        nat_ratings = load(f"{p}ratings") if (spec.ratings is not None and _exists(f"{p}ratings")) else None
+        rat_by = {c: g for c, g in nat_ratings.groupby(spec.code_col)} if nat_ratings is not None else {}
         for c, g in tasks.groupby("nat_code"):
             items = []
             for r in g.sort_values("task_seq").itertuples():
@@ -709,6 +727,11 @@ def build_country_payload(spec, onet_list, ssoc_list, stats, us_payload):
             if st_desc is not None and c in st_desc.index:
                 entry["desc"] = str(st_desc.loc[c].description or "")[:600]
                 entry["entry"] = str(st_desc.loc[c].entry_routes or "")[:500]
+            if c in rat_by:
+                g = rat_by[c]
+                fam_order = {"skill": 0, "work_activity": 1, "knowledge": 2}
+                g = g[g.level > 0].assign(_f=g.family.map(fam_order)).sort_values(["_f", "level"], ascending=[True, False])
+                entry["k"] = [[str(k.family), str(k.element_name), _r(k.level, 1)] for _, k in g.head(24).iterrows()]
             files["occ"][c] = entry
     if standards is not None and _exists("uk_ifate_duty_onet_task"):
         stds = load("uk_ifate_standards").set_index("reference")

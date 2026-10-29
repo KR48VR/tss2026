@@ -102,6 +102,28 @@ SOURCES: dict[str, str] = {
     "ons/soc2020_coding_index.xlsx": "https://www.ons.gov.uk/file?uri=/methodology/classificationsandstandards/standardoccupationalclassificationsoc/soc2020/soc2020volume2codingrulesandconventions/soc2020volume2thecodingindexexcel20260827v2.xlsx",
     "ons/soc2020_structure.xlsx": "https://www.ons.gov.uk/file?uri=/methodology/classificationsandstandards/standardoccupationalclassificationsoc/soc2020/soc2020volume1structureanddescriptionsofunitgroups/soc2020volume1structureanddescriptionofunitgroupsexcel20260827.xlsx",
     "ons/census2021_occupation_industry.json": "https://api.beta.ons.gov.uk/v1/population-types/UR/census-observations?area-type=nat&dimensions=occupation_current_105a,industry_current_88a",
+    # ---- Canada (Statistics Canada, ESDC): the fifth workforce
+    "statcan/noc2021_structure.csv": "https://www.statcan.gc.ca/en/subjects/standard/noc/2021/indexV1/noc-2021-v1.0-classification-structure.csv",
+    "statcan/noc2021_elements.csv": "https://www.statcan.gc.ca/en/subjects/standard/noc/2021/indexV1/noc-2021-v1.0-elements.csv",
+    "statcan/soc2018us-noc2016v1_3-eng.csv": "https://www.statcan.gc.ca/en/statistical-programs/document/soc2018us-noc2016v1_3-eng.csv",
+    "statcan/noc2016v1_3-noc2021v1_0-eng.csv": "https://www.statcan.gc.ca/en/statistical-programs/document/noc2016v1_3-noc2021v1_0-eng.csv",
+    "statcan/33100825.zip": "https://www150.statcan.gc.ca/n1/tbl/csv/33100825-eng.zip",
+    "statcan/33101004.zip": "https://www150.statcan.gc.ca/n1/tbl/csv/33101004-eng.zip",
+    "statcan/33101167.zip": "https://www150.statcan.gc.ca/n1/tbl/csv/33101167-eng.zip",
+    "statcan/14100416.zip": "https://www150.statcan.gc.ca/n1/tbl/csv/14100416-eng.zip",
+    "esdc/wages/wages2025.csv": "https://open.canada.ca/data/dataset/adad580f-76b0-4502-bd05-20c125de9116/resource/9da94d63-b178-4a64-aeb3-b6a3bd721ad2/download/2a71-das-wage2025opendata-esdc-all-19nov2025-vf.csv",
+    "esdc/wages/wages2024.csv": "https://open.canada.ca/data/dataset/adad580f-76b0-4502-bd05-20c125de9116/resource/d16e10ea-77bf-4db8-bdb5-adc709e6cada/download/2a71-das-wage2024opendata-esdc-all-11dec2024-vf.csv",
+    "esdc/wages/wages2023.csv": "https://open.canada.ca/data/dataset/adad580f-76b0-4502-bd05-20c125de9116/resource/ff45366b-1c17-4862-8325-f6e7797c7c56/download/2a71-das-wage2023opendata-esdc-all-08dec2023-vf.csv",
+    "esdc/oasis/labels.csv": "https://open.canada.ca/data/dataset/10ce43bd-fb58-4969-806b-4bffebc87bec/resource/af53ca1d-5efc-4e52-ad42-9b858a4507c6/download/labels_oasis_2025_v1.1.csv",
+    "esdc/oasis/lead_statement.csv": "https://open.canada.ca/data/dataset/10ce43bd-fb58-4969-806b-4bffebc87bec/resource/d2a00c9b-2b7d-458f-a41f-10011d8164c7/download/lead-statement_oasis_2025_v1.0.csv",
+    "esdc/oasis/main_duties.csv": "https://open.canada.ca/data/dataset/10ce43bd-fb58-4969-806b-4bffebc87bec/resource/92e4107e-a804-4126-85ec-1fca23b82d81/download/main-duties_oasis-2025_v1.1.csv",
+    "esdc/oasis/example_titles.csv": "https://open.canada.ca/data/dataset/10ce43bd-fb58-4969-806b-4bffebc87bec/resource/3484364c-75a4-4e22-ae9a-d12ea72569d4/download/example-titles_oasis_2025_v1.0.csv",
+    "esdc/oasis/skills.csv": "https://open.canada.ca/data/dataset/10ce43bd-fb58-4969-806b-4bffebc87bec/resource/bd9cf3f2-4cd5-47b1-ba74-ab68cd0a941b/download/skills_oasis_2025_v1.1.csv",
+    "esdc/oasis/knowledge.csv": "https://open.canada.ca/data/dataset/10ce43bd-fb58-4969-806b-4bffebc87bec/resource/b5c3eb08-dda8-4929-ba5d-b90582db6c70/download/knowledge_oasis_2025_v.1.1.csv",
+    "esdc/oasis/work_activities.csv": "https://open.canada.ca/data/dataset/10ce43bd-fb58-4969-806b-4bffebc87bec/resource/44e666cc-f12d-4b3f-9369-6e0843d2bb48/download/work-activities_oasis_2025_v1.1.csv",
+    "esdc/oasis/abilities.csv": "https://open.canada.ca/data/dataset/10ce43bd-fb58-4969-806b-4bffebc87bec/resource/f015095d-15e7-4ef7-97d1-e5fed3486e40/download/abilities_oasis_2025_v1.1.csv",
+    "esdc/oasis/employment_requirements.csv": "https://open.canada.ca/data/dataset/10ce43bd-fb58-4969-806b-4bffebc87bec/resource/33b4ccb4-e725-4618-ab0b-f64c979ab9cc/download/employment-requirements_oasis_2025_v1.0.csv",
+    "esdc/oasis/taxonomy.csv": "https://open.canada.ca/data/dataset/10ce43bd-fb58-4969-806b-4bffebc87bec/resource/2a7a17bf-b67c-4fc2-b636-959c7f1d7ae4/download/guide_oasis_2025_v4.0.csv",
     "ifate/apprenticeship_standards.json": "https://www.instituteforapprenticeships.org/api/apprenticeshipstandards",
 }
 
@@ -127,7 +149,7 @@ def fetch_one(rel: str, url: str, force: bool = False, max_age_days: int | None 
         age_days = (time.time() - dest.stat().st_mtime) / 86400.0
         if max_age_days is None or age_days <= max_age_days:
             return dest
-    headers = {**UA, "User-Agent": BROWSER_UA} if rel.split("/")[0] in ("abs", "ons", "ifate") else UA
+    headers = {**UA, "User-Agent": BROWSER_UA} if rel.split("/")[0] in ("abs", "ons", "ifate", "statcan", "esdc") else UA
     req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=600) as r, open(dest, "wb") as fh:
         shutil.copyfileobj(r, fh)
@@ -285,3 +307,51 @@ def fetch_anzsco_pages(force: bool = False, pause: float = 0.7) -> dict:
             failed.append({"unit": r.anzsco_code, "error": str(e)})
         time.sleep(pause)
     return {"pages": ok, "failed": failed}
+
+
+# ----------------------------------------------------------------------------- Statistics Canada cells pulled through the WDS API
+def fetch_statcan_api(force: bool = False) -> dict:
+    """The Canada-level cells of four Statistics Canada tables whose full downloads run to gigabytes:
+    Census 2021 employment by NOC unit group (98-10-0449), employment income by unit group (98-10-0586),
+    employment by minor group and NAICS sector (98-10-0594), and job vacancies by unit group (14-10-0444).
+    Writes data/raw/statcan/api/api_<table>_<name>.csv plus the dimension member lists."""
+    import csv
+    import time
+
+    out_dir = RAW / "statcan" / "api"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    hdr = {**UA, "User-Agent": BROWSER_UA, "Content-Type": "application/json"}
+    pids = [98100449, 98100586, 98100594, 14100444]
+    req = urllib.request.Request("https://www150.statcan.gc.ca/t1/wds/rest/getCubeMetadata", data=json.dumps([{"productId": p} for p in pids]).encode(), headers=hdr)
+    with urllib.request.urlopen(req, timeout=180) as r:
+        meta = json.load(r)
+    dims = {str(x["object"]["productId"]): x["object"]["dimension"] for x in meta}
+    for pid in pids:
+        (out_dir / f"members_{pid}.json").write_text(json.dumps([{"dim": d["dimensionNameEn"], "pos": d["dimensionPositionId"], "members": [{"id": m["memberId"], "name": m["memberNameEn"], "parent": m.get("parentMemberId")} for m in d["member"]]} for d in dims[str(pid)]]))
+
+    def pull(pid, coords, name, latest=1):
+        dest = out_dir / f"api_{pid}_{name}.csv"
+        if dest.exists() and not force:
+            return str(dest)
+        rows = []
+        for i in range(0, len(coords), 250):
+            body = json.dumps([{"productId": pid, "coordinate": c, "latestN": latest} for c in coords[i:i + 250]]).encode()
+            with urllib.request.urlopen(urllib.request.Request("https://www150.statcan.gc.ca/t1/wds/rest/getDataFromCubePidCoordAndLatestNPeriods", data=body, headers=hdr), timeout=180) as r:
+                for x in json.load(r):
+                    o = x.get("object") or {}
+                    for p in o.get("vectorDataPoint", []):
+                        rows.append({"coordinate": o.get("coordinate"), "refPer": p.get("refPer"), "value": p.get("value"), "status": x.get("status")})
+            time.sleep(0.5)
+        with open(dest, "w", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=["coordinate", "refPer", "value", "status"]); w.writeheader(); w.writerows(rows)
+        return str(dest)
+
+    mem = lambda pid, i: [m["memberId"] for m in dims[str(pid)][i]["member"]]
+    out = {}
+    out["employed"] = pull(98100449, [f"1.1.1.1.{o}.2.0.0.0.0" for o in mem(98100449, 4)], "employed")
+    wa = dims["98100586"][4]["member"]
+    fyft = next((m["memberId"] for m in wa if "full year" in m["memberNameEn"].lower() and "full time" in m["memberNameEn"].lower()), 1)
+    out["income"] = pull(98100586, [f"1.1.1.1.{w}.1.{o}.{s}.0.0" for w in (1, fyft) for o in mem(98100586, 6) for s in (2, 3)], "income")
+    out["vacancies"] = pull(14100444, [f"1.{o}.{s}.0.0.0.0.0.0.0" for o in mem(14100444, 1) for s in (1, 2)], "vacancies", latest=9)
+    out["occ_industry"] = pull(98100594, [f"1.{i}.1.1.1.{o}.2.0.0.0" for i in mem(98100594, 1) for o in mem(98100594, 5)], "occ_industry")
+    return out

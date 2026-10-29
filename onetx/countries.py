@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 
 from . import au_labour as au
+from . import ca_labour as ca
 from . import forecast as fcm
 from . import io
 from . import uk_labour as uk
@@ -66,6 +67,14 @@ class CountrySpec:
     tasks: Callable[[], pd.DataFrame]            # columns: code_col, task_seq, task
     outcome_labels: dict = field(default_factory=dict)
     min_lead_year: float = 2024.0
+    group_len: int = 3                 # digits of the national code that name the mix group (1 = major group)
+    onet_link: Callable[[set], pd.DataFrame] | None = None   # a direct O*NET -> national crosswalk (onet_soc_code, nat_code, weight), used instead of the ISCO route
+    descriptions: Callable[[], pd.DataFrame] | None = None   # per code: description, skill_text (for the job pages)
+    titles: Callable[[], pd.DataFrame] | None = None         # per code: alternative titles (for the search)
+    ratings: Callable[[], pd.DataFrame] | None = None        # national skill ratings per code: family, element_name, level
+    level_descending: bool = False                           # True when a lower national skill-level number means higher skill (ANZSCO, NOC TEER)
+    rating_bands: tuple = ()           # ((band, name, lo, hi), ...) on the national rating scale
+    framework_name: str = ""           # what stands in for the Skills Framework
 
 
 def _au_mix():
@@ -90,17 +99,30 @@ def _uk_isco(unit_codes):
     return d
 
 
+def _ca_mix():
+    d = ca.load_industry_mix()
+    return d[["minor", "industry", "employed"]]
+
+
 SPECS: dict[str, CountrySpec] = {
-    "AUS": CountrySpec(code="AUS", name="Australia", adjective="Australian", prefix="au_", code_col="anzsco_code", title_col="anzsco_title", classification="ANZSCO unit group",
+    "CAN": CountrySpec(code="CAN", name="Canada", adjective="Canadian", prefix="ca_", code_col="noc_code", title_col="noc_title", classification="NOC 2021 unit group", level_descending=True,
+                       major_names=ca.BROAD_NAMES, skill_level_names={k: v for k, v in ca.TEER_NAMES.items()}, industry_names=ca.NAICS_SECTORS, industry_label="NAICS sector", currency="C$",
+                       wage_label="median employment income of full-year full-time workers, 2020 (Census 2021)", emp_label="employed persons, May 2021 (Census 2021)", wage_period="2020",
+                       adoption_source="Canadian Survey on Business Conditions (Statistics Canada)", group_col="minor", group_len=4,
+                       weights=ca.build_noc_weights, outcomes=ca.employment_change, isco_link=lambda codes: pd.DataFrame(columns=["isco_code", "nat_code", "weight"]), onet_link=ca.load_onet_to_noc,
+                       industry_mix=_ca_mix, ai_points=ca.load_csbc_ai_use, tasks=ca.load_oasis_duties, descriptions=ca.load_oasis_descriptions, titles=ca.load_oasis_titles, ratings=ca.load_oasis_ratings,
+                       rating_bands=(("L", "not needed or basic (level 0 to 1)", 0.0, 1.5), ("M", "working level (2 to 3)", 1.5, 3.5), ("H", "advanced (4 to 5)", 3.5, 9.0)), framework_name="OaSIS, the Occupational and Skills Information System",
+                       outcome_labels={"emp": "job vacancies change, four quarters to mid-2026 against the four before (Statistics Canada Job Vacancy and Wage Survey)", "wage": "Job Bank median wage change, 2024 to 2025 releases"}),
+    "AUS": CountrySpec(code="AUS", name="Australia", adjective="Australian", prefix="au_", code_col="anzsco_code", title_col="anzsco_title", classification="ANZSCO unit group", level_descending=True,
                        major_names=au.MAJOR_GROUP_NAMES, skill_level_names=au.SKILL_LEVEL_NAMES, industry_names=au.DIVISIONS, industry_label="ANZSIC industry division", currency="A$",
                        wage_label="average weekly total cash earnings, May 2025 (ABS Employee Earnings and Hours)", emp_label="employed persons, 2025 average (ABS Labour Force)", wage_period="May 2025",
-                       adoption_source="ABS Characteristics of Australian Business", group_col="major_group",
+                       adoption_source="ABS Characteristics of Australian Business", group_col="major_group", group_len=1,
                        weights=au.build_anzsco_weights, outcomes=au.employment_change, isco_link=_au_isco, industry_mix=_au_mix, ai_points=au.load_cab_ai_use, tasks=au.load_anzsco_tasks,
                        outcome_labels={"emp": "employment change, 2024 to 2025 (ABS Labour Force, yearly averages)", "wage": "average weekly earnings change, May 2023 to May 2025 (ABS)"}),
     "GBR": CountrySpec(code="GBR", name="United Kingdom", adjective="UK", prefix="uk_", code_col="soc_code", title_col="soc_title", classification="SOC 2020 unit group",
                        major_names=uk.MAJOR_GROUP_NAMES, skill_level_names=uk.SKILL_LEVEL_NAMES, industry_names=uk.SECTIONS, industry_label="SIC industry section", currency="£",
                        wage_label="median gross annual pay, April 2025 (ONS ASHE, provisional)", emp_label="employee jobs, April 2025 (ONS ASHE)", wage_period="April 2025",
-                       adoption_source="ONS Business Insights and Conditions Survey", group_col="minor",
+                       adoption_source="ONS Business Insights and Conditions Survey", group_col="minor", group_len=3,
                        weights=uk.build_soc_weights, outcomes=uk.employment_change, isco_link=_uk_isco, industry_mix=_uk_mix, ai_points=uk.load_bics_ai_use, tasks=uk.load_soc_tasks,
                        outcome_labels={"emp": "employee jobs change, April 2024 to April 2025 (ONS ASHE)", "wage": "median gross annual pay change, April 2024 to April 2025 (ONS ASHE)"}),
 }
@@ -110,11 +132,15 @@ SPECS: dict[str, CountrySpec] = {
 def national_crosswalk(spec: CountrySpec, unit_codes: set[str] | None = None) -> pd.DataFrame:
     """Compose O*NET -> ISCO-08 with ISCO-08 -> national code. Columns: onet_soc_code, nat_code, weight
     (per O*NET occupation), weight_rev (per national code), n_isco_paths."""
-    a = io.load("xw_onetsoc_isco08")[["onet_soc_code", "isco_code", "weight"]].rename(columns={"weight": "w1"})
-    b = spec.isco_link(unit_codes).rename(columns={"weight": "w2"})
-    m = a.merge(b, on="isco_code", how="inner")
-    m["path_w"] = m.w1 * m.w2
-    g = m.groupby(["onet_soc_code", "nat_code"]).agg(path_w=("path_w", "sum"), n_isco_paths=("isco_code", "nunique")).reset_index()
+    if spec.onet_link is not None:
+        g = spec.onet_link(unit_codes).rename(columns={"weight": "path_w"})
+        g["n_isco_paths"] = 0
+    else:
+        a = io.load("xw_onetsoc_isco08")[["onet_soc_code", "isco_code", "weight"]].rename(columns={"weight": "w1"})
+        b = spec.isco_link(unit_codes).rename(columns={"weight": "w2"})
+        m = a.merge(b, on="isco_code", how="inner")
+        m["path_w"] = m.w1 * m.w2
+        g = m.groupby(["onet_soc_code", "nat_code"]).agg(path_w=("path_w", "sum"), n_isco_paths=("isco_code", "nunique")).reset_index()
     g["weight"] = g.path_w / g.groupby("onet_soc_code").path_w.transform("sum")
     g["weight_rev"] = g.path_w / g.groupby("nat_code").path_w.transform("sum")
     g["country"] = spec.code
@@ -234,8 +260,7 @@ def occupation_shifts(mix: pd.DataFrame, ind_shift: pd.DataFrame, natw: pd.DataF
     m["share"] = m.employed / m.groupby(gcol).employed.transform("sum")
     grp = m.assign(_x=m.share * m.anchor_shift_years).groupby(gcol).agg(adoption_shift_years=("_x", "sum"), employed=("employed", "sum")).reset_index()
     codes = natw[[spec.code_col]].rename(columns={spec.code_col: "nat_code"}).copy()
-    key = codes.nat_code.str[0] if gcol == "major_group" else codes.nat_code.str[:3]
-    codes["group"] = key
+    codes["group"] = codes.nat_code.str[:spec.group_len]
     codes["adoption_shift_years"] = codes.group.map(grp.set_index(gcol).adoption_shift_years).fillna(0.0)
     o = xw[["onet_soc_code", "nat_code", "weight_rev"]].merge(codes[["nat_code", "adoption_shift_years"]], on="nat_code", how="left")
     o["adoption_shift_years"] = o.adoption_shift_years.fillna(0.0)
@@ -287,18 +312,54 @@ def skill_level_bands(t: pd.DataFrame, spec: CountrySpec) -> tuple[pd.DataFrame,
     dd = d.dropna(subset=["done_by_2035"])
     rho, n = _spearman(dd.skill_level, dd.done_by_2035)
     rho_seen, _ = _spearman(dd.skill_level, dd.share_weight_observed)
-    # ANZSCO counts down (1 = highest skill), SOC counts up (4 = highest): read the sign accordingly
-    higher_first = (rho is not None) and ((rho < -0.15) if spec.code == "AUS" else (rho > 0.15))
-    lower_first = (rho is not None) and ((rho > 0.15) if spec.code == "AUS" else (rho < -0.15))
+    # ANZSCO and the NOC TEER count down (1 or 0 = highest skill), SOC counts up (4 = highest): read the sign accordingly
+    higher_first = (rho is not None) and ((rho < -0.15) if spec.level_descending else (rho > 0.15))
+    lower_first = (rho is not None) and ((rho > 0.15) if spec.level_descending else (rho < -0.15))
     reading = "no clear pattern across skill levels" if rho is None or (not higher_first and not lower_first) else ("AI reaches the higher-skilled work first" if higher_first else "AI reaches the lower-skilled work first")
     return pd.DataFrame(rows), {"rho_level_vs_done_2035": rho, "rho_level_vs_seen": rho_seen, "n_codes": n, "reading": reading}
+
+
+def rating_level_exposure(t: pd.DataFrame, ratings: pd.DataFrame, spec: CountrySpec, families: tuple = ("skill",), min_codes: int = 5) -> dict:
+    """The country's own skill ratings against AI, as us_economy.skill_level_exposure does with O*NET levels:
+    codes are banded by the level each skill needs (spec.rating_bands), exposure is employment-weighted
+    within each band, and a rank correlation between level and 'AI doing by 2035' is given per skill and
+    for the average level over all the family's skills."""
+    r = ratings[ratings.family.isin(families)].rename(columns={"noc_code": "nat_code"}) if "noc_code" in ratings.columns else ratings[ratings.family.isin(families)]
+    base = t[["nat_code", "employment_thousands", "share_weight_observed", "observed_automation", "done_by_2035", "done_by_2035_p10", "done_by_2035_p90", "quarter_done_year_p10", "quarter_done_year_p50", "quarter_done_year_p90"]].dropna(subset=["done_by_2035"])
+    def band_of(level):
+        for b, name, lo, hi in spec.rating_bands:
+            if lo <= level < hi:
+                return b
+        return None
+    rows, corr = [], []
+    def bands_for(d, element_name, family):
+        d = d.assign(band=d.level.map(band_of)).dropna(subset=["band"])
+        for b, name, lo, hi in spec.rating_bands:
+            g = d[d.band == b]
+            if len(g) < min_codes or g.employment_thousands.sum() <= 0:
+                continue
+            row = {"family": family, "element_name": element_name, "band": b, "band_name": name, "n_occupations": int(len(g))}
+            for c in ["share_weight_observed", "observed_automation", "done_by_2035", "done_by_2035_p10", "done_by_2035_p90", "quarter_done_year_p10", "quarter_done_year_p50", "quarter_done_year_p90"]:
+                row[c] = se._wavg(g, c, "employment_thousands")
+            row["quarter_done_year_fast_from_curve"], row["quarter_done_year_central_from_curve"], row["quarter_done_year_slow_from_curve"] = row["quarter_done_year_p10"], row["quarter_done_year_p50"], row["quarter_done_year_p90"]
+            rows.append(row)
+        rho, n = _spearman(d.level, d.done_by_2035); rho_s, _ = _spearman(d.level, d.share_weight_observed)
+        corr.append({"family": family, "element_name": element_name, "rho_level_vs_done_2035": rho, "rho_level_vs_seen": rho_s, "n_occupations": n})
+    for (fam, name), g in r.groupby(["family", "element_name"]):
+        d = base.merge(g[["nat_code", "level"]], on="nat_code", how="inner")
+        if len(d) >= 3 * min_codes:
+            bands_for(d, name, fam)
+    idx = r[r.family == families[0]].groupby("nat_code")["level"].mean().reset_index()
+    d = base.merge(idx, on="nat_code", how="inner")
+    bands_for(d, f"All {families[0].replace('_', ' ')}s (average level)", "index")
+    return {"bands": pd.DataFrame(rows), "correlations": pd.DataFrame(corr)}
 
 
 def industry_view(mix: pd.DataFrame, ind_shift: pd.DataFrame, points: pd.DataFrame, t: pd.DataFrame, spec: CountrySpec) -> pd.DataFrame:
     """The sector lens: per industry, its share of employment, the firm AI-use readings, its shift against
     the national curve, and exposure through its occupation mix (group-level, employment-weighted)."""
     gcol = spec.group_col
-    key = t.nat_code.str[0] if gcol == "major_group" else t.nat_code.str[:3]
+    key = t.nat_code.str[:spec.group_len]
     cols = ["observed_automation", "share_weight_observed", "share_weight_physical", "done_by_2030", "done_by_2035", "done_by_2035_p10", "done_by_2035_p90", "share_by_2035", "ceiling_ai_share", "quarter_done_year_p10", "quarter_done_year_p50", "quarter_done_year_p90"]
     cols = [c for c in cols if c in t.columns]
     grp = pd.DataFrame({c: t.assign(_g=key).groupby("_g").apply(lambda g: se._wavg(g, c, "employment_thousands"), include_groups=False) for c in cols})
@@ -383,6 +444,13 @@ def build_base(spec: CountrySpec) -> dict:
     links = match_tasks(tasks, xw, spec); io.save(links, f"{p}task_onet_task")
     stats = {"codes": int(len(natw)), "codes_linked_to_onet": int(xw.nat_code.nunique()), "onet_occupations_linked": int(xw.onet_soc_code.nunique()), "employment_thousands_total": float(natw.employment_thousands.sum()),
              "wage_sources": natw.wage_source.value_counts(dropna=False).to_dict(), "official_tasks": int(len(tasks)), "codes_with_tasks": int(tasks[spec.code_col].nunique()), "task_match_mean_score": float(links[links["rank"] == 1].score.mean()), "task_match_in_mapped_occ_share": float(links[links["rank"] == 1].in_mapped_occ.mean())}
+    if spec.descriptions is not None:
+        io.save(spec.descriptions(), f"{p}descriptions")
+    if spec.titles is not None:
+        io.save(spec.titles(), f"{p}titles")
+    if spec.ratings is not None:
+        rt = spec.ratings(); io.save(rt, f"{p}ratings")
+        stats["national_ratings"] = {"codes": int(rt[spec.code_col].nunique() if spec.code_col in rt.columns else rt.nat_code.nunique()), "families": rt.family.value_counts().to_dict()}
     if spec.code == "AUS":
         io.save(au.load_anzsco_pages().drop_duplicates("anzsco_code")[["anzsco_code", "description", "skill_text"]], "au_descriptions")
         io.save(au.load_anzsco_structure(), "au_structure")
@@ -438,6 +506,12 @@ def build_country(spec: CountrySpec, tf, barriers, params, now, tiers, occ, occf
     lv = ue.skill_level_exposure(onet_w, io.load("onet_descriptor_ratings_v31"), occf, occ_curve)
     io.save(lv["bands"], f"{p}onet_skill_level_exposure"); io.save(lv["correlations"], f"{p}onet_skill_level_correlations")
     iv = industry_view(mix, ind, points, t, spec); io.save(iv, f"{p}industry_view")
+    rating_stats = {}
+    if spec.ratings is not None and io.exists(f"{p}ratings"):
+        rl = rating_level_exposure(t, io.load(f"{p}ratings"), spec)
+        io.save(rl["bands"], f"{p}rating_level_exposure"); io.save(rl["correlations"], f"{p}rating_level_correlations")
+        ix = rl["correlations"][rl["correlations"].family == "index"]
+        rating_stats = {"index_rho": float(ix.rho_level_vs_done_2035.iloc[0]) if len(ix) and pd.notna(ix.rho_level_vs_done_2035.iloc[0]) else None, "skills": int((rl["correlations"].family != "index").sum())}
     route_stats = {}
     if spec.code == "GBR" and io.exists("uk_ifate_standards"):
         rv = route_view(io.load("uk_ifate_standards"), io.load("uk_ifate_standard_soc"), t); io.save(rv, "uk_ifate_route_view")
@@ -448,7 +522,7 @@ def build_country(spec: CountrySpec, tf, barriers, params, now, tiers, occ, occf
              "weights": {"employment_thousands_total": float(natw.employment_thousands.sum()), "wage_value_total": float(natw.wage_value.sum()), "codes": int(len(natw)), "wage_sources": natw.wage_source.value_counts(dropna=False).to_dict(), "edition": int(natw.edition.iloc[0]) if "edition" in natw else None},
              "economy": {w: {"observed_automation": float(e.loc[w, "observed_automation"]), "share_weight_observed": float(e.loc[w, "share_weight_observed"]), "done_by_2035": float(e.loc[w, "done_by_2035"]), "share_by_2035": float(e.loc[w, "share_by_2035"]), "quarter_done_year_central": float(e.loc[w, "quarter_done_year_central_from_curve"]) if pd.notna(e.loc[w, "quarter_done_year_central_from_curve"]) else None} for w in ["employment", "wage_value"] if w in e.index},
              "outcomes": out_stats, "skill_levels_national": band_stats, "skill_levels_onet": {"index_rho": float(lv["correlations"].set_index("element_name").loc["All essential skills (average level)", "rho_level_vs_done_2035"]) if "All essential skills (average level)" in set(lv["correlations"].element_name) else None},
-             "apprenticeship_routes": route_stats, "decompositions": decomps}
+             "apprenticeship_routes": route_stats, "national_ratings": rating_stats, "framework_name": spec.framework_name, "decompositions": decomps}
     ctx = {"spec": spec, "natw": natw, "xw": xw, "fr_nat": fr_nat, "econ": econ, "fc": fc, "params": params_c}
     return stats, ctx
 
