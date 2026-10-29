@@ -277,3 +277,38 @@ def test_europe_loaders_cover_the_eurostat_countries():
     assert set(link.nat_code) == {"11", "25"} and link.isco_code.str.len().eq(4).all()
     by = eu.load_ai_use_by_activity()
     assert set(by.industry) <= set(eu.NACE_SECTIONS) and not by.duplicated(["geo", "date", "industry"]).any()
+
+
+def test_five_office_loaders_give_consistent_weights_and_links():
+    """Sweden, Finland, Denmark, the Netherlands and Ireland: weights with pay for every code, crosswalk weights
+    summing to one per ISCO code, AI readings with the national series, and the section parser."""
+    from onetx import eu_labour as el
+    import pytest
+    if not (el.SCB / "yreg50bas_employees_by_ssyk.json").exists():
+        pytest.skip("office files not present")
+    assert el.sections_from_label("manufacturing (SNI 10–33)") == ["C"] and el.sections_from_label("GHI") == ["G", "H", "I"] and el.sections_from_label("L, N, S951 Real estate") == ["L", "N", "S"]
+    for pre, n_lo, n_hi in (("se", 400, 440), ("fi", 400, 430), ("dk", 370, 430), ("nl", 110, 116), ("ie", 300, 330)):
+        w = getattr(el, f"{pre}_weights")()
+        assert n_lo <= len(w) <= n_hi and w.wage_value.gt(0).all() and w.skill_level.between(1, 4).all(), pre
+        link = getattr(el, f"{pre}_isco_link")(set(w[w.columns[0]]))
+        assert (link.groupby("isco_code").weight.sum() - 1).abs().lt(1e-6).all(), pre
+        pts = getattr(el, f"{pre}_ai_points")()
+        nat = pts[pts.group_type == "all"]
+        assert len(nat) >= 3 and nat.pct.between(0, 100).all() and nat.date.is_monotonic_increasing, pre
+    assert el.se_weights().employment_thousands.sum() < 6000   # all sectors once, not the nested sector codes added up
+    assert el.ie_ai_points().query("group_type == 'industry'").empty   # the CSO publishes no industry breakdown
+
+
+def test_japan_hand_made_link_covers_every_class():
+    from onetx import jp_labour as jp
+    import pytest
+    if not (jp.ESTAT / "wage2024_t1_occupation_small.xlsx").exists():
+        pytest.skip("e-Stat files not present")
+    t = jp.load_wage_table()
+    assert len(t) == len(jp.JSOC_TO_ISCO) == 144 and t.workers.gt(0).all()
+    w = jp.build_weights(); link = jp.load_isco_link(set(w.jp_code))
+    assert set(link.nat_code) == set(w.jp_code) and (link.groupby("isco_code").weight.sum() - 1).abs().lt(1e-6).all()
+    assert link.isco_code.str.fullmatch(r"\d{4}").all()
+    pts = jp.load_ai_points(); nat = pts[pts.group_type == "all"]
+    assert list(nat.period) == [str(y) for y in range(2018, 2026)] and set(pts.industry.dropna()) <= set(jp.INDUSTRIES)
+    mix = jp.load_industry_mix(); assert set(mix.industry) <= set(jp.INDUSTRIES) and set(mix.major_group) <= set(jp.MAJOR_GROUP_NAMES)

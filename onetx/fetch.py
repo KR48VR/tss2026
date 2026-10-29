@@ -184,6 +184,14 @@ def fetch_all(force: bool = False) -> dict:
             print(f"FAIL  {rel}: {e}")
     manifest["singapore_labour_apis"] = fetch_singapore_labour(force)
     try:
+        manifest["further_offices"] = fetch_further_offices(force)
+    except Exception as e:
+        manifest["further_offices"] = f"failed: {e}"
+    try:
+        manifest["estat"] = fetch_estat(force)
+    except Exception as e:
+        manifest["estat"] = f"failed: {e}"
+    try:
         manifest["ssb"] = fetch_ssb(force)
     except Exception as e:
         manifest["ssb"] = f"failed: {e}"
@@ -330,6 +338,126 @@ def fetch_anzsco_pages(force: bool = False, pause: float = 0.7) -> dict:
 
 
 # ----------------------------------------------------------------------------- Statistics Canada cells pulled through the WDS API
+def _post_json(url: str, body: dict, timeout: int = 600, headers: dict | None = None) -> bytes:
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json", "User-Agent": BROWSER_UA, **(headers or {})})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
+
+
+def _pxweb_query(url: str, selections: dict, fmt: str = "json-stat2") -> bytes:
+    """A PxWeb v1 query (Statistics Sweden, Statistics Finland): {variable code: [values] | "*"}."""
+    q = [{"code": k, "selection": {"filter": "all", "values": ["*"]} if v == "*" else {"filter": "item", "values": list(v)}} for k, v in selections.items()]
+    return _post_json(url, {"query": q, "response": {"format": fmt}})
+
+
+def fetch_further_offices(force: bool = False) -> dict:
+    """The open tables behind Sweden, Finland, Denmark, the Netherlands and Ireland, as JSON-stat or JSON under
+    data/raw/<office>/. Each pull is one query to the office's own API; the file name says what it holds."""
+    jobs = {
+        # Sweden (SCB PxWeb): employees by 4-digit SSYK 2012 (register, 2022-2024), salary by SSYK (2023-2025), AI use by study domain (2021-2025)
+        "scb/yreg50bas_employees_by_ssyk.json": ("https://api.scb.se/OV0104/v1/doris/en/ssd/AM/AM0208/AM0208E/YREG50BAS", {"Yrke2012": "*", "ArbetsSektor": "*", "Kon": "*", "ContentsCode": "*", "Tid": ["2022", "2023", "2024"]}),
+        "scb/lone_salary_by_ssyk.json": ("https://api.scb.se/OV0104/v1/doris/en/ssd/AM/AM0110/AM0110A/LoneSpridSektYrk4AN", {"Sektor": ["0"], "Yrke2012": "*", "Kon": ["1+2"], "ContentsCode": ["000007CD", "000007CE"], "Tid": "*"}),
+        "scb/ai_use_by_domain.json": ("https://api.scb.se/OV0104/v1/doris/en/ssd/NV/NV0116/NV0116M/AiTeknikerTypN", {"TypAvTeknik": ["0080"], "Redovisningsgrupp": "*", "ContentsCode": ["000007JC"], "Tid": "*"}),
+        # Finland (StatFin PxWeb): employed by occupation (register), structure of earnings by occupation, ICT use in enterprises (AI)
+        "statfin/tyokay_115q_employed_by_occupation.json": ("https://pxdata.stat.fi/PxWeb/api/v1/en/StatFin/tyokay/115q.px", {"ammatti_104_20161021": "*", "sukupuoli_9_20180101": ["SSS"], "ammattiasema_7_20121201": ["SS"], "timeperiod_y": ["2022", "2023", "2024"], "contentscode": ["tyokay-tyolliset2"]}),
+        "statfin/pra_15ay_earnings_by_occupation.json": ("https://pxdata.stat.fi/PxWeb/api/v1/en/StatFin/pra/15ay.px", {"timeperiod_y": "*", "sektoriluokitus_7_20230101": ["S0"], "ammatti_19_20180101": "*", "tyoaika_4_20180128": ["SSS"], "contentscode": "*"}),
+        "statfin/icte_14yc_ict_in_enterprises.json": ("https://pxdata.stat.fi/PxWeb/api/v1/en/StatFin/icte/14yc.px", {"timeperiod_y": "*", "toimiala_79_20180101": "*", "contentscode": ["icte22"]}),
+    }
+    out = {}
+    for rel, (url, sel) in jobs.items():
+        f = RAW / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        if f.exists() and not force:
+            out[rel] = "cached"; continue
+        try:
+            f.write_bytes(_pxweb_query(url, sel)); out[rel] = f"{f.stat().st_size} bytes"
+        except Exception as e:
+            out[rel] = f"failed: {e}"
+    # Denmark (Statistics Denmark API): earnings by DISCO-08 occupation; enterprises' use of AI by industry
+    dk = {
+        "dst/lons20_earnings_by_occupation.json": ("LONS20", {"ARBF": ["*"], "SEKTOR": ["1000"], "AFLOEN": ["TIFA"], "LONGRP": ["LTOT"], "LØNMÅL": ["FORINKL"], "KØN": ["TOT"], "Tid": ["2023", "2024", "2025"]}),
+        "dst/itav28_ai_use_by_industry.json": ("ITAV28", {"VIRKSTRRDA": ["*"], "BRANCHEDB25UDVALG": ["*"], "ANVEND": ["1680"], "Tid": ["*"]}),
+    }
+    for rel, (table, variables) in dk.items():
+        f = RAW / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        if f.exists() and not force:
+            out[rel] = "cached"; continue
+        try:
+            body = {"table": table, "format": "JSONSTAT", "lang": "en", "variables": [{"code": k, "values": v} for k, v in variables.items()]}
+            f.write_bytes(_post_json("https://api.statbank.dk/v1/data", body)); out[rel] = f"{f.stat().st_size} bytes"
+        except Exception as e:
+            out[rel] = f"failed: {e}"
+    # Netherlands (CBS StatLine OData): employed by occupation group, hourly wage by occupation group, ICT use by industry (AI) 2023-2025
+    nl = {
+        "cbs/86320NED_employed_by_occupation.json": "https://opendata.cbs.nl/ODataApi/odata/86320NED/TypedDataSet?$format=json&$filter=Geslacht%20eq%20%27T001038%27%20and%20Persoonskenmerken%20eq%20%27T009002%27",
+        "cbs/86320NED_Beroep.json": "https://opendata.cbs.nl/ODataApi/odata/86320NED/Beroep?$format=json",
+        "cbs/86355NED_hourly_wage_by_occupation.json": "https://opendata.cbs.nl/ODataApi/odata/86355NED/TypedDataSet?$format=json",
+        "cbs/86355NED_Beroep.json": "https://opendata.cbs.nl/ODataApi/odata/86355NED/Beroep?$format=json",
+        "cbs/86120NED_ict_by_industry_2025.json": "https://opendata.cbs.nl/ODataApi/odata/86120NED/TypedDataSet?$format=json",
+        "cbs/86120NED_industries.json": "https://opendata.cbs.nl/ODataApi/odata/86120NED/BedrijfstakkenBranchesSBI2008?$format=json",
+        "cbs/86075NED_ict_by_industry_2024.json": "https://opendata.cbs.nl/ODataApi/odata/86075NED/TypedDataSet?$format=json",
+        "cbs/86075NED_industries.json": "https://opendata.cbs.nl/ODataApi/odata/86075NED/BedrijfstakkenBranchesSBI2008?$format=json",
+        "cbs/85735NED_ict_by_industry_2023.json": "https://opendata.cbs.nl/ODataApi/odata/85735NED/TypedDataSet?$format=json",
+        "cbs/85735NED_industries.json": "https://opendata.cbs.nl/ODataApi/odata/85735NED/BedrijfstakkenBranchesSBI2008?$format=json",
+        "cbs/85735NED_sizes.json": "https://opendata.cbs.nl/ODataApi/odata/85735NED/Bedrijfsgrootte?$format=json",
+    }
+    for rel, url in nl.items():
+        f = RAW / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        if f.exists() and not force:
+            out[rel] = "cached"; continue
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA, "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=600) as r:
+                f.write_bytes(r.read())
+            out[rel] = f"{f.stat().st_size} bytes"
+        except Exception as e:
+            out[rel] = f"failed: {e}"
+    # Ireland (CSO PxStat JSON-RPC): Census labour force by detailed occupational group; enterprise use of AI
+    ie = {"cso/F7042_labour_force_by_detailed_occupation.json": "F7042", "cso/ICA237_enterprise_ai_use.json": "ICA237"}
+    for rel, matrix in ie.items():
+        f = RAW / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        if f.exists() and not force:
+            out[rel] = "cached"; continue
+        try:
+            body = {"jsonrpc": "2.0", "method": "PxStat.Data.Cube_API.ReadDataset", "params": {"class": "query", "id": [], "dimension": {}, "extension": {"pivot": None, "codes": False, "language": {"code": "en"}, "format": {"type": "JSON-stat", "version": "2.0"}, "matrix": matrix}, "version": "2.0"}}
+            f.write_bytes(_post_json("https://ws.cso.ie/public/api.jsonrpc", body)); out[rel] = f"{f.stat().st_size} bytes"
+        except Exception as e:
+            out[rel] = f"failed: {e}"
+    return out
+
+
+ESTAT_FILES = {
+    # e-Stat file ids (fileKind 4 = Excel for the wage survey tables, 1 = CSV for the communications survey)
+    "estat/wage2024_t1_occupation_small.xlsx": ("000040247854", 4),
+    "estat/wage2024_t20_occupation_major_industry.xlsx": ("000040247875", 4),
+    "estat/mic_iot_ai_adoption_2018.csv": ("000031831159", 1), "estat/mic_iot_ai_adoption_2019.csv": ("000031951199", 1), "estat/mic_iot_ai_adoption_2020.csv": ("000032097896", 1),
+    "estat/mic_iot_ai_adoption_2021.csv": ("000032203902", 1), "estat/mic_iot_ai_adoption_2022.csv": ("000040056827", 1), "estat/mic_iot_ai_adoption_2023.csv": ("000040185424", 1),
+    "estat/mic_iot_ai_adoption_2024.csv": ("000040278570", 1), "estat/mic_iot_ai_adoption_2025.csv": ("000040458767", 1),
+}
+
+
+def fetch_estat(force: bool = False) -> dict:
+    """Japan's files from e-Stat's file-download endpoint (no key needed): the wage survey tables and the
+    communications survey's IoT/AI question by industry, 2018 to 2025."""
+    out = {}
+    for rel, (sid, kind) in ESTAT_FILES.items():
+        f = RAW / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        if f.exists() and not force:
+            out[rel] = "cached"; continue
+        try:
+            req = urllib.request.Request(f"https://www.e-stat.go.jp/stat-search/file-download?statInfId={sid}&fileKind={kind}", headers={"User-Agent": BROWSER_UA, "Referer": "https://www.e-stat.go.jp/stat-search/files", "Accept-Language": "ja,en"})
+            with urllib.request.urlopen(req, timeout=300) as r:
+                f.write_bytes(r.read())
+            out[rel] = f"{f.stat().st_size} bytes"
+        except Exception as e:
+            out[rel] = f"failed: {e}"
+    return out
+
+
 def fetch_ssb(force: bool = False) -> dict:
     """Statistics Norway's three tables through the data.ssb.no JSON query API (POST), saved as JSON-stat 2.0:
     11658 (employees, jobs and earnings by occupation, second quarters 2024-2026), 13265 and 14942 (AI use by

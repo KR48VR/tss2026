@@ -29,6 +29,8 @@ import pandas as pd
 from . import au_labour as au
 from . import nz_labour as nz
 from . import no_labour as no
+from . import eu_labour as el
+from . import jp_labour as jp
 from . import ca_labour as ca
 from . import forecast as fcm
 from . import io
@@ -77,6 +79,10 @@ class CountrySpec:
     level_descending: bool = False                           # True when a lower national skill-level number means higher skill (ANZSCO, NOC TEER)
     outcome_units: Callable[[], pd.DataFrame] | None = None  # per-code units for the outcome cells (emp_unit, wage_unit) where they are not thousands and the wage period
     lead_proxy: str | None = None                            # a country whose measured lead stands in when this one has no firm survey (marked on the page)
+    depth: str = "full"                                      # full | medium | limited: how fine the country's own data is, marked on the page
+    depth_note: str = ""                                     # one sentence on what is coarse or borrowed
+    what_exists: str = ""                                    # for the leaders card: what the statistics office publishes
+    lvl_kind: str = "isco"                                   # anzsco | teer | soc | isco: which skill-level scale the national level uses
     rating_bands: tuple = ()           # ((band, name, lo, hi), ...) on the national rating scale
     framework_name: str = ""           # what stands in for the Skills Framework
 
@@ -109,7 +115,7 @@ def _ca_mix():
 
 
 SPECS: dict[str, CountrySpec] = {
-    "CAN": CountrySpec(code="CAN", name="Canada", adjective="Canadian", prefix="ca_", code_col="noc_code", title_col="noc_title", classification="NOC 2021 unit group", level_descending=True,
+    "CAN": CountrySpec(code="CAN", name="Canada", adjective="Canadian", prefix="ca_", code_col="noc_code", title_col="noc_title", classification="NOC 2021 unit group", level_descending=True, lvl_kind="teer", what_exists="Statistics Canada's Census employment and income by NOC unit group, its quarterly vacancy survey, its business conditions survey with AI since 2024, the Census occupation-by-industry table, and OaSIS with duties, titles and skill ratings per unit group.",
                        major_names=ca.BROAD_NAMES, skill_level_names={k: v for k, v in ca.TEER_NAMES.items()}, industry_names=ca.NAICS_SECTORS, industry_label="NAICS sector", currency="C$",
                        wage_label="median employment income of full-year full-time workers, 2020 (Census 2021)", emp_label="employed persons, May 2021 (Census 2021)", wage_period="2020",
                        adoption_source="Canadian Survey on Business Conditions (Statistics Canada)", group_col="minor", group_len=4,
@@ -117,26 +123,75 @@ SPECS: dict[str, CountrySpec] = {
                        industry_mix=_ca_mix, ai_points=ca.load_csbc_ai_use, tasks=ca.load_oasis_duties, descriptions=ca.load_oasis_descriptions, titles=ca.load_oasis_titles, ratings=ca.load_oasis_ratings,
                        rating_bands=(("L", "not needed or basic (level 0 to 1)", 0.0, 1.5), ("M", "working level (2 to 3)", 1.5, 3.5), ("H", "advanced (4 to 5)", 3.5, 9.0)), framework_name="OaSIS, the Occupational and Skills Information System",
                        outcome_labels={"emp": "job vacancies change, four quarters to mid-2026 against the four before (Statistics Canada Job Vacancy and Wage Survey)", "wage": "Job Bank median wage change, 2024 to 2025 releases"}),
-    "AUS": CountrySpec(code="AUS", name="Australia", adjective="Australian", prefix="au_", code_col="anzsco_code", title_col="anzsco_title", classification="ANZSCO unit group", level_descending=True,
+    "AUS": CountrySpec(code="AUS", name="Australia", adjective="Australian", prefix="au_", code_col="anzsco_code", title_col="anzsco_title", classification="ANZSCO unit group", level_descending=True, lvl_kind="anzsco",
                        major_names=au.MAJOR_GROUP_NAMES, skill_level_names=au.SKILL_LEVEL_NAMES, industry_names=au.DIVISIONS, industry_label="ANZSIC industry division", currency="A$",
                        wage_label="average weekly total cash earnings, May 2025 (ABS Employee Earnings and Hours)", emp_label="employed persons, 2025 average (ABS Labour Force)", wage_period="May 2025",
                        adoption_source="ABS Characteristics of Australian Business", group_col="major_group", group_len=1,
                        weights=au.build_anzsco_weights, outcomes=au.employment_change, isco_link=_au_isco, industry_mix=_au_mix, ai_points=au.load_cab_ai_use, tasks=au.load_anzsco_tasks,
                        outcome_labels={"emp": "employment change, 2024 to 2025 (ABS Labour Force, yearly averages)", "wage": "average weekly earnings change, May 2023 to May 2025 (ABS)"}),
-    "NZL": CountrySpec(code="NZL", name="New Zealand", adjective="New Zealand", prefix="nz_", code_col="anzsco_code", title_col="anzsco_title", classification="ANZSCO unit group", level_descending=True,
+    "NZL": CountrySpec(code="NZL", name="New Zealand", adjective="New Zealand", prefix="nz_", code_col="anzsco_code", title_col="anzsco_title", classification="ANZSCO unit group", level_descending=True, lvl_kind="anzsco", depth="limited", depth_note="Pay is the major group's median (eight figures), Australia's AI survey stands in for a New Zealand one, and there is no industry lens; the detailed Census pay and industry tables sit behind a Stats NZ API key.",
                        major_names=au.MAJOR_GROUP_NAMES, skill_level_names=au.SKILL_LEVEL_NAMES, industry_names=au.DIVISIONS, industry_label="ANZSIC industry division", currency="NZ$",
                        wage_label="median weekly earnings of the major occupation group, year to June 2026 (Stats NZ Household Labour Force Survey; Stats NZ publishes no finer breakdown openly)", emp_label="employed people, March 2023 (2023 Census)", wage_period="June 2026",
                        adoption_source="no New Zealand firm survey has asked about AI use yet; the Australian ABS readings stand in", group_col="major_group", group_len=1, lead_proxy="AUS",
                        weights=nz.build_anzsco_weights, outcomes=nz.employment_change, outcome_units=nz.outcome_units, isco_link=_au_isco, industry_mix=nz.load_industry_mix, ai_points=nz.load_ai_points, tasks=au.load_anzsco_tasks,
                        descriptions=nz.load_descriptions, titles=nz.load_titles,
                        outcome_labels={"emp": "employment change, 2018 to 2023 Censuses (Stats NZ; the 2023 Census changed its occupation coding, so small changes mean little)", "wage": "median weekly earnings change of the major group, June 2025 to June 2026 (Stats NZ HLFS)"}),
-    "NOR": CountrySpec(code="NOR", name="Norway", adjective="Norwegian", prefix="no_", code_col="styrk_code", title_col="styrk_title", classification="STYRK-08 occupation (ISCO-08 unit group)",
+    "NOR": CountrySpec(code="NOR", name="Norway", adjective="Norwegian", prefix="no_", code_col="styrk_code", title_col="styrk_title", classification="STYRK-08 occupation (ISCO-08 unit group)", depth_note="No official task list per occupation: job pages carry O*NET's tasks through the ISCO code.",
                        major_names=no.MAJOR_GROUP_NAMES, skill_level_names=no.SKILL_LEVEL_NAMES, industry_names=no.INDUSTRIES, industry_label="industry group", currency="NOK ",
                        wage_label="median monthly earnings, second quarter of 2026 (Statistics Norway register-based earnings)", emp_label="employees, second quarter of 2026 (Statistics Norway)", wage_period="2026 Q2",
                        adoption_source="Statistics Norway's survey of ICT usage in enterprises", group_col="major_group", group_len=1,
                        weights=no.build_styrk_weights, outcomes=no.employment_change, outcome_units=no.outcome_units, isco_link=no.load_isco_link, industry_mix=no.load_industry_mix, ai_points=no.load_ai_use, tasks=no.no_tasks, titles=no.load_titles,
                        outcome_labels={"emp": "employees change, second quarter of 2025 to second quarter of 2026 (Statistics Norway)", "wage": "median monthly earnings change, second quarter of 2025 to 2026 (Statistics Norway)"}),
-    "GBR": CountrySpec(code="GBR", name="United Kingdom", adjective="UK", prefix="uk_", code_col="soc_code", title_col="soc_title", classification="SOC 2020 unit group",
+    "SWE": CountrySpec(code="SWE", name="Sweden", adjective="Swedish", prefix="se_", code_col="ssyk_code", title_col="ssyk_title", classification="SSYK 2012 occupation",
+                       major_names=no.MAJOR_GROUP_NAMES, skill_level_names=no.SKILL_LEVEL_NAMES, industry_names=el.eu.NACE_SECTIONS, industry_label="NACE section", currency="SEK ",
+                       wage_label="median monthly salary, 2025 (Statistics Sweden salary structure statistics)", emp_label="employees, 2024 (Statistics Sweden occupational register)", wage_period="2025",
+                       adoption_source="Statistics Sweden's survey of ICT usage in enterprises", group_col="major_group", group_len=1,
+                       weights=el.se_weights, outcomes=el.se_outcomes, outcome_units=el.se_units, isco_link=el.se_isco_link, industry_mix=lambda: el._mix("SE"), ai_points=el.se_ai_points, tasks=el.empty_tasks("ssyk_code"), titles=el.se_titles,
+                       depth="full", depth_note="The link to O*NET runs through Statistics Sweden's own key, which pairs each ISCO minor group (three digits) with the SSYK classes it maps to; no official task list.",
+                       what_exists="Statistics Sweden's occupational register (employees by four-digit SSYK 2012 occupation, yearly), its salary structure statistics at the same detail, its ICT-use survey with AI since 2021 by industry, and the EU Labour Force Survey's occupation-by-industry table.",
+                       outcome_labels={"emp": "employees change, 2023 to 2024 (Statistics Sweden occupational register)", "wage": "median monthly salary change, 2024 to 2025 (Statistics Sweden)"}),
+    "FIN": CountrySpec(code="FIN", name="Finland", adjective="Finnish", prefix="fi_", code_col="tk_code", title_col="tk_title", classification="Classification of Occupations 2010 (ISCO-08 unit group)",
+                       major_names=no.MAJOR_GROUP_NAMES, skill_level_names=no.SKILL_LEVEL_NAMES, industry_names=el.eu.NACE_SECTIONS, industry_label="NACE section", currency="€",
+                       wage_label="median hourly earnings, 2024 (Statistics Finland structure of earnings)", emp_label="employed persons, 2024 (Statistics Finland employment statistics)", wage_period="2024",
+                       adoption_source="Statistics Finland's survey of ICT use in enterprises", group_col="major_group", group_len=1,
+                       weights=el.fi_weights, outcomes=el.fi_outcomes, outcome_units=el.fi_units, isco_link=el.fi_isco_link, industry_mix=lambda: el._mix("FI"), ai_points=el.fi_ai_points, tasks=el.empty_tasks("tk_code"), titles=el.fi_titles,
+                       depth="full", depth_note="Finland's classification carries ISCO-08's own four-digit codes, so O*NET links directly; the earnings structure is published for one year so far, so there is no pay-change test; no official task list.",
+                       what_exists="Statistics Finland's register-based employment statistics (employed by occupation to five digits, yearly), its structure of earnings by four-digit occupation, its ICT-use survey with AI since 2021 by industry, and the EU Labour Force Survey's occupation-by-industry table.",
+                       outcome_labels={"emp": "employed persons change, 2023 to 2024 (Statistics Finland employment statistics)", "wage": "pay change not testable yet (one year of the earnings structure)"}),
+    "DNK": CountrySpec(code="DNK", name="Denmark", adjective="Danish", prefix="dk_", code_col="disco_code", title_col="disco_title", classification="DISCO-08 occupation (ISCO-08 unit group)",
+                       major_names=no.MAJOR_GROUP_NAMES, skill_level_names=no.SKILL_LEVEL_NAMES, industry_names=el.eu.NACE_SECTIONS, industry_label="NACE section", currency="DKK ",
+                       wage_label="earnings per hour worked, 2025 (Statistics Denmark earnings statistics)", emp_label="employed, 2025 (EU Labour Force Survey two-digit groups, split across four-digit occupations in Norway's register proportions)", wage_period="2025",
+                       adoption_source="Statistics Denmark's survey of ICT usage in enterprises", group_col="major_group", group_len=1,
+                       weights=el.dk_weights, outcomes=el.dk_outcomes, outcome_units=el.dk_units, isco_link=el.dk_isco_link, industry_mix=lambda: el._mix("DK"), ai_points=el.dk_ai_points, tasks=el.empty_tasks("disco_code"), titles=el.dk_titles,
+                       depth="medium", depth_note="Pay is at four digits but employment by detailed occupation is not in the open API: each two-digit group's EU-LFS employment is split across its four-digit occupations in the proportions of Norway's register, the nearest country with those codes; no employment-change test; no official task list.",
+                       what_exists="Statistics Denmark's earnings statistics by four-digit DISCO-08 occupation (yearly) and its ICT-use survey with AI since 2023 by industry; register employment is published by industry rather than occupation in the open API.",
+                       outcome_labels={"emp": "employment change not testable (no employment by detailed occupation in the open API)", "wage": "hourly earnings change, 2024 to 2025 (Statistics Denmark)"}),
+    "NLD": CountrySpec(code="NLD", name="Netherlands", adjective="Dutch", prefix="nl_", code_col="brc_code", title_col="brc_title", classification="BRC 2014 occupation group",
+                       major_names=no.MAJOR_GROUP_NAMES, skill_level_names=no.SKILL_LEVEL_NAMES, industry_names=el.eu.NACE_SECTIONS, industry_label="NACE section", currency="€",
+                       wage_label="median hourly wage of employees, 2025 (Statistics Netherlands)", emp_label="employed persons, 2025 (Statistics Netherlands labour force survey)", wage_period="2025",
+                       adoption_source="Statistics Netherlands' survey of ICT use by businesses", group_col="major_group", group_len=1,
+                       weights=el.nl_weights, outcomes=el.nl_outcomes, outcome_units=el.nl_units, isco_link=el.nl_isco_link, industry_mix=lambda: el._mix("NL"), ai_points=el.nl_ai_points, tasks=el.empty_tasks("brc_code"), titles=el.nl_titles,
+                       depth="medium", depth_note="The 114 BRC 2014 groups sit between two and three ISCO digits (a group often holds several ISCO occupations), titles are Dutch, and a few small groups take their segment's median wage; the ISCO composition of every group gives the link to O*NET; no official task list.",
+                       what_exists="Statistics Netherlands' labour force survey employment and median hourly wages for the 114 BRC 2014 occupation groups, its ICT-use survey with AI since 2023 by industry, and the ROA-CBS publication of the ISCO 2008 composition of every group.",
+                       outcome_labels={"emp": "employed persons change, 2024 to 2025 (Statistics Netherlands)", "wage": "median hourly wage change, 2024 to 2025 (Statistics Netherlands)"}),
+    "IRL": CountrySpec(code="IRL", name="Ireland", adjective="Irish", prefix="ie_", code_col="soc10_code", title_col="soc10_title", classification="SOC 2010 unit group (Census of Ireland)",
+                       major_names={"1": "Managers, directors and senior officials", "2": "Professional occupations", "3": "Associate professional and technical", "4": "Administrative and secretarial", "5": "Skilled trades", "6": "Caring, leisure and other service", "7": "Sales and customer service", "8": "Process, plant and machine operatives", "9": "Elementary occupations"},
+                       skill_level_names=no.SKILL_LEVEL_NAMES, industry_names=el.eu.NACE_SECTIONS, industry_label="NACE section", currency="€",
+                       wage_label="mean hourly earnings of the major group, 2022 (Eurostat Structure of Earnings Survey; Ireland publishes no pay by occupation)", emp_label="persons in the labour force, April 2022 (Census 2022)", wage_period="2022",
+                       adoption_source="CSO survey of ICT usage in enterprises (national reading only)", group_col="major_group", group_len=1,
+                       weights=el.ie_weights, outcomes=el.ie_outcomes, outcome_units=el.ie_units, isco_link=el.ie_isco_link, industry_mix=lambda: el._mix("IE"), ai_points=el.ie_ai_points, tasks=el.empty_tasks("soc10_code"), titles=el.ie_titles,
+                       depth="medium", depth_note="Employment is the Census 2022 labour force by 329 detailed occupations (people at work or looking for work), pay is the major group's mean from Eurostat (nine figures), and the AI survey is published nationally only, so there are no industry shifts; the link to O*NET runs through the ONS SOC 2010 mapping; no official task list.",
+                       what_exists="The CSO's Census 2022 labour force by detailed occupational group (UK SOC 2010 codes) and its enterprise AI-use survey since 2023; pay by occupation is not published, and the AI survey has no industry breakdown.",
+                       outcome_labels={"emp": "labour force change by occupation, Census 2016 to Census 2022 (CSO)", "wage": "pay change not testable (no pay by occupation)"}),
+    "JPN": CountrySpec(code="JPN", name="Japan", adjective="Japanese", prefix="jp_", code_col="jp_code", title_col="jp_title", classification="wage survey occupation class",
+                       major_names=jp.MAJOR_GROUP_NAMES, skill_level_names=jp.SKILL_LEVEL_NAMES, industry_names=jp.INDUSTRIES, industry_label="industry group", currency="¥",
+                       wage_label="monthly scheduled earnings, June 2024 (Basic Survey on Wage Structure, regular workers in enterprises with 10 or more employees)", emp_label="regular workers covered by the Basic Survey on Wage Structure, June 2024", wage_period="June 2024",
+                       adoption_source="MIC Communications Usage Trend Survey, enterprises with 100 or more employees that have introduced IoT or AI systems", group_col="major_group", group_len=1,
+                       weights=jp.build_weights, outcomes=jp.employment_change, outcome_units=jp.outcome_units, isco_link=jp.load_isco_link, industry_mix=jp.load_industry_mix, ai_points=jp.load_ai_points, tasks=jp.no_tasks, titles=jp.load_titles,
+                       depth="medium", depth_note="The 144 occupation classes are the wage survey's (regular employees in enterprises with 10 or more employees, not all workers), the firm survey asks about IoT and AI together, and the link to ISCO-08 is a table written by hand for this map, since Japan publishes no official correspondence; no outcome test yet and no official task list.",
+                       what_exists="The Basic Survey on Wage Structure's workers and monthly earnings by 144 occupation classes and by occupation group and industry, and the Communications Usage Trend Survey's yearly question on IoT or AI systems by industry since 2018; the Census publishes occupation by small group only in sample tabulations by prefecture.",
+                       outcome_labels={"emp": "employment change not testable yet (one year of the wage survey loaded)", "wage": "pay change not testable yet"}),
+    "GBR": CountrySpec(code="GBR", name="United Kingdom", adjective="UK", prefix="uk_", code_col="soc_code", title_col="soc_title", classification="SOC 2020 unit group", lvl_kind="soc",
                        major_names=uk.MAJOR_GROUP_NAMES, skill_level_names=uk.SKILL_LEVEL_NAMES, industry_names=uk.SECTIONS, industry_label="SIC industry section", currency="£",
                        wage_label="median gross annual pay, April 2025 (ONS ASHE, provisional)", emp_label="employee jobs, April 2025 (ONS ASHE)", wage_period="April 2025",
                        adoption_source="ONS Business Insights and Conditions Survey", group_col="minor", group_len=3,
