@@ -13,8 +13,8 @@
   --involved:#6fa8a3; --involved-text:#3a746e; --us:#8a4b6e; --rated:#2f7d32; --mixed:#6b4fa0; --fast:#a3571a; --central:#0e6b67; --slow:#3f5f8a; --scn:#0e6b67; --zebra:#f3f1ea; --heat-warm:233,167,156; --heat-cool:188,208,234;
   --font-display:"Newsreader", Georgia, "Times New Roman", serif; --font-body:"Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif; --font-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#141a1b; --panel:#1c2426; --fg:#e8e9e4; --muted:#a4adaf; --line:#2f3a3c; --accent:#5fc0b9; --accent-soft:#1f3836; --doing:#5fc0b9; --helping:#e0a04e; --physical:#9db0c2; --notseen:#6c777a; --warn:#e07a68; --involved:#3d8a85; --involved-text:#8ccfc8; --us:#d19ab8; --rated:#7fcb7f; --mixed:#b79bea; --fast:#e0a04e; --central:#5fc0b9; --slow:#8fb0e0; --scn:#5fc0b9; --zebra:#202a2c; --heat-warm:150,70,55; --heat-cool:55,80,120; --on-scn:#141a1b; color-scheme:dark } }
-:root[data-theme="dark"]{ --bg:#141a1b; --panel:#1c2426; --fg:#e8e9e4; --muted:#a4adaf; --line:#2f3a3c; --accent:#5fc0b9; --accent-soft:#1f3836; --doing:#5fc0b9; --helping:#e0a04e; --physical:#9db0c2; --notseen:#6c777a; --warn:#e07a68; --involved:#3d8a85; --involved-text:#8ccfc8; --us:#d19ab8; --rated:#7fcb7f; --mixed:#b79bea; --fast:#e0a04e; --central:#5fc0b9; --slow:#8fb0e0; --scn:#5fc0b9; --zebra:#202a2c; --heat-warm:150,70,55; --heat-cool:55,80,120; --on-scn:#141a1b; color-scheme:dark }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#141a1b; --depth-full:#6fd0c8; --depth-medium:#e6b25c; --depth-limited:#f29c8e; --panel:#1c2426; --fg:#e8e9e4; --muted:#a4adaf; --line:#2f3a3c; --accent:#5fc0b9; --accent-soft:#1f3836; --doing:#5fc0b9; --helping:#e0a04e; --physical:#9db0c2; --notseen:#6c777a; --warn:#e07a68; --involved:#3d8a85; --involved-text:#8ccfc8; --us:#d19ab8; --rated:#7fcb7f; --mixed:#b79bea; --fast:#e0a04e; --central:#5fc0b9; --slow:#8fb0e0; --scn:#5fc0b9; --zebra:#202a2c; --heat-warm:150,70,55; --heat-cool:55,80,120; --on-scn:#141a1b; color-scheme:dark } }
+:root[data-theme="dark"]{ --bg:#141a1b; --depth-full:#6fd0c8; --depth-medium:#e6b25c; --depth-limited:#f29c8e; --panel:#1c2426; --fg:#e8e9e4; --muted:#a4adaf; --line:#2f3a3c; --accent:#5fc0b9; --accent-soft:#1f3836; --doing:#5fc0b9; --helping:#e0a04e; --physical:#9db0c2; --notseen:#6c777a; --warn:#e07a68; --involved:#3d8a85; --involved-text:#8ccfc8; --us:#d19ab8; --rated:#7fcb7f; --mixed:#b79bea; --fast:#e0a04e; --central:#5fc0b9; --slow:#8fb0e0; --scn:#5fc0b9; --zebra:#202a2c; --heat-warm:150,70,55; --heat-cool:55,80,120; --on-scn:#141a1b; color-scheme:dark }
 :root[data-scn="0"]{--scn:var(--fast)} :root[data-scn="1"]{--scn:var(--central)} :root[data-scn="2"]{--scn:var(--slow)}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;margin:0}
@@ -473,7 +473,7 @@ const wageBillLabel = () => isUS() ? 'Wage bill (US$m / year)' : (isNat()&&CC().
 let ecoE, ecoW; function pickEco(){ const E=ECO(); ecoE=E.find(e=>e.scope==='economy'&&e.w==='emp'); ecoW=E.find(e=>e.scope==='economy'&&e.w==='wage'); } pickEco();
 const CNAME = () => isUS() ? 'the United States' : isNat() ? CC().name : 'Singapore';
 const CADJ = () => isUS() ? 'US' : isNat() ? CC().adj : 'Singapore';
-const POSS = c => c.code==='GBR' ? "the UK's" : c.name+"'s";
+const POSS = c => c.code==='GBR' ? "the UK's" : c.code==='NLD' ? "the Netherlands'" : c.name+"'s";
 const CPOSS = () => isUS() ? "the United States'" : isNat() ? POSS(CC()) : "Singapore's";
 const ORIG = {}; ['ov-h2','ov-intro','ov-major-eyebrow','ov-sub-eyebrow','x-chart-eyebrow'].forEach(id=>{ const el=document.getElementById(id); if(el) ORIG[id]=el.innerHTML; });
 const USTXT = {
@@ -527,9 +527,9 @@ function ladderSvg(compact){
 }
 function cmpList(){ const C=D.compare; return C ? ['SGP','USA','AUS','GBR','CAN','NZL','NOR','SWE','FIN','DNK','NLD','IRL','JPN'].filter(k=>C.countries[k]) : []; }
 let CMPA='SGP', CMPB='USA'; try{ const a=localStorage.getItem('cmpa'), b=localStorage.getItem('cmpb'); if(a&&D.compare&&D.compare.countries[a]) CMPA=a; if(b&&D.compare&&D.compare.countries[b]) CMPB=b; }catch(e){} if(CMPA===CMPB) CMPB = CMPA==='USA'?'SGP':'USA';
-function cname(k){ return k==='SGP'?'Singapore':k==='USA'?'the United States':k==='GBR'?'the United Kingdom':((D.compare.countries[k]||{}).name||k); }
+function cname(k){ return k==='SGP'?'Singapore':k==='USA'?'the United States':k==='GBR'?'the United Kingdom':k==='NLD'?'the Netherlands':((D.compare.countries[k]||{}).name||k); }
 function cshort(k){ return k==='SGP'?'Singapore':k==='USA'?'United States':((D.compare.countries[k]||{}).name||k); }
-function cposs(k){ return k==='USA'?"the United States'":k==='GBR'?"the UK's":cshort(k)+"'s"; }
+function cposs(k){ return k==='USA'?"the United States'":k==='GBR'?"the UK's":k==='NLD'?"the Netherlands'":cshort(k)+"'s"; }
 function cadjK(k){ return k==='SGP'?'Singapore':k==='USA'?'US':(D.c&&D.c[k]?D.c[k].adj:k); }
 function cLead(k){ const c=D.compare.countries[k]; return k==='USA'?0:(c.lead!=null?c.lead:null); }
 function cHalf(k){ const c=D.compare.countries[k]; if(c.half_firms!=null) return c.half_firms; const l=cLead(k); const us=((m.adoption||{}).us_half||{}).central; return (l==null||us==null)?null:us-l; }
@@ -1023,7 +1023,7 @@ function openNat(i){ const c=CC(); if(!c) return; current={kind:'nat',i}; search
   const std=(o.std||[]).map(j=>c.standards[j]);
   const wsNote = o.ws ? (/unit_group|ashe_median/.test(o.ws) ? '' : o.ws==='ashe_mean_no_median' ? '; the mean, as no median is published for this code' : '; a group average stands in, as no separate figure is published for this code') : '';
   el.innerHTML = `<div class="eyebrow">${esc(c.cls)} ${MID} ${esc(o.c)}${o.smn?' '+MID+' '+esc(o.smn):''}</div><h2>${esc(o.t)}</h2>
-    <p class="small muted">${o.emp!=null?`${fmt(o.emp,1)} thousand ${esc(c.emp_label)}; ${c.cur}${fmt(o.wage)} ${esc(c.wage_label)}.`:''} ${o.lvl!=null?`Skill level ${fmt(o.lvl,(o.lvl%1)?1:0)} of ${c.levels_national?c.levels_national.max_level:''}${band?' ('+esc(band[1])+')':''}.`:''}</p>
+    <p class="small muted">${o.emp!=null?`${fmt(o.emp,1)} thousand ${esc(c.emp_label)}; ${c.cur}${fmt(o.wage, c.wb==='hour'?2:0)} ${esc(c.wage_label)}.`:''} ${o.lvl!=null?`Skill level ${fmt(o.lvl,(o.lvl%1)?1:0)} of ${c.levels_national?c.levels_national.max_level:''}${band?' ('+esc(band[1])+')':''}.`:''}</p>
     ${o.db?headline(o.h,o.oa,o.so,o.sp,'nat',o):'<p class="muted small">No timing available (no O*NET tasks linked).</p>'}
     ${o.db?timeline(o,"Share of this occupation's work AI could be doing, and be involved in, by year", null, "this occupation's work"):''}
     ${evidence(o,'nat')}
