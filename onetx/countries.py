@@ -28,6 +28,7 @@ import pandas as pd
 
 from . import au_labour as au
 from . import nz_labour as nz
+from . import no_labour as no
 from . import ca_labour as ca
 from . import forecast as fcm
 from . import io
@@ -129,6 +130,12 @@ SPECS: dict[str, CountrySpec] = {
                        weights=nz.build_anzsco_weights, outcomes=nz.employment_change, outcome_units=nz.outcome_units, isco_link=_au_isco, industry_mix=nz.load_industry_mix, ai_points=nz.load_ai_points, tasks=au.load_anzsco_tasks,
                        descriptions=nz.load_descriptions, titles=nz.load_titles,
                        outcome_labels={"emp": "employment change, 2018 to 2023 Censuses (Stats NZ; the 2023 Census changed its occupation coding, so small changes mean little)", "wage": "median weekly earnings change of the major group, June 2025 to June 2026 (Stats NZ HLFS)"}),
+    "NOR": CountrySpec(code="NOR", name="Norway", adjective="Norwegian", prefix="no_", code_col="styrk_code", title_col="styrk_title", classification="STYRK-08 occupation (ISCO-08 unit group)",
+                       major_names=no.MAJOR_GROUP_NAMES, skill_level_names=no.SKILL_LEVEL_NAMES, industry_names=no.INDUSTRIES, industry_label="industry group", currency="NOK ",
+                       wage_label="median monthly earnings, second quarter of 2026 (Statistics Norway register-based earnings)", emp_label="employees, second quarter of 2026 (Statistics Norway)", wage_period="2026 Q2",
+                       adoption_source="Statistics Norway's survey of ICT usage in enterprises", group_col="major_group", group_len=1,
+                       weights=no.build_styrk_weights, outcomes=no.employment_change, outcome_units=no.outcome_units, isco_link=no.load_isco_link, industry_mix=no.load_industry_mix, ai_points=no.load_ai_use, tasks=no.no_tasks, titles=no.load_titles,
+                       outcome_labels={"emp": "employees change, second quarter of 2025 to second quarter of 2026 (Statistics Norway)", "wage": "median monthly earnings change, second quarter of 2025 to 2026 (Statistics Norway)"}),
     "GBR": CountrySpec(code="GBR", name="United Kingdom", adjective="UK", prefix="uk_", code_col="soc_code", title_col="soc_title", classification="SOC 2020 unit group",
                        major_names=uk.MAJOR_GROUP_NAMES, skill_level_names=uk.SKILL_LEVEL_NAMES, industry_names=uk.SECTIONS, industry_label="SIC industry section", currency="£",
                        wage_label="median gross annual pay, April 2025 (ONS ASHE, provisional)", emp_label="employee jobs, April 2025 (ONS ASHE)", wage_period="April 2025",
@@ -408,6 +415,8 @@ def match_tasks(tasks: pd.DataFrame, xw: pd.DataFrame, spec: CountrySpec, k_glob
     ot = onet.load_tasks()
     neigh = xw.groupby("nat_code").onet_soc_code.apply(set).to_dict()
     t = tasks.rename(columns={spec.code_col: "nat_code"}).reset_index(drop=True)
+    if t.empty:  # a country with no official task list (Norway): nothing to match
+        return pd.DataFrame({"nat_code": pd.Series(dtype=str), "task_seq": pd.Series(dtype=int), "rank": pd.Series(dtype=int), "task_id": pd.Series(dtype=int), "onet_soc_code": pd.Series(dtype=str), "score": pd.Series(dtype=float), "in_mapped_occ": pd.Series(dtype=bool), "country": pd.Series(dtype=str)})
     m = HybridMatcher(ot.task_statement.tolist())
     idx, sc = m.query(t.task.tolist(), k=k_global)
     allowed = [neigh.get(c, set()) for c in t.nat_code]
@@ -453,7 +462,7 @@ def build_base(spec: CountrySpec) -> dict:
     tasks = spec.tasks(); io.save(tasks, f"{p}tasks")
     links = match_tasks(tasks, xw, spec); io.save(links, f"{p}task_onet_task")
     stats = {"codes": int(len(natw)), "codes_linked_to_onet": int(xw.nat_code.nunique()), "onet_occupations_linked": int(xw.onet_soc_code.nunique()), "employment_thousands_total": float(natw.employment_thousands.sum()),
-             "wage_sources": natw.wage_source.value_counts(dropna=False).to_dict(), "official_tasks": int(len(tasks)), "codes_with_tasks": int(tasks[spec.code_col].nunique()), "task_match_mean_score": float(links[links["rank"] == 1].score.mean()), "task_match_in_mapped_occ_share": float(links[links["rank"] == 1].in_mapped_occ.mean())}
+             "wage_sources": natw.wage_source.value_counts(dropna=False).to_dict(), "official_tasks": int(len(tasks)), "codes_with_tasks": int(tasks[spec.code_col].nunique()), "task_match_mean_score": float(links[links["rank"] == 1].score.mean()) if len(links) else None, "task_match_in_mapped_occ_share": float(links[links["rank"] == 1].in_mapped_occ.mean())}
     if spec.descriptions is not None:
         io.save(spec.descriptions(), f"{p}descriptions")
     if spec.titles is not None:

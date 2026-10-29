@@ -253,6 +253,12 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
                 others[code] = cctx
             except FileNotFoundError as e:
                 stats["countries"][code] = {"error": f"{spec.name} files missing: {e}"}
+        # ---- Europe at a glance: every Eurostat country at two-digit resolution
+        try:
+            from . import europe
+            stats["europe"] = europe.build_europe(tf, barriers, params, now, tiers, occ, occf, btos_fit)
+        except Exception as e:  # the country records above are already saved; record the failure rather than lose the run
+            stats["europe"] = {"error": f"Europe at a glance not built: {type(e).__name__}: {e}"}
     register_duckdb()
     return stats
 

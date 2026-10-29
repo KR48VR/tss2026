@@ -104,6 +104,13 @@ SOURCES: dict[str, str] = {
     "ons/census2021_occupation_industry.json": "https://api.beta.ons.gov.uk/v1/population-types/UR/census-observations?area-type=nat&dimensions=occupation_current_105a,industry_current_88a",
     # ---- Canada (Statistics Canada, ESDC): the fifth workforce
     # New Zealand: Stats NZ tables republished by Figure.NZ (CC BY 4.0), the source file and its tidy CSV
+    # Eurostat (JSON-stat from the dissemination API) and Statistics Norway (JSON-stat 2.0 from data.ssb.no; see fetch_ssb)
+    "eurostat/isoc_eb_ai.json": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/isoc_eb_ai?format=JSON&lang=EN&indic_is=E_AI_TANY&unit=PC_ENT&size_emp=GE10",
+    "eurostat/isoc_eb_ain2.json": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/isoc_eb_ain2?format=JSON&lang=EN&indic_is=E_AI_TANY&unit=PC_ENT&size_emp=GE10",
+    "eurostat/lfsa_egai2d.json": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/lfsa_egai2d?format=JSON&lang=EN&sex=T&age=Y15-64&time=2024&time=2025",
+    "eurostat/earn_ses22_14.json": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/earn_ses22_14?format=JSON&lang=EN&sex=T&age=TOTAL&sizeclas=TOTAL&sizeclas=GE10&indic_se=ERN&unit=EUR&unit=NAC",
+    "eurostat/earn_ses18_14.json": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/earn_ses18_14?format=JSON&lang=EN&sex=T&age=TOTAL&sizeclas=TOTAL&sizeclas=GE10&indic_se=ERN&unit=EUR&unit=NAC",
+    "eurostat/lfsa_eisn2.json": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/lfsa_eisn2?format=JSON&lang=EN&sex=T&time=2024",
     "statsnz/census2023_occupation_sex_region.xlsx": "https://figure.nz/table/93JjK3JipxibN5z0/download-source-dataset",
     "statsnz/census_occupation_2013_2018_2023.csv": "https://figure.nz/table/rjkP7FejTiMetM8I/download",
     "statsnz/census_industry_2013_2018_2023.csv": "https://figure.nz/table/5NUkKEe3d3IlNraI/download",
@@ -154,7 +161,7 @@ def fetch_one(rel: str, url: str, force: bool = False, max_age_days: int | None 
         age_days = (time.time() - dest.stat().st_mtime) / 86400.0
         if max_age_days is None or age_days <= max_age_days:
             return dest
-    headers = {**UA, "User-Agent": BROWSER_UA} if rel.split("/")[0] in ("abs", "ons", "ifate", "statcan", "esdc", "statsnz") else UA
+    headers = {**UA, "User-Agent": BROWSER_UA} if rel.split("/")[0] in ("abs", "ons", "ifate", "statcan", "esdc", "statsnz", "eurostat") else UA
     req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=600) as r, open(dest, "wb") as fh:
         shutil.copyfileobj(r, fh)
@@ -176,6 +183,10 @@ def fetch_all(force: bool = False) -> dict:
             manifest[rel] = {"url": url, "error": str(e)}
             print(f"FAIL  {rel}: {e}")
     manifest["singapore_labour_apis"] = fetch_singapore_labour(force)
+    try:
+        manifest["ssb"] = fetch_ssb(force)
+    except Exception as e:
+        manifest["ssb"] = f"failed: {e}"
     try:
         manifest["statsnz_ade"] = fetch_statsnz_ade(force=force)   # only with STATSNZ_API_KEY set; otherwise records why it was skipped
     except Exception as e:
@@ -319,6 +330,32 @@ def fetch_anzsco_pages(force: bool = False, pause: float = 0.7) -> dict:
 
 
 # ----------------------------------------------------------------------------- Statistics Canada cells pulled through the WDS API
+def fetch_ssb(force: bool = False) -> dict:
+    """Statistics Norway's three tables through the data.ssb.no JSON query API (POST), saved as JSON-stat 2.0:
+    11658 (employees, jobs and earnings by occupation, second quarters 2024-2026), 13265 and 14942 (AI use by
+    industry, 2021-2025 and 2026)."""
+    dest = RAW / "ssb"
+    dest.mkdir(parents=True, exist_ok=True)
+    queries = {
+        "11658_employees_earnings_by_occupation.json": (11658, [{"code": "Kjonn", "selection": {"filter": "item", "values": ["0"]}}, {"code": "Alder", "selection": {"filter": "item", "values": ["999D"]}}, {"code": "Yrke", "selection": {"filter": "all", "values": ["*"]}},
+                                                                {"code": "ContentsCode", "selection": {"filter": "item", "values": ["Lonsstakere", "AntArbForhold", "HeltidsEkvMnd", "GjMdTotal", "MedianMndLonn", "GjAvtaltMdlonn"]}}, {"code": "Tid", "selection": {"filter": "item", "values": ["2024K2", "2025K2", "2026K2"]}}]),
+        "13265_ai_use_by_industry_2021_2025.json": (13265, [{"code": "SyssGrpIKT", "selection": {"filter": "all", "values": ["*"]}}, {"code": "NACE2007", "selection": {"filter": "all", "values": ["*"]}}, {"code": "ContentsCode", "selection": {"filter": "item", "values": ["BrukarKunstigIntelli"]}}, {"code": "Tid", "selection": {"filter": "all", "values": ["*"]}}]),
+        "14942_ai_use_by_industry_2026.json": (14942, [{"code": "NACE2025", "selection": {"filter": "all", "values": ["*"]}}, {"code": "SyssGrpIKT", "selection": {"filter": "all", "values": ["*"]}}, {"code": "ContentsCode", "selection": {"filter": "item", "values": ["BrukarKunstigIntelli"]}}, {"code": "Tid", "selection": {"filter": "all", "values": ["*"]}}]),
+    }
+    out = {}
+    for name, (table, query) in queries.items():
+        f = dest / name
+        if f.exists() and not force:
+            out[name] = "cached"
+            continue
+        body = json.dumps({"query": query, "response": {"format": "json-stat2"}}).encode()
+        req = urllib.request.Request(f"https://data.ssb.no/api/v0/en/table/{table}", data=body, headers={"Content-Type": "application/json", "User-Agent": BROWSER_UA})
+        with urllib.request.urlopen(req, timeout=600) as r:
+            f.write_bytes(r.read())
+        out[name] = f"{f.stat().st_size} bytes"
+    return out
+
+
 def fetch_statsnz_ade(key: str | None = None, force: bool = False) -> dict:
     """The two Census 2023 tables New Zealand lacks openly, from the Aotearoa Data Explorer's SDMX service,
     which needs a (free, registered) Stats NZ API subscription key: income bands by occupation (CEN23_INC_007)

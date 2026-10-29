@@ -323,7 +323,7 @@ def build_data(companion_url: str | None = None) -> dict:
             for k, v in ((cs.get(code) or {}).get("decompositions") or {}).items():
                 pairs[k] = _rnd(v)
         compare["pairs"] = pairs
-    return {"meta": meta, "economy": economy, "ssoc": ssoc_list, "roles": role_list, "onet": onet_list, "skills": skills_list, "gwa": gwa_list, "sectors": sector_list, "compare": compare, "us": us_payload, "c": country_payloads or None, "_key_tasks": key_tasks, "_us_tasks": us_tasks, "_country_tasks": country_tasks}
+    return {"meta": meta, "economy": economy, "ssoc": ssoc_list, "roles": role_list, "onet": onet_list, "skills": skills_list, "gwa": gwa_list, "sectors": sector_list, "compare": compare, "us": us_payload, "c": country_payloads or None, "europe": build_europe_payload(stats), "_key_tasks": key_tasks, "_us_tasks": us_tasks, "_country_tasks": country_tasks}
 
 
 def _exists(name):
@@ -549,6 +549,33 @@ def _econ_payload_row(r):
             "db": _db(r), "db10": _db(r, "p10"), "db90": _db(r, "p90"), "cap": _pct(r.get("ceiling_ai_share")), "hq": [_r(r.get("quarter_done_year_fast_from_curve"), 1), _r(r.get("quarter_done_year_central_from_curve"), 1), _r(r.get("quarter_done_year_slow_from_curve"), 1)], "hd": [_r(r.get("half_done_year_fast_from_curve"), 1), _r(r.get("half_done_year_central_from_curve"), 1), _r(r.get("half_done_year_slow_from_curve"), 1)], "ech": None}
 
 
+def build_europe_payload(stats: dict) -> dict | None:
+    """Europe at a glance in the page's shape: one entry per Eurostat country with its readings, lead,
+    economy figures, sub-major groups and industries (from europe.build_europe)."""
+    es = stats.get("europe") or {}
+    if not es or "error" in es or not _exists("eu_economy"):
+        return None
+    econ = load("eu_economy"); groups = load("eu_groups"); iv = load("eu_industry_view") if _exists("eu_industry_view") else None
+    out = []
+    for geo, st in es.items():
+        if not isinstance(st, dict) or "lead" not in st:
+            continue
+        e = econ[(econ.geo == geo) & (econ.scope == "economy")]
+        rows = {("emp" if r.weighting == "employment" else "wage"): _econ_payload_row(r) for _, r in e.iterrows()}
+        g = groups[groups.geo == geo].sort_values("employment_thousands", ascending=False)
+        grp = [[r.nat_code, r.nat_title, _r(r.employment_thousands, 1), _pct(r.get("share_weight_observed")), _pct(r.get("done_by_2035")), [_r(r.get("quarter_done_year_p10"), 1), _r(r.get("quarter_done_year_p50"), 1), _r(r.get("quarter_done_year_p90"), 1)]] for _, r in g.iterrows() if pd.notna(r.get("done_by_2035"))]
+        ind = []
+        if iv is not None and len(iv):
+            for _, r in iv[iv.geo == geo].iterrows():
+                ind.append({"code": r.industry, "name": r.label, "es": _pct(r.employment_share), "ai": _r(r.ai_use_latest_pct, 1) if pd.notna(r.ai_use_latest_pct) else None, "ai0": _r(r.ai_use_first_pct, 1) if pd.notna(r.ai_use_first_pct) else None,
+                            "shift": _r(r.anchor_shift_years, 1) if pd.notna(r.anchor_shift_years) else None, "sv": bool(pd.notna(r.anchor_shift_years)), "db35": _pct(r.get("done_by_2035")), "hq": [_r(r.get("quarter_done_year_fast_from_curve"), 1), _r(r.get("quarter_done_year_central_from_curve"), 1), _r(r.get("quarter_done_year_slow_from_curve"), 1)]})
+        lead = st.get("lead") or {}
+        pts = [[x.get("label"), _r(x.get("pct"), 1)] for x in (lead.get("points") or [])]
+        out.append({"geo": geo, "name": st.get("name", geo), "lead": _r(lead.get("lead_years"), 1) if lead.get("lead_years") is not None else None, "n": lead.get("n_points_used"), "pts": pts,
+                    "emp_total": _r(st.get("employment_thousands_total"), 0), "codes": st.get("codes"), "wage_src": st.get("wage_source"), "emp_year": st.get("employment_year"), "econ": rows, "groups": grp, "ind": ind})
+    return {"countries": out, "survey": "Eurostat survey of ICT usage in enterprises (10 or more persons employed), share using at least one AI technology, 2021, 2023, 2024 and 2025", "employment": "EU Labour Force Survey, employed persons by ISCO-08 two-digit group, 15 to 64, 2025", "pay": "Structure of Earnings Survey, mean hourly earnings by ISCO-08 major group, 2022 (2018 where 2022 is not published by occupation)"}
+
+
 def _adoption_now_text(code: str, label) -> str | None:
     """The latest national adoption reading in words, where a date would mislead: a financial year for
     Australia ('2024-25 financial year'), a quarter for Canada ('the second quarter of 2026')."""
@@ -720,10 +747,10 @@ def build_country_payload(spec, onet_list, ssoc_list, stats, us_payload):
         levels_nat["index_name"] = idxname
         levels_nat["bands"] = [[b, name] for b, name, lo, hi in spec.rating_bands]
         levels_nat["framework"] = spec.framework_name
-    office = {"AUS": "ABS", "GBR": "ONS", "CAN": "OaSIS", "NZL": "Stats NZ"}.get(spec.code, spec.name)
+    office = {"AUS": "ABS", "GBR": "ONS", "CAN": "OaSIS", "NZL": "Stats NZ", "NOR": "Statistics Norway"}.get(spec.code, spec.name)
     if lead.get("proxy"):
         adoption, adoption_now_text = [], f"none yet ({lead['proxy']}'s survey stands in)"
-    payload = {"code": spec.code, "name": spec.name, "adj": spec.adjective, "adoption_now_text": adoption_now_text, "office": office, "lvl_desc": spec.level_descending, "levels_nat": levels_nat, "framework": spec.framework_name, "sys": {"AUS": "ANZSCO", "NZL": "ANZSCO", "GBR": "SOC 2020", "CAN": "NOC 2021"}.get(spec.code, spec.classification), "lead_proxy": lead.get("proxy"), "cls": spec.classification, "cur": spec.currency, "emp_label": spec.emp_label, "wage_label": spec.wage_label, "wage_period": spec.wage_period, "adoption_source": spec.adoption_source, "industry_label": spec.industry_label, "major_names": spec.major_names,
+    payload = {"code": spec.code, "name": spec.name, "adj": spec.adjective, "adoption_now_text": adoption_now_text, "office": office, "lvl_desc": spec.level_descending, "levels_nat": levels_nat, "framework": spec.framework_name, "sys": {"AUS": "ANZSCO", "NZL": "ANZSCO", "GBR": "SOC 2020", "CAN": "NOC 2021", "NOR": "STYRK-08"}.get(spec.code, spec.classification), "lead_proxy": lead.get("proxy"), "cls": spec.classification, "cur": spec.currency, "emp_label": spec.emp_label, "wage_label": spec.wage_label, "wage_period": spec.wage_period, "adoption_source": spec.adoption_source, "industry_label": spec.industry_label, "major_names": spec.major_names,
                "occ": occ_rows, "economy": economy, "industries": industries, "levels_national": levels_national, "levels": _levels_payload(levels, lcorr), "outcomes": cs.get("outcomes") or {}, "weights": cs.get("weights") or {}, "shift_range": cs.get("shift_range"), "lead": _r(lead.get("lead_years"), 1) if lead.get("lead_years") is not None else None, "lead_points_used": lead.get("n_points_used"), "adoption": adoption, "adoption_now": _r(lead.get("latest_pct"), 1) if (lead.get("latest_pct") is not None and not lead.get("proxy")) else None, "adoption_now_date": _r(lead.get("latest_date"), 2) if (lead.get("latest_date") is not None and not lead.get("proxy")) else None,
                "standards": standards, "routes": routes, "industry_shifts": cs.get("industry_shifts") or {}, "o2n": o2n}
     # on-demand file: the official task list per code, matched to O*NET tasks, on this country's timing

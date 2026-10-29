@@ -244,3 +244,19 @@ def test_proxy_lead_stands_in_when_a_country_has_no_survey():
     if lead["lead_years"] is None and spec.lead_proxy in others:
         lead = {**others[spec.lead_proxy]["lead"], "proxy": spec.lead_proxy, "own_points": 0}
     assert lead["proxy"] == "AUS" and lead["lead_years"] == -0.4
+
+
+def test_norway_sits_on_isco_codes_with_register_pay():
+    from onetx import no_labour as no
+    import pytest
+    if not (no.SSB / "11658_employees_earnings_by_occupation.json").exists():
+        pytest.skip("Statistics Norway files not present")
+    w = no.build_styrk_weights()
+    assert len(w) == 400 and w.styrk_code.str.fullmatch(r"\d{4}").all() and w.wage_monthly.gt(0).all()
+    link = no.load_isco_link(set(w.styrk_code))
+    assert (link.isco_code == link.nat_code).all() and (link.weight == 1).all()
+    pts = no.load_ai_use()
+    nat = pts[pts.group_type == "all"].sort_values("date")
+    assert list(nat.period) == ["2021", "2023", "2024", "2025", "2026"] and nat.pct.iloc[-1] > nat.pct.iloc[0]
+    mix = no.load_industry_mix()
+    assert set(mix.industry) <= set(no.INDUSTRIES) and mix.employed.sum() > 1000
