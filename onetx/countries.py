@@ -73,6 +73,7 @@ class CountrySpec:
     titles: Callable[[], pd.DataFrame] | None = None         # per code: alternative titles (for the search)
     ratings: Callable[[], pd.DataFrame] | None = None        # national skill ratings per code: family, element_name, level
     level_descending: bool = False                           # True when a lower national skill-level number means higher skill (ANZSCO, NOC TEER)
+    outcome_units: Callable[[], pd.DataFrame] | None = None  # per-code units for the outcome cells (emp_unit, wage_unit) where they are not thousands and the wage period
     rating_bands: tuple = ()           # ((band, name, lo, hi), ...) on the national rating scale
     framework_name: str = ""           # what stands in for the Skills Framework
 
@@ -109,7 +110,7 @@ SPECS: dict[str, CountrySpec] = {
                        major_names=ca.BROAD_NAMES, skill_level_names={k: v for k, v in ca.TEER_NAMES.items()}, industry_names=ca.NAICS_SECTORS, industry_label="NAICS sector", currency="C$",
                        wage_label="median employment income of full-year full-time workers, 2020 (Census 2021)", emp_label="employed persons, May 2021 (Census 2021)", wage_period="2020",
                        adoption_source="Canadian Survey on Business Conditions (Statistics Canada)", group_col="minor", group_len=4,
-                       weights=ca.build_noc_weights, outcomes=ca.employment_change, isco_link=lambda codes: pd.DataFrame(columns=["isco_code", "nat_code", "weight"]), onet_link=ca.load_onet_to_noc,
+                       weights=ca.build_noc_weights, outcomes=ca.employment_change, outcome_units=ca.outcome_units, isco_link=lambda codes: pd.DataFrame(columns=["isco_code", "nat_code", "weight"]), onet_link=ca.load_onet_to_noc,
                        industry_mix=_ca_mix, ai_points=ca.load_csbc_ai_use, tasks=ca.load_oasis_duties, descriptions=ca.load_oasis_descriptions, titles=ca.load_oasis_titles, ratings=ca.load_oasis_ratings,
                        rating_bands=(("L", "not needed or basic (level 0 to 1)", 0.0, 1.5), ("M", "working level (2 to 3)", 1.5, 3.5), ("H", "advanced (4 to 5)", 3.5, 9.0)), framework_name="OaSIS, the Occupational and Skills Information System",
                        outcome_labels={"emp": "job vacancies change, four quarters to mid-2026 against the four before (Statistics Canada Job Vacancy and Wage Survey)", "wage": "Job Bank median wage change, 2024 to 2025 releases"}),

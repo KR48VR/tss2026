@@ -3,6 +3,7 @@ browse the results without running Python. `python -m onetx site`."""
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from pathlib import Path
 
@@ -548,6 +549,20 @@ def _econ_payload_row(r):
             "db": _db(r), "db10": _db(r, "p10"), "db90": _db(r, "p90"), "cap": _pct(r.get("ceiling_ai_share")), "hq": [_r(r.get("quarter_done_year_fast_from_curve"), 1), _r(r.get("quarter_done_year_central_from_curve"), 1), _r(r.get("quarter_done_year_slow_from_curve"), 1)], "hd": [_r(r.get("half_done_year_fast_from_curve"), 1), _r(r.get("half_done_year_central_from_curve"), 1), _r(r.get("half_done_year_slow_from_curve"), 1)], "ech": None}
 
 
+def _adoption_now_text(code: str, label) -> str | None:
+    """The latest national adoption reading in words, where a date would mislead: a financial year for
+    Australia ('2024-25 financial year'), a quarter for Canada ('the second quarter of 2026')."""
+    if not label:
+        return None
+    if code == "AUS":
+        return f"{label} financial year"
+    if code == "CAN":
+        m = re.match(r"(\d{4}) Q([1-4])", str(label))
+        if m:
+            return f"the {['first', 'second', 'third', 'fourth'][int(m.group(2)) - 1]} quarter of {m.group(1)}"
+    return None
+
+
 def _levels_payload(levels, lcorr):
     """The O*NET skill-level test in the page's shape (shared by the US and the further countries)."""
     if levels is None:
@@ -647,6 +662,7 @@ def build_country_payload(spec, onet_list, ssoc_list, stats, us_payload):
             rv = load("uk_ifate_route_view")
             routes = [{"route": r.route, "n": _r(r.n_standards), "nsoc": _r(r.n_soc_codes), "emp": _r(r.employment_thousands, 1), "levels": r.levels, "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "db30": _pct(r.done_by_2030), "db35": _pct(r.done_by_2035), "db35f": _pct(r.done_by_2035_p10), "db35s": _pct(r.done_by_2035_p90), "sb35": _pct(r.share_by_2035), "cap": _pct(r.ceiling_ai_share), "hq": [_r(r.quarter_done_year_p10, 1), _r(r.quarter_done_year_p50, 1), _r(r.quarter_done_year_p90, 1)]} for r in rv.itertuples()]
     yf, yt = (cs.get("outcomes") or {}).get("years") or [None, None]
+    units = spec.outcome_units().set_index(spec.code_col) if spec.outcome_units is not None else None
     occ_rows = []
     for _, r in t.iterrows():
         o = outc.loc[r.nat_code] if (outc is not None and r.nat_code in outc.index) else None
@@ -655,6 +671,11 @@ def build_country_payload(spec, onet_list, ssoc_list, stats, us_payload):
             wcols = [c for c in o.index if c.startswith("wage_") and c.split("_")[1].isdigit()]
             wcols = sorted(wcols, key=lambda c: int(c.split("_")[1]))
             oc = [_r(o.get(f"emp_{yf}"), 1), _r(o.get(f"emp_{yt}"), 1), _r(o.get("emp_change_pct"), 1), _r(o.get(wcols[0])) if wcols else None, _r(o.get(wcols[-1])) if wcols else None, _r(o.get("wage_change_pct"), 1)]
+            if units is not None and r.nat_code in units.index:
+                u = units.loc[r.nat_code]
+                oc += [u.emp_unit if isinstance(u.emp_unit, str) else None, u.wage_unit if isinstance(u.wage_unit, str) else None]
+                if oc[7] == "hour" and wcols:  # hourly wages keep their cents
+                    oc[3], oc[4] = _r(o.get(wcols[0]), 2), _r(o.get(wcols[-1]), 2)
         top = top_code.get(r.nat_code)
         ui = us_idx.get(top)
         occ_rows.append({"c": r.nat_code, "t": r.nat_title, "mg": r.major_group, "sm": r.submajor_label, "smn": r.submajor_name if isinstance(r.submajor_name, str) else None, "lvl": _r(r.skill_level, 1) if pd.notna(r.skill_level) else None, "emp": _r(r.employment_thousands, 1), "wage": _r(r.get("wage_median", r.get("wage_weekly"))), "ws": r.wage_source if isinstance(r.wage_source, str) else None,
@@ -682,7 +703,8 @@ def build_country_payload(spec, onet_list, ssoc_list, stats, us_payload):
         if k and k[2] in nat_idx:
             best[o] = nat_idx[k[2]]
     o2n = [best.get(e["c"]) for e in onet_list]
-    adoption_now_text = (lead.get("points") or [{}])[-1].get("label") if spec.code == "AUS" else None
+    last_label = (lead.get("points") or [{}])[-1].get("label")
+    adoption_now_text = _adoption_now_text(spec.code, last_label)
     rlev = load(f"{p}rating_level_exposure") if _exists(f"{p}rating_level_exposure") else None
     rcorr = load(f"{p}rating_level_correlations") if _exists(f"{p}rating_level_correlations") else None
     levels_nat = None
@@ -699,7 +721,7 @@ def build_country_payload(spec, onet_list, ssoc_list, stats, us_payload):
         levels_nat["bands"] = [[b, name] for b, name, lo, hi in spec.rating_bands]
         levels_nat["framework"] = spec.framework_name
     office = {"AUS": "ABS", "GBR": "ONS", "CAN": "OaSIS"}.get(spec.code, spec.name)
-    payload = {"code": spec.code, "name": spec.name, "adj": spec.adjective, "adoption_now_text": (f"{adoption_now_text} financial year" if adoption_now_text else None), "office": office, "lvl_desc": spec.level_descending, "levels_nat": levels_nat, "framework": spec.framework_name, "sys": {"AUS": "ANZSCO", "GBR": "SOC 2020", "CAN": "NOC 2021"}.get(spec.code, spec.classification), "cls": spec.classification, "cur": spec.currency, "emp_label": spec.emp_label, "wage_label": spec.wage_label, "wage_period": spec.wage_period, "adoption_source": spec.adoption_source, "industry_label": spec.industry_label, "major_names": spec.major_names,
+    payload = {"code": spec.code, "name": spec.name, "adj": spec.adjective, "adoption_now_text": adoption_now_text, "office": office, "lvl_desc": spec.level_descending, "levels_nat": levels_nat, "framework": spec.framework_name, "sys": {"AUS": "ANZSCO", "GBR": "SOC 2020", "CAN": "NOC 2021"}.get(spec.code, spec.classification), "cls": spec.classification, "cur": spec.currency, "emp_label": spec.emp_label, "wage_label": spec.wage_label, "wage_period": spec.wage_period, "adoption_source": spec.adoption_source, "industry_label": spec.industry_label, "major_names": spec.major_names,
                "occ": occ_rows, "economy": economy, "industries": industries, "levels_national": levels_national, "levels": _levels_payload(levels, lcorr), "outcomes": cs.get("outcomes") or {}, "weights": cs.get("weights") or {}, "shift_range": cs.get("shift_range"), "lead": _r(lead.get("lead_years"), 1) if lead.get("lead_years") is not None else None, "lead_points_used": lead.get("n_points_used"), "adoption": adoption, "adoption_now": _r(lead.get("latest_pct"), 1) if lead.get("latest_pct") is not None else None, "adoption_now_date": _r(lead.get("latest_date"), 2) if lead.get("latest_date") is not None else None,
                "standards": standards, "routes": routes, "industry_shifts": cs.get("industry_shifts") or {}, "o2n": o2n}
     # on-demand file: the official task list per code, matched to O*NET tasks, on this country's timing

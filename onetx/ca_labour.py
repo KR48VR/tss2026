@@ -243,7 +243,16 @@ def employment_change() -> pd.DataFrame:
     df["year_from"], df["year_to"] = yf, yt
     df["wage_years"] = "2024-2025"
     df["vacancy_quarters_to"] = str(pd.Timestamp(last4[-1]).date())
+    df["emp_unit"] = "vacancies"
+    df["wage_unit"] = df.noc_code.map(w1.annual.map({True: "year", False: "hour"}))
     return df
+
+
+def outcome_units() -> pd.DataFrame:
+    """Units for the page's outcome cells: the 'employment' figures are job vacancies (four-quarter sums,
+    counts rather than thousands) and Job Bank wages are hourly unless the release flags them annual."""
+    w = load_jobbank_wages(2025)
+    return pd.DataFrame({"noc_code": w.noc_code.values, "emp_unit": "vacancies", "wage_unit": np.where(w.annual.values, "year", "hour")})
 
 
 # ----------------------------------------------------------------------------- firm AI use and the industry mix

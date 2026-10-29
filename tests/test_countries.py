@@ -207,3 +207,11 @@ def test_group_len_drives_the_mix_key():
     grp, nat, onet = cn.occupation_shifts(mix, ind, natw, xw, spec)
     s = nat.set_index("nat_code").adoption_shift_years
     assert abs(s["11100"] - (-2.0 * 0.75 + 2.0 * 0.25)) < 1e-9 and abs(s["21101"] - 2.0) < 1e-9
+
+
+def test_adoption_now_text_reads_a_quarter_or_a_financial_year():
+    from onetx.site import _adoption_now_text
+    assert _adoption_now_text("CAN", "2026 Q2") == "the second quarter of 2026"
+    assert _adoption_now_text("AUS", "2024-25") == "2024-25 financial year"
+    assert _adoption_now_text("GBR", "2026 Q2") is None
+    assert _adoption_now_text("CAN", None) is None
