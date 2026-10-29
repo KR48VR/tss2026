@@ -15,6 +15,7 @@ def main(argv=None):
     sub.add_parser("report", help="write docs/REPORT.md from the processed tables")
     f = sub.add_parser("forecast", help="re-run only the timing model (fast) and the report")
     f.add_argument("--now", default="2026-10-01")
+    f.add_argument("--only", default="", help="comma-separated further-workforce codes to rebuild (e.g. NZL,NOR,EUROPE); the rest keep their saved tables")
     cn = sub.add_parser("countries", help="build the base tables for the further workforces (weights, crosswalks, official-task matches); then run forecast")
     cn.add_argument("--only", default="", help="comma-separated country codes to build (default: all, e.g. AUS,GBR,CAN)")
     st = sub.add_parser("site", help="build the self-contained web page (site/index.html + site/kt.json)")
@@ -46,7 +47,8 @@ def main(argv=None):
 
         stats = json.loads((PROCESSED / "build_stats.json").read_text()) if (PROCESSED / "build_stats.json").exists() else {"now": args.now}
         stats["now"] = args.now
-        stats.update(build_forecasts(now=args.now))
+        only = [c.strip().upper() for c in getattr(args, "only", "").split(",") if c.strip()]
+        stats.update(build_forecasts(now=args.now, only=only or None, prev_stats=stats))
         write_json(stats, PROCESSED / "build_stats.json")
         print(json.dumps(stats, indent=2, default=str))
         write_report()

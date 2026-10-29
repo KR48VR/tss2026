@@ -161,8 +161,10 @@ def build_country_bases(only: list | None = None) -> dict:
     return out
 
 
-def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams | None = None, metr_trend: dict | None = None) -> dict:
-    """Re-run only the timing model from the processed frontier tables (fast; use it to try parameters)."""
+def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams | None = None, metr_trend: dict | None = None, only: list | None = None, prev_stats: dict | None = None) -> dict:
+    """Re-run only the timing model from the processed frontier tables (fast; use it to try parameters).
+    `only` restricts the further-workforce loop to the listed country codes (and "EUROPE"): the others keep
+    their saved tables and stats, read back as context for the pairwise splits."""
     from .io import load
 
     tf = load("frontier_tasks"); occ = load("onet_occupations"); o2s = load("xw_onetsoc_ssoc2024"); kt_links = load("xw_sfw_keytask_onet_task")
@@ -243,9 +245,18 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
         from . import countries as cn
         from .io import exists
         others = {}
+        prev = (prev_stats or {}).get("countries") or {}
         for code, spec in cn.SPECS.items():
             if not exists(f"{spec.prefix}weights"):
                 stats["countries"][code] = {"error": f"base tables missing; run `python -m onetx countries` ({spec.prefix}weights)"}
+                continue
+            if only and code not in only:
+                ctx = cn.saved_ctx(spec, prev.get(code))
+                if ctx is not None:
+                    stats["countries"][code] = prev[code]; others[code] = ctx
+                    print(f"kept  {code} from the previous run")
+                else:
+                    stats["countries"][code] = {"error": "not built in this run and no saved tables to keep"}
                 continue
             try:
                 cstats, cctx = cn.build_country(spec, tf, barriers, params, now, tiers, occ, occf, btos_fit, o2s, ssoc_w, load("frontier_ssoc2024"), econ, fc, us_ctx["us_w"], us_ctx["econ_us"], us_ctx["fc_us"], others)
@@ -254,6 +265,10 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
             except FileNotFoundError as e:
                 stats["countries"][code] = {"error": f"{spec.name} files missing: {e}"}
         # ---- Europe at a glance: every Eurostat country at two-digit resolution
+        if only and "EUROPE" not in only:
+            stats["europe"] = (prev_stats or {}).get("europe") or {"error": "not built in this run"}
+            register_duckdb()
+            return stats
         try:
             from . import europe
             stats["europe"] = europe.build_europe(tf, barriers, params, now, tiers, occ, occf, btos_fit)

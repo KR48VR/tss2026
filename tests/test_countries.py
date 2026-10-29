@@ -260,3 +260,20 @@ def test_norway_sits_on_isco_codes_with_register_pay():
     assert list(nat.period) == ["2021", "2023", "2024", "2025", "2026"] and nat.pct.iloc[-1] > nat.pct.iloc[0]
     mix = no.load_industry_mix()
     assert set(mix.industry) <= set(no.INDUSTRIES) and mix.employed.sum() > 1000
+
+
+def test_europe_loaders_cover_the_eurostat_countries():
+    from onetx import europe as eu
+    import pytest
+    if not (eu.EUROSTAT / "isoc_eb_ai.json").exists():
+        pytest.skip("Eurostat files not present")
+    ai = eu.load_ai_use(); emp = eu.load_employment_2d(); earn = eu.load_earnings_1d(); mix = eu.load_mix()
+    assert ai.pct.between(0, 100).all() and set(ai.period) == {"2021", "2023", "2024", "2025"}
+    assert emp.isco2_code.str.fullmatch(r"\d\d").all() and emp.geo.nunique() >= 30
+    w = eu.weights("DE", emp, earn)
+    assert len(w) > 30 and w.wage_value.gt(0).all() and w.skill_level.between(1, 4).all()
+    assert set(mix.industry) <= set(eu.NACE_SECTIONS)
+    link = eu._isco_to_2d({"11", "25"})
+    assert set(link.nat_code) == {"11", "25"} and link.isco_code.str.len().eq(4).all()
+    by = eu.load_ai_use_by_activity()
+    assert set(by.industry) <= set(eu.NACE_SECTIONS) and not by.duplicated(["geo", "date", "industry"]).any()

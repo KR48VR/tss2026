@@ -375,6 +375,8 @@ def rating_level_exposure(t: pd.DataFrame, ratings: pd.DataFrame, spec: CountryS
 def industry_view(mix: pd.DataFrame, ind_shift: pd.DataFrame, points: pd.DataFrame, t: pd.DataFrame, spec: CountrySpec) -> pd.DataFrame:
     """The sector lens: per industry, its share of employment, the firm AI-use readings, its shift against
     the national curve, and exposure through its occupation mix (group-level, employment-weighted)."""
+    if mix is None or mix.empty:   # no occupation-by-industry table (New Zealand without an API key): no industry lens
+        return pd.DataFrame(columns=["industry", "label", "employment_share", "ai_use_latest_pct", "ai_use_latest_date", "ai_use_first_pct", "ai_use_first_date", "anchor_shift_years", "share_of_groups_scored"])
     gcol = spec.group_col
     key = t.nat_code.str[:spec.group_len]
     cols = ["observed_automation", "share_weight_observed", "share_weight_physical", "done_by_2030", "done_by_2035", "done_by_2035_p10", "done_by_2035_p90", "share_by_2035", "ceiling_ai_share", "quarter_done_year_p10", "quarter_done_year_p50", "quarter_done_year_p90"]
@@ -547,6 +549,17 @@ def build_country(spec: CountrySpec, tf, barriers, params, now, tiers, occ, occf
              "apprenticeship_routes": route_stats, "national_ratings": rating_stats, "framework_name": spec.framework_name, "decompositions": decomps}
     ctx = {"spec": spec, "natw": natw, "xw": xw, "fr_nat": fr_nat, "econ": econ, "fc": fc, "params": params_c, "lead": lead}
     return stats, ctx
+
+
+def saved_ctx(spec: CountrySpec, cstats: dict | None) -> dict | None:
+    """The context a later country needs from an earlier one (weights, crosswalk, frontier, economy, task
+    forecast, lead), read back from the saved tables so a partial re-run can skip countries already built."""
+    p = spec.prefix
+    needed = [f"{p}weights", f"{p}onet_crosswalk", f"{p}frontier_national", f"{p}economy_exposure", f"forecast_tasks_{p.rstrip('_')}"]
+    if not all(io.exists(n) for n in needed) or not cstats or "lead" not in cstats:
+        return None
+    return {"spec": spec, "natw": io.load(f"{p}weights"), "xw": io.load(f"{p}onet_crosswalk"), "fr_nat": io.load(f"{p}frontier_national"), "econ": io.load(f"{p}economy_exposure"),
+            "fc": io.load(f"forecast_tasks_{p.rstrip('_')}"), "params": None, "lead": cstats["lead"]}
 
 
 def route_view(standards: pd.DataFrame, std_soc: pd.DataFrame, t: pd.DataFrame) -> pd.DataFrame:
