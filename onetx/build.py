@@ -246,17 +246,21 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
         from .io import exists
         others = {}
         prev = (prev_stats or {}).get("countries") or {}
-        for code, spec in cn.SPECS.items():
-            if not exists(f"{spec.prefix}weights"):
-                stats["countries"][code] = {"error": f"base tables missing; run `python -m onetx countries` ({spec.prefix}weights)"}
-                continue
-            if only and code not in only:
+        if only:  # first the kept countries, so every rebuilt one gets its pairwise split against all of them
+            for code, spec in cn.SPECS.items():
+                if code in only or not exists(f"{spec.prefix}weights"):
+                    continue
                 ctx = cn.saved_ctx(spec, prev.get(code))
                 if ctx is not None:
                     stats["countries"][code] = prev[code]; others[code] = ctx
                     print(f"kept  {code} from the previous run")
                 else:
                     stats["countries"][code] = {"error": "not built in this run and no saved tables to keep"}
+        for code, spec in cn.SPECS.items():
+            if not exists(f"{spec.prefix}weights"):
+                stats["countries"][code] = {"error": f"base tables missing; run `python -m onetx countries` ({spec.prefix}weights)"}
+                continue
+            if only and code not in only:
                 continue
             try:
                 cstats, cctx = cn.build_country(spec, tf, barriers, params, now, tiers, occ, occf, btos_fit, o2s, ssoc_w, load("frontier_ssoc2024"), econ, fc, us_ctx["us_w"], us_ctx["econ_us"], us_ctx["fc_us"], others)
