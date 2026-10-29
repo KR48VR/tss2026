@@ -44,7 +44,7 @@ _SECTION_TO_KEY = {"C": "C-E", "D": "C-E", "E": "C-E", "F": "F", "G": "G", "H": 
 def jsonstat_frame(path: Path) -> pd.DataFrame:
     """A JSON-stat 2.0 dataset as a long table: one column per dimension (codes), `label_<dim>` for the
     labels, and `value`."""
-    d = json.loads(Path(path).read_text())
+    d = json.loads(Path(path).read_text(encoding="utf-8"))
     dims = d["id"]
     cats = []
     for k in dims:
@@ -70,6 +70,7 @@ def load_occupation_table() -> pd.DataFrame:
     df = jsonstat_frame(SSB / "11658_employees_earnings_by_occupation.json")
     m = {"Lonsstakere": "employees", "AntArbForhold": "jobs", "HeltidsEkvMnd": "fte", "GjMdTotal": "mean_monthly", "MedianMndLonn": "median_monthly", "GjAvtaltMdlonn": "mean_basic_monthly"}
     df["measure"] = df.ContentsCode.map(m)
+    df["label_Yrke"] = df.label_Yrke.str.replace("¿", "'", regex=False)   # the English labels carry an inverted question mark where an apostrophe belongs
     return df.rename(columns={"Yrke": "styrk_code", "label_Yrke": "title", "Tid": "quarter"})[["styrk_code", "title", "quarter", "measure", "value"]]
 
 
