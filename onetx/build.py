@@ -266,8 +266,14 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
                 cstats, cctx = cn.build_country(spec, tf, barriers, params, now, tiers, occ, occf, btos_fit, o2s, ssoc_w, load("frontier_ssoc2024"), econ, fc, us_ctx["us_w"], us_ctx["econ_us"], us_ctx["fc_us"], others)
                 stats["countries"][code] = cstats
                 others[code] = cctx
+                write_json({**(prev_stats or {}), **stats}, PROCESSED / "build_stats.partial.json")   # a checkpoint, so a later country's failure does not lose the earlier ones
+                print(f"ok    {code} ({spec.name})")
             except FileNotFoundError as e:
                 stats["countries"][code] = {"error": f"{spec.name} files missing: {e}"}
+            except Exception as e:  # one country's fault must not lose the run; it is recorded and the rest continue
+                import traceback
+                stats["countries"][code] = {"error": f"{spec.name} not built: {type(e).__name__}: {e}", "traceback": traceback.format_exc()[-1500:]}
+                print(f"FAIL  {code} ({spec.name}): {type(e).__name__}: {e}")
         # ---- Europe at a glance: every Eurostat country at two-digit resolution
         if only and "EUROPE" not in only:
             stats["europe"] = (prev_stats or {}).get("europe") or {"error": "not built in this run"}

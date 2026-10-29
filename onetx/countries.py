@@ -328,14 +328,14 @@ def occupation_shifts(mix: pd.DataFrame, ind_shift: pd.DataFrame, natw: pd.DataF
     group inherits it; an O*NET occupation takes the weight_rev-weighted mean of its codes."""
     gcol = spec.group_col
     m = mix.merge(ind_shift[["industry", "anchor_shift_years"]], on="industry", how="left")
-    m["anchor_shift_years"] = m.anchor_shift_years.fillna(0.0)
+    m["anchor_shift_years"] = pd.to_numeric(m.anchor_shift_years, errors="coerce").fillna(0.0).astype(float)   # an empty shift table arrives as object dtype
     m["share"] = m.employed / m.groupby(gcol).employed.transform("sum")
     grp = m.assign(_x=m.share * m.anchor_shift_years).groupby(gcol).agg(adoption_shift_years=("_x", "sum"), employed=("employed", "sum")).reset_index()
     codes = natw[[spec.code_col]].rename(columns={spec.code_col: "nat_code"}).copy()
     codes["group"] = codes.nat_code.str[:spec.group_len]
-    codes["adoption_shift_years"] = codes.group.map(grp.set_index(gcol).adoption_shift_years).fillna(0.0)
+    codes["adoption_shift_years"] = pd.to_numeric(codes.group.map(grp.set_index(gcol).adoption_shift_years), errors="coerce").fillna(0.0).astype(float)
     o = xw[["onet_soc_code", "nat_code", "weight_rev"]].merge(codes[["nat_code", "adoption_shift_years"]], on="nat_code", how="left")
-    o["adoption_shift_years"] = o.adoption_shift_years.fillna(0.0)
+    o["adoption_shift_years"] = pd.to_numeric(o.adoption_shift_years, errors="coerce").fillna(0.0).astype(float)
     o["_x"] = o.weight_rev * o.adoption_shift_years
     onet = o.groupby("onet_soc_code").agg(_x=("_x", "sum"), w=("weight_rev", "sum")).reset_index()
     onet["adoption_shift_years"] = np.where(onet.w > 0, onet._x / onet.w, 0.0)

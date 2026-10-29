@@ -312,3 +312,15 @@ def test_japan_hand_made_link_covers_every_class():
     pts = jp.load_ai_points(); nat = pts[pts.group_type == "all"]
     assert list(nat.period) == [str(y) for y in range(2018, 2026)] and set(pts.industry.dropna()) <= set(jp.INDUSTRIES)
     mix = jp.load_industry_mix(); assert set(mix.industry) <= set(jp.INDUSTRIES) and set(mix.major_group) <= set(jp.MAJOR_GROUP_NAMES)
+
+
+def test_occupation_shifts_stay_numeric_without_industry_readings():
+    """A country whose AI survey has no industry breakdown (Ireland) gets zero shifts as floats, not objects."""
+    from onetx import countries as cn
+    spec = cn.SPECS["IRL"]
+    mix = pd.DataFrame({"major_group": ["1", "2"], "industry": ["C", "J"], "employed": [10.0, 20.0]})
+    ind = pd.DataFrame(columns=["industry", "label", "n_points", "latest_date", "latest_pct", "national_pct_latest", "level_offset", "anchor_shift_years"])
+    natw = pd.DataFrame({"soc10_code": ["1115", "2111"], "employment_thousands": [1.0, 2.0]})
+    xw = pd.DataFrame({"onet_soc_code": ["11-1011.00", "19-1021.00"], "nat_code": ["1115", "2111"], "weight_rev": [1.0, 1.0]})
+    grp, nat, onet = cn.occupation_shifts(mix, ind, natw, xw, spec)
+    assert nat.adoption_shift_years.dtype == float and onet.adoption_shift_years.dtype == float and (nat.adoption_shift_years == 0).all()
