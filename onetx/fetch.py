@@ -103,6 +103,11 @@ SOURCES: dict[str, str] = {
     "ons/soc2020_structure.xlsx": "https://www.ons.gov.uk/file?uri=/methodology/classificationsandstandards/standardoccupationalclassificationsoc/soc2020/soc2020volume1structureanddescriptionsofunitgroups/soc2020volume1structureanddescriptionofunitgroupsexcel20260827.xlsx",
     "ons/census2021_occupation_industry.json": "https://api.beta.ons.gov.uk/v1/population-types/UR/census-observations?area-type=nat&dimensions=occupation_current_105a,industry_current_88a",
     # ---- Canada (Statistics Canada, ESDC): the fifth workforce
+    # New Zealand: Stats NZ tables republished by Figure.NZ (CC BY 4.0), the source file and its tidy CSV
+    "statsnz/census2023_occupation_sex_region.xlsx": "https://figure.nz/table/93JjK3JipxibN5z0/download-source-dataset",
+    "statsnz/census_occupation_2013_2018_2023.csv": "https://figure.nz/table/rjkP7FejTiMetM8I/download",
+    "statsnz/census_industry_2013_2018_2023.csv": "https://figure.nz/table/5NUkKEe3d3IlNraI/download",
+    "statsnz/hlfs_earnings_by_occupation.csv": "https://figure.nz/table/tANdfeZpRDSl8UII/download",
     "statcan/noc2021_structure.csv": "https://www.statcan.gc.ca/en/subjects/standard/noc/2021/indexV1/noc-2021-v1.0-classification-structure.csv",
     "statcan/noc2021_elements.csv": "https://www.statcan.gc.ca/en/subjects/standard/noc/2021/indexV1/noc-2021-v1.0-elements.csv",
     "statcan/soc2018us-noc2016v1_3-eng.csv": "https://www.statcan.gc.ca/en/statistical-programs/document/soc2018us-noc2016v1_3-eng.csv",
@@ -149,7 +154,7 @@ def fetch_one(rel: str, url: str, force: bool = False, max_age_days: int | None 
         age_days = (time.time() - dest.stat().st_mtime) / 86400.0
         if max_age_days is None or age_days <= max_age_days:
             return dest
-    headers = {**UA, "User-Agent": BROWSER_UA} if rel.split("/")[0] in ("abs", "ons", "ifate", "statcan", "esdc") else UA
+    headers = {**UA, "User-Agent": BROWSER_UA} if rel.split("/")[0] in ("abs", "ons", "ifate", "statcan", "esdc", "statsnz") else UA
     req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=600) as r, open(dest, "wb") as fh:
         shutil.copyfileobj(r, fh)
@@ -171,6 +176,10 @@ def fetch_all(force: bool = False) -> dict:
             manifest[rel] = {"url": url, "error": str(e)}
             print(f"FAIL  {rel}: {e}")
     manifest["singapore_labour_apis"] = fetch_singapore_labour(force)
+    try:
+        manifest["statsnz_ade"] = fetch_statsnz_ade(force=force)   # only with STATSNZ_API_KEY set; otherwise records why it was skipped
+    except Exception as e:
+        manifest["statsnz_ade"] = f"failed: {e}"
     try:
         parse_microsoft_diffusion_pdf()
         manifest["microsoft_diffusion_countries_csv"] = "parsed"
@@ -310,6 +319,32 @@ def fetch_anzsco_pages(force: bool = False, pause: float = 0.7) -> dict:
 
 
 # ----------------------------------------------------------------------------- Statistics Canada cells pulled through the WDS API
+def fetch_statsnz_ade(key: str | None = None, force: bool = False) -> dict:
+    """The two Census 2023 tables New Zealand lacks openly, from the Aotearoa Data Explorer's SDMX service,
+    which needs a (free, registered) Stats NZ API subscription key: income bands by occupation (CEN23_INC_007)
+    and occupation by industry (CEN23_WRK_008). Pass the key or set STATSNZ_API_KEY. Written as CSV with
+    labels to data/raw/statsnz/ade/; the New Zealand loaders use them when present."""
+    import os
+
+    key = key or os.environ.get("STATSNZ_API_KEY")
+    out = {}
+    if not key:
+        return {"skipped": "no STATSNZ_API_KEY; New Zealand pay stays at the major-group level and no industry mix is used"}
+    dest = RAW / "statsnz" / "ade"
+    dest.mkdir(parents=True, exist_ok=True)
+    for flow in ("CEN23_INC_007", "CEN23_WRK_008"):
+        f = dest / f"{flow}.csv"
+        if f.exists() and not force:
+            out[flow] = "cached"
+            continue
+        url = f"https://api.data.stats.govt.nz/rest/data/STATSNZ,{flow},1.0/all?dimensionAtObservation=AllDimensions&format=csvfilewithlabels"
+        req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA, "Ocp-Apim-Subscription-Key": key, "Accept": "text/csv"})
+        with urllib.request.urlopen(req, timeout=600) as r:
+            f.write_bytes(r.read())
+        out[flow] = f"{f.stat().st_size} bytes"
+    return out
+
+
 def fetch_statcan_api(force: bool = False) -> dict:
     """The Canada-level cells of four Statistics Canada tables whose full downloads run to gigabytes:
     Census 2021 employment by NOC unit group (98-10-0449), employment income by unit group (98-10-0586),

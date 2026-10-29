@@ -215,3 +215,32 @@ def test_adoption_now_text_reads_a_quarter_or_a_financial_year():
     assert _adoption_now_text("AUS", "2024-25") == "2024-25 financial year"
     assert _adoption_now_text("GBR", "2026 Q2") is None
     assert _adoption_now_text("CAN", None) is None
+
+
+def test_new_zealand_weights_share_anzsco_with_australia():
+    from onetx import nz_labour as nz
+    import pytest
+    if not (nz.STATSNZ / "census2023_occupation_sex_region.xlsx").exists():
+        pytest.skip("Stats NZ files not present")
+    w = nz.build_anzsco_weights()
+    assert len(w) == 358 and w.anzsco_code.str.fullmatch(r"\d{4}").all()
+    assert abs(w.employment_thousands.sum() - 2622.8) < 1.0          # 2023 Census employed, all of New Zealand
+    assert w.skill_level.notna().all() and w.wage_weekly.gt(0).all()
+    ch = nz.employment_change()
+    assert {"emp_2018", "emp_2023", "emp_change_pct", "wage_change_pct"} <= set(ch.columns)
+    assert nz.load_ai_points().empty and nz.load_industry_mix().empty   # no survey, no key: documented gaps
+
+
+def test_proxy_lead_stands_in_when_a_country_has_no_survey():
+    """A country without firm-survey points borrows the proxy country's measured lead and is marked."""
+    from onetx import countries as cn
+    pts = pd.DataFrame(columns=["date", "period", "pct", "group_type", "industry", "label"])
+    fit = {"saturation": 0.9, "intercept": -2.0, "growth_per_year": 0.7}
+    lead = cn.firm_lead(fit, pts)
+    assert lead["lead_years"] is None and lead["n_points_used"] == 0
+    others = {"AUS": {"lead": {"lead_years": -0.4, "points": [{"date": 2025.5, "pct": 12.1}], "n_points_used": 1, "latest_pct": 12.1, "latest_date": 2025.5}}}
+    spec = cn.SPECS["NZL"]
+    assert spec.lead_proxy == "AUS"
+    if lead["lead_years"] is None and spec.lead_proxy in others:
+        lead = {**others[spec.lead_proxy]["lead"], "proxy": spec.lead_proxy, "own_points": 0}
+    assert lead["proxy"] == "AUS" and lead["lead_years"] == -0.4

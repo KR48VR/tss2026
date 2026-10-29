@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 
 from . import au_labour as au
+from . import nz_labour as nz
 from . import ca_labour as ca
 from . import forecast as fcm
 from . import io
@@ -74,6 +75,7 @@ class CountrySpec:
     ratings: Callable[[], pd.DataFrame] | None = None        # national skill ratings per code: family, element_name, level
     level_descending: bool = False                           # True when a lower national skill-level number means higher skill (ANZSCO, NOC TEER)
     outcome_units: Callable[[], pd.DataFrame] | None = None  # per-code units for the outcome cells (emp_unit, wage_unit) where they are not thousands and the wage period
+    lead_proxy: str | None = None                            # a country whose measured lead stands in when this one has no firm survey (marked on the page)
     rating_bands: tuple = ()           # ((band, name, lo, hi), ...) on the national rating scale
     framework_name: str = ""           # what stands in for the Skills Framework
 
@@ -120,6 +122,13 @@ SPECS: dict[str, CountrySpec] = {
                        adoption_source="ABS Characteristics of Australian Business", group_col="major_group", group_len=1,
                        weights=au.build_anzsco_weights, outcomes=au.employment_change, isco_link=_au_isco, industry_mix=_au_mix, ai_points=au.load_cab_ai_use, tasks=au.load_anzsco_tasks,
                        outcome_labels={"emp": "employment change, 2024 to 2025 (ABS Labour Force, yearly averages)", "wage": "average weekly earnings change, May 2023 to May 2025 (ABS)"}),
+    "NZL": CountrySpec(code="NZL", name="New Zealand", adjective="New Zealand", prefix="nz_", code_col="anzsco_code", title_col="anzsco_title", classification="ANZSCO unit group", level_descending=True,
+                       major_names=au.MAJOR_GROUP_NAMES, skill_level_names=au.SKILL_LEVEL_NAMES, industry_names=au.DIVISIONS, industry_label="ANZSIC industry division", currency="NZ$",
+                       wage_label="median weekly earnings of the major occupation group, year to June 2026 (Stats NZ Household Labour Force Survey; Stats NZ publishes no finer breakdown openly)", emp_label="employed people, March 2023 (2023 Census)", wage_period="June 2026",
+                       adoption_source="no New Zealand firm survey has asked about AI use yet; the Australian ABS readings stand in", group_col="major_group", group_len=1, lead_proxy="AUS",
+                       weights=nz.build_anzsco_weights, outcomes=nz.employment_change, outcome_units=nz.outcome_units, isco_link=_au_isco, industry_mix=nz.load_industry_mix, ai_points=nz.load_ai_points, tasks=au.load_anzsco_tasks,
+                       descriptions=nz.load_descriptions, titles=nz.load_titles,
+                       outcome_labels={"emp": "employment change, 2018 to 2023 Censuses (Stats NZ; the 2023 Census changed its occupation coding, so small changes mean little)", "wage": "median weekly earnings change of the major group, June 2025 to June 2026 (Stats NZ HLFS)"}),
     "GBR": CountrySpec(code="GBR", name="United Kingdom", adjective="UK", prefix="uk_", code_col="soc_code", title_col="soc_title", classification="SOC 2020 unit group",
                        major_names=uk.MAJOR_GROUP_NAMES, skill_level_names=uk.SKILL_LEVEL_NAMES, industry_names=uk.SECTIONS, industry_label="SIC industry section", currency="£",
                        wage_label="median gross annual pay, April 2025 (ONS ASHE, provisional)", emp_label="employee jobs, April 2025 (ONS ASHE)", wage_period="April 2025",
@@ -471,6 +480,9 @@ def build_country(spec: CountrySpec, tf, barriers, params, now, tiers, occ, occf
     natw = io.load(f"{p}weights"); xw = io.load(f"{p}onet_crosswalk"); mix = io.load(f"{p}industry_mix"); points = io.load(f"{p}ai_adoption"); onet_w = io.load(f"{p}onet_weights")
     # 3. lead and sector shifts from the country's own survey
     lead = firm_lead(btos_fit, points, spec.min_lead_year)
+    if lead["lead_years"] is None and spec.lead_proxy and others and spec.lead_proxy in others:
+        # no national survey: the proxy country's measured lead stands in, and the page says so
+        lead = {**others[spec.lead_proxy]["lead"], "proxy": spec.lead_proxy, "own_points": int(len(points))}
     ind = industry_offsets(points, btos_fit); io.save(ind, f"{p}adoption_shift_industry")
     grp_shift, nat_shift, onet_shift = occupation_shifts(mix, ind, natw, xw, spec)
     io.save(nat_shift, f"{p}adoption_shift_national"); io.save(onet_shift, f"{p}adoption_shift_onet")
@@ -524,7 +536,7 @@ def build_country(spec: CountrySpec, tf, barriers, params, now, tiers, occ, occf
              "economy": {w: {"observed_automation": float(e.loc[w, "observed_automation"]), "share_weight_observed": float(e.loc[w, "share_weight_observed"]), "done_by_2035": float(e.loc[w, "done_by_2035"]), "share_by_2035": float(e.loc[w, "share_by_2035"]), "quarter_done_year_central": float(e.loc[w, "quarter_done_year_central_from_curve"]) if pd.notna(e.loc[w, "quarter_done_year_central_from_curve"]) else None} for w in ["employment", "wage_value"] if w in e.index},
              "outcomes": out_stats, "skill_levels_national": band_stats, "skill_levels_onet": {"index_rho": float(lv["correlations"].set_index("element_name").loc["All essential skills (average level)", "rho_level_vs_done_2035"]) if "All essential skills (average level)" in set(lv["correlations"].element_name) else None},
              "apprenticeship_routes": route_stats, "national_ratings": rating_stats, "framework_name": spec.framework_name, "decompositions": decomps}
-    ctx = {"spec": spec, "natw": natw, "xw": xw, "fr_nat": fr_nat, "econ": econ, "fc": fc, "params": params_c}
+    ctx = {"spec": spec, "natw": natw, "xw": xw, "fr_nat": fr_nat, "econ": econ, "fc": fc, "params": params_c, "lead": lead}
     return stats, ctx
 
 
