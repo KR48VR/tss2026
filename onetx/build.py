@@ -237,7 +237,12 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
         stats["outcomes"] = oc.outcome_tests(outc, ssoc_curve, load("frontier_ssoc2024"), econ)
         stats["data_as_of"].update({"mom_vacancies": "Sep 2025", "mom_employment_by_occupation": "Jun 2025", "mom_retrenchment": int(outc["retrenchment"].year.max()) if len(outc["retrenchment"]) else None, "mom_wages_change": "Jun 2024 to Jun 2025"})
     except FileNotFoundError as e:
-        stats["outcomes"] = {"error": f"outcome files missing: {e}"}
+        prev_out = (prev_stats or {}).get("outcomes") or {}
+        if prev_out and "error" not in prev_out and (PROCESSED / "sg_outcomes_ssoc2024.parquet").exists():   # MOM's files refused this time: the saved outcome tables and tests stand
+            stats["outcomes"] = prev_out
+            stats["data_as_of"].update({k: v for k, v in ((prev_stats or {}).get("data_as_of") or {}).items() if k.startswith("mom_")})
+        else:
+            stats["outcomes"] = {"error": f"outcome files missing: {e}"}
     e = econ[(econ.scope == "economy")].set_index("weighting")
     stats["singapore_economy"] = {w: {"observed_automation": float(e.loc[w, "observed_automation"]), "share_weight_observed": float(e.loc[w, "share_weight_observed"]), "share_by_2030": float(e.loc[w, "share_by_2030"]), "share_by_2035": float(e.loc[w, "share_by_2035"]), "half_year_central": float(e.loc[w, "half_year_central_from_curve"])} for w in ["employment", "wage_value"]}
     # ---- a second workforce: the United States (BLS OEWS weights, US sector mix, no adoption lead)

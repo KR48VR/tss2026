@@ -162,10 +162,14 @@ def build_shifts(sector_levels: pd.DataFrame) -> dict:
     links = io.load("xw_sfw_role_ssoc2024")
     o2s = io.load("xw_onetsoc_ssoc2024")
     weights = io.load("sg_ssoc2024_weights")
-    d2 = load_lfs_industry_by_major(2025)
     ind = industry_shifts(sector_levels)
-    codes = pd.concat([weights.ssoc_code.astype(str), o2s.ssoc_code.astype(str), links.ssoc_code.astype(str)]).unique()
-    mix = ssoc_industry_mix(d2, roles, links, pd.Series(codes))
+    if (MOM / "LFR2025_SectionD.xlsx").exists() or not io.exists("sg_ssoc2024_industry_mix"):
+        d2 = load_lfs_industry_by_major(2025)
+        codes = pd.concat([weights.ssoc_code.astype(str), o2s.ssoc_code.astype(str), links.ssoc_code.astype(str)]).unique()
+        mix = ssoc_industry_mix(d2, roles, links, pd.Series(codes))
+    else:   # MOM's server refuses the download from this address: the mix built from Table D2 in an earlier run is kept
+        d2 = None
+        mix = io.load("sg_ssoc2024_industry_mix")
     ssoc, onet = occupation_shifts(mix, ind, o2s)
     role = role_shifts(roles, ind)
     return {"industry": ind, "ssoc": ssoc, "onet": onet, "role": role, "mix": mix, "d2": d2}

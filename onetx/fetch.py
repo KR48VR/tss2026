@@ -144,6 +144,18 @@ SOURCES: dict[str, str] = {
     "esdc/oasis/employment_requirements.csv": "https://open.canada.ca/data/dataset/10ce43bd-fb58-4969-806b-4bffebc87bec/resource/33b4ccb4-e725-4618-ab0b-f64c979ab9cc/download/employment-requirements_oasis_2025_v1.0.csv",
     "esdc/oasis/taxonomy.csv": "https://open.canada.ca/data/dataset/10ce43bd-fb58-4969-806b-4bffebc87bec/resource/2a7a17bf-b67c-4fc2-b636-959c7f1d7ae4/download/guide_oasis_2025_v4.0.csv",
     "ifate/apprenticeship_standards.json": "https://www.instituteforapprenticeships.org/api/apprenticeshipstandards",
+    # ---- Germany: the Federal Employment Agency's employment statistics by occupation (KldB 2010, revised 2020) and its
+    # official conversion key from the five-digit KldB to ISCO-08 unit groups; GENESIS tables come through fetch_genesis
+    "ba/beschaeftigte_berufe_202506.xlsx": "https://statistik.arbeitsagentur.de/Statistikdaten/Detail/202506/iiia6/beschaeftigung-sozbe-bo-heft/bo-heft-d-0-202506-xlsx.xlsx?__blob=publicationFile",
+    "ba/beschaeftigte_berufe_202406.xlsx": "https://statistik.arbeitsagentur.de/Statistikdaten/Detail/202406/iiia6/beschaeftigung-sozbe-bo-heft/bo-heft-d-0-202406-xlsx.xlsx?__blob=publicationFile",
+    "ba/kldb2010_isco08_key.xlsx": "https://statistik.arbeitsagentur.de/DE/Statischer-Content/Grundlagen/Klassifikationen/Klassifikation-der-Berufe/KldB2010-Fassung2020/Arbeitsmittel/Generische-Publikationen/Umsteigeschluessel-KLDB2020-ISCO08.xlsx?__blob=publicationFile&v=1",
+    # ---- France: INSEE's correspondence matrices (PCS 2003 to PCS 2020, PCS 2020 to ISCO-08) and the PCS 2003 title list,
+    # whose four-character profession codes the wage tables on Melodi use (PCS-ESE); the Melodi tables come through fetch_melodi
+    "insee/pcs2003_pcs2020_matrix.csv": "https://www.insee.fr/fr/statistiques/fichier/6205275/matrice_P2003_P2020.csv",
+    "insee/pcs2020_isco08_matrix.csv": "https://www.insee.fr/fr/statistiques/fichier/8292892/Matrice_PCS_ISCO_pour_programmes.csv",
+    "insee/pcs2003_liste_n4.xls": "https://www.insee.fr/fr/statistiques/fichier/2400059/pcs2003_liste_n4.xls",
+    "insee/pcs_ese2017_liste.xls": "https://www.insee.fr/fr/statistiques/fichier/2912545/PCS-ESE_2017_Liste.xls",
+    "insee/pcs_ese2017_liste_n2.xls": "https://www.insee.fr/fr/statistiques/fichier/2912545/PCS-ESE_2017_Liste_n2.xls",
 }
 
 
@@ -168,7 +180,7 @@ def fetch_one(rel: str, url: str, force: bool = False, max_age_days: int | None 
         age_days = (time.time() - dest.stat().st_mtime) / 86400.0
         if max_age_days is None or age_days <= max_age_days:
             return dest
-    headers = {**UA, "User-Agent": BROWSER_UA} if rel.split("/")[0] in ("abs", "ons", "ifate", "statcan", "esdc", "statsnz", "eurostat") else UA
+    headers = {**UA, "User-Agent": BROWSER_UA} if rel.split("/")[0] in ("abs", "ons", "ifate", "statcan", "esdc", "statsnz", "eurostat", "ba", "insee") else UA
     req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=600) as r, open(dest, "wb") as fh:
         shutil.copyfileobj(r, fh)
@@ -210,6 +222,14 @@ def fetch_all(force: bool = False) -> dict:
         manifest["kosis"] = fetch_kosis(force)
     except Exception as e:
         manifest["kosis"] = f"failed: {e}"
+    try:
+        manifest["genesis"] = fetch_genesis(force=force)   # only with DESTATIS_USER and DESTATIS_PASSWORD set
+    except Exception as e:
+        manifest["genesis"] = f"failed: {e}"
+    try:
+        manifest["melodi"] = fetch_melodi(force=force)
+    except Exception as e:
+        manifest["melodi"] = f"failed: {e}"
     try:
         parse_microsoft_diffusion_pdf()
         manifest["microsoft_diffusion_countries_csv"] = "parsed"
@@ -497,11 +517,20 @@ def fetch_ssb(force: bool = False) -> dict:
     return out
 
 
+# Census 2023 tables on the Aotearoa Data Explorer (SDMX). The Explorer publishes occupation to the sub-major group
+# (two digits) at most: CEN23_WRK_011 (occupation sub-major group by total personal income, with a median row),
+# CEN23_INC_007 (the same by major group) and CEN23_WRK_008 (occupation major group by ANZSIC06 industry division).
+# The key "2023.9999...." asks for the 2023 Census and the whole of New Zealand ("9999") with every other dimension.
+STATSNZ_ADE_FLOWS = {"CEN23_WRK_011": "2023.9999....", "CEN23_INC_007": "2023.9999....", "CEN23_WRK_008": "2023.9999...."}
+
+
 def fetch_statsnz_ade(key: str | None = None, force: bool = False) -> dict:
-    """The two Census 2023 tables New Zealand lacks openly, from the Aotearoa Data Explorer's SDMX service,
-    which needs a (free, registered) Stats NZ API subscription key: income bands by occupation (CEN23_INC_007)
-    and occupation by industry (CEN23_WRK_008). Pass the key or set STATSNZ_API_KEY. Written as CSV with
-    labels to data/raw/statsnz/ade/; the New Zealand loaders use them when present."""
+    """The Census 2023 tables New Zealand lacks openly, from the Aotearoa Data Explorer's SDMX service, which
+    needs a (free, registered) Stats NZ API subscription key: total personal income by occupation sub-major
+    group (CEN23_WRK_011, with the median) and by major group (CEN23_INC_007), and occupation by industry
+    (CEN23_WRK_008). Pass the key or set STATSNZ_API_KEY. Each pull is keyed to the 2023 Census and the New
+    Zealand total (the unkeyed 'all' runs to tens of millions of cells over 2,500 areas and times out). Written
+    as CSV with labels to data/raw/statsnz/ade/; the New Zealand loaders use them when present."""
     import os
 
     key = key or os.environ.get("STATSNZ_API_KEY")
@@ -510,16 +539,134 @@ def fetch_statsnz_ade(key: str | None = None, force: bool = False) -> dict:
         return {"skipped": "no STATSNZ_API_KEY; New Zealand pay stays at the major-group level and no industry mix is used"}
     dest = RAW / "statsnz" / "ade"
     dest.mkdir(parents=True, exist_ok=True)
-    for flow in ("CEN23_INC_007", "CEN23_WRK_008"):
+    for flow, sdmx_key in STATSNZ_ADE_FLOWS.items():
         f = dest / f"{flow}.csv"
         if f.exists() and not force:
             out[flow] = "cached"
             continue
-        url = f"https://api.data.stats.govt.nz/rest/data/STATSNZ,{flow},1.0/all?dimensionAtObservation=AllDimensions&format=csvfilewithlabels"
+        url = f"https://api.data.stats.govt.nz/rest/data/STATSNZ,{flow},1.0/{sdmx_key}?dimensionAtObservation=AllDimensions&format=csvfilewithlabels"
         req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA, "Ocp-Apim-Subscription-Key": key, "Accept": "text/csv"})
         with urllib.request.urlopen(req, timeout=600) as r:
             f.write_bytes(r.read())
         out[flow] = f"{f.stat().st_size} bytes"
+    return out
+
+
+# ----------------------------------------------------------------------------- Germany: GENESIS-Online (Destatis) with a registered account
+GENESIS = "https://genesis.destatis.de/genesisWS/rest/2020"
+# table -> (file stem, extra query parameters). The earnings survey by five-digit occupation is too big for one call and is
+# pulled one reference year at a time; the ICT-use tables carry the AI indicator nationally (0001 to 2024, 0005 from 2025)
+# and by economic section (0002, 0006); the Microcensus table gives persons in employment by two-digit occupation as a check.
+GENESIS_TABLES = {
+    "52911-0001": ("52911-0001", {"startyear": "2015"}), "52911-0002": ("52911-0002", {"startyear": "2015"}),
+    "52911-0005": ("52911-0005", {}), "52911-0006": ("52911-0006", {}),
+    "12211-0009": ("12211-0009", {}),
+}
+GENESIS_EARNINGS_TABLE = "62361-0030"
+GENESIS_EARNINGS_YEARS = range(2022, 2027)
+
+
+def _genesis_tablefile(name: str, user: str, password: str, dest: Path, **params) -> str:
+    """One GENESIS table as a flat CSV (format=ffcsv). The service answers with a zip whatever `compress` says;
+    a JSON body instead of a zip is an error message (a table too big for dialogue processing, or no data)."""
+    import io as _io
+    import urllib.parse
+
+    body = urllib.parse.urlencode({"name": name, "area": "all", "format": "ffcsv", "language": "en", "compress": "false", **params}).encode()
+    req = urllib.request.Request(f"{GENESIS}/data/tablefile", data=body, headers={"username": user, "password": password, "User-Agent": BROWSER_UA, "Content-Type": "application/x-www-form-urlencoded"})
+    with urllib.request.urlopen(req, timeout=900) as r:
+        raw = r.read()
+    if raw[:2] != b"PK":
+        try:
+            msg = json.loads(raw.decode("utf-8", "replace")).get("Status", {}).get("Content", "")
+        except Exception:
+            msg = raw[:200].decode("utf-8", "replace")
+        raise RuntimeError(f"{name}: {msg}")
+    with zipfile.ZipFile(_io.BytesIO(raw)) as z:
+        dest.write_bytes(z.read(z.namelist()[0]))
+    return f"{dest.stat().st_size} bytes"
+
+
+def fetch_genesis(user: str | None = None, password: str | None = None, force: bool = False) -> dict:
+    """Germany's tables from GENESIS-Online's REST interface, which takes a registered account's email and password
+    as the request headers `username` and `password` (POST only): the earnings survey's median and average gross
+    earnings by five-digit KldB 2010 occupation (62361-0030, one April reference month per year from 2022), the
+    ICT-use survey's indicators nationally and by economic section (52911), and the Microcensus by two-digit
+    occupation (12211-0009). Set DESTATIS_USER and DESTATIS_PASSWORD. Written as flat CSV to data/raw/destatis/."""
+    import os
+
+    user = user or os.environ.get("DESTATIS_USER"); password = password or os.environ.get("DESTATIS_PASSWORD")
+    if not (user and password):
+        return {"skipped": "no DESTATIS_USER / DESTATIS_PASSWORD; Germany is not rebuilt"}
+    dest = RAW / "destatis"
+    dest.mkdir(parents=True, exist_ok=True)
+    out = {}
+    for name, (stem, params) in GENESIS_TABLES.items():
+        f = dest / f"{stem}.csv"
+        if f.exists() and not force:
+            out[stem] = "cached"; continue
+        try:
+            out[stem] = _genesis_tablefile(name, user, password, f, **params)
+        except Exception as e:
+            out[stem] = f"failed: {e}"
+    for y in GENESIS_EARNINGS_YEARS:
+        f = dest / f"{GENESIS_EARNINGS_TABLE}_{y}.csv"
+        if f.exists() and not force:
+            out[f.stem] = "cached"; continue
+        try:
+            out[f.stem] = _genesis_tablefile(GENESIS_EARNINGS_TABLE, user, password, f, startyear=str(y), endyear=str(y))
+        except Exception as e:   # a year not yet published answers with an error: record it and go on
+            out[f.stem] = f"failed: {e}"
+    return out
+
+
+# ----------------------------------------------------------------------------- France: INSEE's Melodi API (no key needed at 30 calls a minute)
+MELODI = "https://api.insee.fr/melodi"
+# file -> (dataset, filters). Each pull keeps the totals over the dimensions the record does not use.
+MELODI_QUERIES = {
+    # private-sector wages by detailed socio-professional category (PCS-ESE, four characters): full-time-equivalent
+    # employees and mean net monthly salary per FTE, both sexes, all ages, all activities and enterprise sizes
+    "insee/melodi_dera_prive.json": ("DS_DERA_PRIVE_ANNUEL", {"ACTIVITY": "_T", "AGE": "_T", "SEX": "_T", "WKTIME": "_T", "NUMBER_EMPL": "_T", "QUANTILE": "_T"}),
+    # the same for the public sector (civil service), all statuses and legal forms
+    "insee/melodi_dera_public.json": ("DS_DERA_PUBLIC_ANNUEL", {"CIVILSERVANT_STATUS": "_T", "PUBLIC_LEGAL_FORM": "_T", "WKTIME": "_T", "SEX": "_T", "AGE": "_T", "QUANTILE": "_T"}),
+    # the labour force survey's employed persons (thousands) by two-digit PCS and economic activity, 15 and over
+    "insee/melodi_eec_pcs_activity.json": ("DD_EEC_ANNUEL", {"EEC_MEASURE": "EMP", "SEX": "_T", "IMMI": "_T", "EMPFORM": "_T", "WKTIME": "_T", "AGE": "Y_GE15"}),
+}
+
+
+def fetch_melodi(key: str | None = None, force: bool = False) -> dict:
+    """France's tables from Melodi: the Déclaration sociale nominative based wage tables by detailed PCS (private and
+    public sectors) and the labour force survey's occupation-by-activity table. Melodi answers without a key at 30
+    calls a minute, which these three pulls stay under, so no key is sent: the portal's application key
+    (INSEE_API_KEY) is for INSEE's other APIs, and Melodi answers 401 when it is sent as a header. Pages are
+    followed; each file holds the dataset's observations as a list."""
+    import time
+    import urllib.parse
+
+    key = None
+    out = {}
+    for rel, (dataset, filters) in MELODI_QUERIES.items():
+        f = RAW / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        if f.exists() and not force:
+            out[rel] = "cached"; continue
+        try:
+            url = f"{MELODI}/data/{dataset}?{urllib.parse.urlencode({**filters, 'maxResult': 10000})}"
+            obs = []
+            for _ in range(50):
+                hdr = {"User-Agent": BROWSER_UA, "Accept": "application/json", **({"X-INSEE-Api-Key-Integration": key} if key else {})}
+                with urllib.request.urlopen(urllib.request.Request(url, headers=hdr), timeout=600) as r:
+                    d = json.load(r)
+                obs += d.get("observations", [])
+                nxt = (d.get("paging") or {}).get("next")
+                if not nxt or nxt == url:
+                    break
+                url = nxt
+                time.sleep(2.5)   # 30 calls a minute without a key
+            f.write_text(json.dumps({"identifier": dataset, "filters": filters, "observations": obs}, ensure_ascii=False))
+            out[rel] = f"{len(obs)} observations"
+        except Exception as e:
+            out[rel] = f"failed: {e}"
     return out
 
 

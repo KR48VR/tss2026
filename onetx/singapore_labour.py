@@ -192,8 +192,17 @@ def load_ows2025_wages(sheet: str = "T4") -> pd.DataFrame:
 
 def load_lfs_employment_submajor(edition: int = 2025) -> pd.DataFrame:
     """Table D8 of the Labour Force in Singapore report: employed residents (thousands) by SSOC 2024
-    sub-major group (2-digit). Combined rows such as '61-62' and 'X1-X5' are kept with their label."""
-    rows = _xl_rows(MOM / f"LFR{edition}_SectionD.xlsx", "D8")
+    sub-major group (2-digit). Combined rows such as '61-62' and 'X1-X5' are kept with their label. When MOM's
+    server refuses the spreadsheet (it answered 403 to every download from the build environment in October
+    2026), the table saved by an earlier build (`sg_lfs_employment_submajor`) stands in."""
+    path = MOM / f"LFR{edition}_SectionD.xlsx"
+    if not path.exists():
+        from . import io as _io
+        if _io.exists("sg_lfs_employment_submajor"):
+            d = _io.load("sg_lfs_employment_submajor")
+            d["submajor_members"] = d.submajor_members.map(lambda s: str(s).split(","))
+            return d
+    rows = _xl_rows(path, "D8")
     out = []
     for r in rows:
         if not r or r[0] is None:

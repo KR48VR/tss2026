@@ -1,7 +1,8 @@
-"""New Zealand: the sixth workforce, on ANZSCO (shared with Australia), from the open Stats NZ files.
+"""New Zealand: the sixth workforce, on ANZSCO (shared with Australia), from the open Stats NZ files and, with a
+Stats NZ API key, the Census 2023 tables on the Aotearoa Data Explorer.
 
-Inputs (`data/raw/statsnz/`), all Stats NZ data republished under CC BY 4.0 by Figure.NZ, which keeps the
-original Stats NZ file beside its tidy CSV:
+Inputs (`data/raw/statsnz/`), the open files being Stats NZ data republished under CC BY 4.0 by Figure.NZ, which
+keeps the original Stats NZ file beside its tidy CSV:
   census2023_occupation_sex_region.xlsx   2023 Census: employed people by ANZSCO unit group (level 4), sex
                                           and region (Stats NZ's own file; the "Total New Zealand" rows are used)
   census_occupation_2013_2018_2023.csv    2013, 2018 and 2023 Censuses: employed people by 6-digit occupation
@@ -9,14 +10,18 @@ original Stats NZ file beside its tidy CSV:
   census_industry_2013_2018_2023.csv      the same by ANZSIC06 industry (employment shares by division)
   hlfs_earnings_by_occupation.csv         Household Labour Force Survey income supplement: median and average
                                           weekly and hourly earnings by ANZSCO major group, June years 2009-2026
-  ade/CEN23_INC_007.csv (optional)        Aotearoa Data Explorer: total personal income (bands) by occupation,
-                                          pulled with a Stats NZ API key (`python -m onetx fetch --statsnz`);
-                                          gives a median per unit group in place of the major-group figure
-  ade/CEN23_WRK_008.csv (optional)        occupation by industry, the mix that would carry industry shifts
+  ade/CEN23_WRK_011.csv (with the key)    Aotearoa Data Explorer (`fetch.fetch_statsnz_ade`, STATSNZ_API_KEY):
+                                          2023 Census total personal income by occupation sub-major group (two
+                                          digits), with a median row per group; the pay weight of every unit group
+                                          in the sub-major group (the Explorer publishes no unit-group income table)
+  ade/CEN23_INC_007.csv (with the key)    the same by major group (a check, and the fallback for a missing group)
+  ade/CEN23_WRK_008.csv (with the key)    2023 Census employed people by occupation major group and ANZSIC06
+                                          industry division: the mix that carries industry shifts and the sector lens
 
 What New Zealand does not have (October 2026): an official reading of the share of firms using AI (Stats NZ's
 first Survey of Business Operations with an AI question reports later in 2026), so its lead on the adoption
-curve is borrowed from Australia's survey and marked as such, and no industry shifts are measured.
+curve is borrowed from Australia's survey and marked as such, and the industry shifts are Australia's readings
+carried through New Zealand's own occupation-by-industry mix.
 """
 from __future__ import annotations
 
@@ -100,17 +105,57 @@ def _band_edges(label: str) -> tuple[float, float] | None:
     return (float(m.group(1).replace(",", "")), float(m.group(2).replace(",", "")))
 
 
+def has_ade() -> bool:
+    """Whether the Data Explorer extracts (pay by sub-major group and the occupation-by-industry mix) are on disk."""
+    return (ADE / "CEN23_WRK_011.csv").exists() and (ADE / "CEN23_WRK_008.csv").exists()
+
+
+def _ade_frame(name: str) -> pd.DataFrame | None:
+    """An Aotearoa Data Explorer extract (CSV with labels) as written by fetch.fetch_statsnz_ade; None when absent."""
+    f = ADE / f"{name}.csv"
+    if not f.exists():
+        return None
+    return pd.read_csv(f, dtype=str)
+
+
+def _ade_totals(d: pd.DataFrame) -> pd.DataFrame:
+    """The all-ages, all-genders rows of a Census extract (code 99 on the age and gender dimensions)."""
+    age = next(c for c in d.columns if c.startswith("CEN23_AGE"))
+    gen = next(c for c in d.columns if c.startswith("CEN23_GEN"))
+    return d[(d[age] == "99") & (d[gen] == "99")]
+
+
+def census_income_medians() -> dict | None:
+    """Median total personal income (NZ$ a year, 2023 Census) per occupation group from the Data Explorer: the
+    Explorer carries a 'Median ($)' row per group in its income tables, so no interpolation of bands is needed.
+    Returns {'submajor': Series by two-digit code, 'major': Series by one-digit code}, or None without the extracts."""
+    sub = _ade_frame("CEN23_WRK_011")
+    maj = _ade_frame("CEN23_INC_007")
+    if sub is None and maj is None:
+        return None
+    out = {}
+    for key, d, occ, width in (("submajor", sub, "CEN23_OCC_003", 2), ("major", maj, "CEN23_OCC_002", 1)):
+        if d is None:
+            continue
+        t = _ade_totals(d)
+        t = t[t["Total personal income"].str.startswith("Median") & t[occ].str.fullmatch(r"\d{%d}" % width)]
+        out[key] = pd.to_numeric(t.set_index(occ).OBS_VALUE, errors="coerce").dropna()
+    return out
+
+
 def census_income_median(ade_file=ADE / "CEN23_INC_007.csv") -> pd.DataFrame | None:
-    """Median total personal income per unit group from the Census income bands (linear interpolation inside
-    the median band), when the Aotearoa Data Explorer extract is present; None otherwise."""
+    """Kept for the band-interpolation route (a unit-group income table, should Stats NZ publish one on the
+    Explorer): median total personal income per unit group from income bands, else None."""
     if not ade_file.exists():
         return None
     d = pd.read_csv(ade_file, dtype=str)
-    occ_col = next((c for c in d.columns if "occupation" in c.lower() and "code" in c.lower()), None) or next(c for c in d.columns if "OCCUPATION" in c.upper())
+    occ_col = next((c for c in d.columns if "occupation" in c.lower() and "code" in c.lower()), None) or next(c for c in d.columns if "OCC" in c.upper())
     inc_col = next(c for c in d.columns if "income" in c.lower() and "code" not in c.lower())
     val_col = next(c for c in d.columns if c.upper() in ("OBS_VALUE", "VALUE"))
     d["code"] = d[occ_col].astype(str).str.strip()
     d = d[d.code.str.fullmatch(r"\d{4}")].copy()
+    if d.empty:
+        return None
     d["value"] = pd.to_numeric(d[val_col], errors="coerce")
     d["edges"] = d[inc_col].map(_band_edges)
     d = d.dropna(subset=["edges", "value"])
@@ -131,9 +176,10 @@ def census_income_median(ade_file=ADE / "CEN23_INC_007.csv") -> pd.DataFrame | N
 
 
 def build_anzsco_weights() -> pd.DataFrame:
-    """Per unit group: 2023 Census employment (thousands), weekly earnings (the Census income median per unit
-    group where the Data Explorer extract exists, else the HLFS median weekly earnings of the major group,
-    June 2026), their product as the wage weight, skill level and group names from the ANZSCO structure."""
+    """Per unit group: 2023 Census employment (thousands), weekly pay (the 2023 Census median total personal
+    income of the unit group's sub-major group divided by 52 where the Data Explorer extract exists, 43 figures;
+    else the HLFS median weekly earnings of the major group, eight figures), their product as the wage weight,
+    skill level and group names from the ANZSCO structure."""
     emp = load_census_employment()
     # titles, group names and skill levels as the Australian build carries them for the same 358 codes
     # (the two countries' Census and labour force codes coincide), else from the ANZSCO structure
@@ -158,12 +204,21 @@ def build_anzsco_weights() -> pd.DataFrame:
     mg = h[h.year == latest].set_index("major_group").median_weekly
     df["wage_weekly"] = df.major_group.map(mg)
     df["wage_source"] = f"hlfs_{latest}_major_group_median_weekly"
-    med = census_income_median()
+    meds = census_income_medians()
+    if meds:
+        for key, width, label in (("major", 1, "census_2023_major_group_median_income"), ("submajor", 2, "census_2023_submajor_group_median_income")):
+            if key not in meds:
+                continue
+            m = meds[key] / 52.0
+            has = df.anzsco_code.str[:width].isin(m.index)
+            df.loc[has, "wage_weekly"] = df.loc[has, "anzsco_code"].str[:width].map(m)
+            df.loc[has, "wage_source"] = label
+    med = census_income_median()   # a unit-group income table, if Stats NZ ever publishes one on the Explorer
     if med is not None and len(med):
         m = med.set_index("anzsco_code").income_median / 52.0
         has = df.anzsco_code.isin(m.index)
         df.loc[has, "wage_weekly"] = df.loc[has, "anzsco_code"].map(m)
-        df.loc[has, "wage_source"] = "census_2023_income_median"
+        df.loc[has, "wage_source"] = "census_2023_unit_group_median_income"
     df["wage_value"] = df.employment_thousands * df.wage_weekly
     df["employment_method"] = "census_2023"
     df["edition"] = 2023
@@ -213,17 +268,14 @@ def load_ai_points() -> pd.DataFrame:
 
 
 def load_industry_mix() -> pd.DataFrame:
-    """Occupation (major group) by industry (division) when the Data Explorer extract is present; otherwise an
-    empty mix, so no industry shifts are applied."""
-    f = ADE / "CEN23_WRK_008.csv"
-    if not f.exists():
+    """Employed people by occupation major group and ANZSIC06 industry division (2023 Census, all ages and
+    genders) when the Data Explorer extract is present; otherwise an empty mix, so no industry shifts are applied."""
+    d = _ade_frame("CEN23_WRK_008")
+    if d is None:
         return pd.DataFrame(columns=["major_group", "industry", "employed"])
-    d = pd.read_csv(f, dtype=str)
-    occ_col = next(c for c in d.columns if "occupation" in c.lower() and "code" in c.lower())
-    ind_col = next(c for c in d.columns if "industry" in c.lower() and "code" in c.lower())
-    val_col = next(c for c in d.columns if c.upper() in ("OBS_VALUE", "VALUE"))
-    d["major_group"] = d[occ_col].astype(str).str[0]
-    d["industry"] = d[ind_col].astype(str).str[0]
-    d["employed"] = pd.to_numeric(d[val_col], errors="coerce")
-    d = d[d.major_group.str.fullmatch(r"\d") & d.industry.str.fullmatch(r"[A-S]")]
-    return d.groupby(["major_group", "industry"]).employed.sum().reset_index()
+    t = _ade_totals(d).copy()
+    t["major_group"] = t.CEN23_OCC_002.astype(str)
+    t["industry"] = t.CEN23_IND_003.astype(str)
+    t["employed"] = pd.to_numeric(t.OBS_VALUE, errors="coerce")
+    t = t[t.major_group.str.fullmatch(r"[1-8]") & t.industry.str.fullmatch(r"[A-S]")]
+    return t.groupby(["major_group", "industry"]).employed.sum().reset_index()

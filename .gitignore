@@ -36,6 +36,8 @@ site/dnk_tasks.json
 site/fin_tasks.json
 site/swe_tasks.json
 site/kor_tasks.json
+site/deu_tasks.json
+site/fra_tasks.json
 tools/qa/out/
 tools/qa/node_modules/
 tools/qa/r21/

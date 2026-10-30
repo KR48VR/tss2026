@@ -15,7 +15,7 @@ async def main():
             await page.goto("http://127.0.0.1:8765/index.html", wait_until="load"); await page.wait_for_timeout(800)
             await page.evaluate("localStorage.setItem('cmpa','NOR'); localStorage.setItem('cmpb','USA');"); await page.reload(wait_until="load"); await page.wait_for_timeout(800)
             await page.click("nav.tabs button[data-view=leaders]"); await page.wait_for_timeout(300)
-            for k in (["SGP","USA","CAN","AUS","GBR","NOR","JPN","KOR","NZL"] if name=="desktop" else ["SGP","NOR","KOR"]):
+            for k in (["SGP","USA","CAN","AUS","GBR","NOR","JPN","KOR","NZL","DEU","FRA"] if name=="desktop" else ["SGP","NOR","KOR"]):
                 await page.click(f".cty button[data-cty={k}]"); await page.wait_for_timeout(400)
                 breath = await T(page, "#x-breath"); i = breath.find("firms"); print(f"[{name}] {k} breath: ...{breath[max(0,breath.find(' firms')-40):breath.find(' firms')+260]}")
                 tiles = await page.evaluate("Array.from(document.querySelectorAll('#x-tiles .tile')).map(t=>t.textContent.replace(/\\s+/g,' ').trim()).filter(t=>/firms/i.test(t))"); print(f"[{name}] {k} tile: {tiles[0][:230] if tiles else 'NONE'}")

@@ -228,7 +228,8 @@ def test_new_zealand_weights_share_anzsco_with_australia():
     assert w.skill_level.notna().all() and w.wage_weekly.gt(0).all()
     ch = nz.employment_change()
     assert {"emp_2018", "emp_2023", "emp_change_pct", "wage_change_pct"} <= set(ch.columns)
-    assert nz.load_ai_points().empty and nz.load_industry_mix().empty   # no survey, no key: documented gaps
+    assert nz.load_ai_points().empty   # no survey: a documented gap
+    assert nz.has_ade() == (not nz.load_industry_mix().empty)   # the mix exists only with the Data Explorer extracts
 
 
 def test_proxy_lead_stands_in_when_a_country_has_no_survey():
@@ -284,7 +285,7 @@ def test_five_office_loaders_give_consistent_weights_and_links():
     summing to one per ISCO code, AI readings with the national series, and the section parser."""
     from onetx import eu_labour as el
     import pytest
-    if not (el.SCB / "yreg50bas_employees_by_ssyk.json").exists():
+    if not (el.SCB / "yreg50bas_employees_by_ssyk.json").exists() or not (el.SCB / "ssyk2012_isco08_key.csv").exists():
         pytest.skip("office files not present")
     assert el.sections_from_label("manufacturing (SNI 10–33)") == ["C"] and el.sections_from_label("GHI") == ["G", "H", "I"] and el.sections_from_label("L, N, S951 Real estate") == ["L", "N", "S"]
     for pre, n_lo, n_hi in (("se", 400, 440), ("fi", 400, 430), ("dk", 370, 430), ("nl", 110, 116), ("ie", 300, 330)):
@@ -356,6 +357,9 @@ def test_korea_loaders_from_kosis_downloads():
     pay reaches the 2024 classification through the 7th-to-8th link, and the firm survey gives a yearly series."""
     from onetx import kr_labour as kr
     from onetx import ai_signals as ai
+    import pytest
+    if not (kr.KOSIS / kr.EMPLOYMENT_TBL / f"{kr.EMPLOYMENT_TBL}.csv").exists():
+        pytest.skip("KOSIS downloads not present")
     w = kr.build_weights()
     assert 150 <= len(w) <= 170 and (w.employment_thousands > 0).all() and w.wage_monthly.notna().all()
     assert 26000 <= w.employment_thousands.sum() <= 31000          # about 29 million employed
@@ -377,9 +381,87 @@ def test_korea_loaders_from_kosis_downloads():
 def test_change_tables_name_their_employment_years():
     """The outcome test reads emp_<year_from> and emp_<year_to> from a country's change table, so the year
     labels must match the employment columns even when the pay years differ (Korea's do)."""
-    from onetx import kr_labour as kr, jp_labour as jp
-    for mod in (kr, jp):
+    from onetx import kr_labour as kr, jp_labour as jp, de_labour as de
+    import pytest
+    for mod, probe in ((kr, kr.KOSIS / kr.EMPLOYMENT_TBL / f"{kr.EMPLOYMENT_TBL}.csv"), (jp, jp.ESTAT / "wage2024_t1_occupation_small.xlsx"), (de, de.BA / "beschaeftigte_berufe_202506.xlsx")):
+        if not probe.exists():
+            continue
         d = mod.employment_change()
         yf, yt = int(d.year_from.iloc[0]), int(d.year_to.iloc[0])
         assert f"emp_{yf}" in d.columns and f"emp_{yt}" in d.columns, mod.__name__
         assert "emp_change_pct" in d.columns and "wage_change_pct" in d.columns
+
+
+# ---------------------------------------------------------------------------- Germany (GENESIS and the employment agency) and France (Melodi)
+def test_germany_loaders_from_genesis_and_the_employment_agency():
+    """Germany: five-digit employees from the agency's requirement-level columns, pay from GENESIS at the same codes,
+    the official key with weights summing to one per ISCO group, the AI series with 2025 from the revised table,
+    and the derived occupation-by-industry mix summing to the employees."""
+    from onetx import de_labour as de
+    import pytest
+    if not (de.BA / "beschaeftigte_berufe_202506.xlsx").exists() or not (de.DESTATIS / "62361-0030_2025.csv").exists():
+        pytest.skip("German files not present")
+    e = de.load_employment()
+    assert e.kldb_code.str.fullmatch(r"\d{5}").all() and 33000000 < e.employees.sum() < 37000000   # 34.9 million employees subject to social insurance
+    assert set(e.level) == {1, 2, 3, 4} and (e.kldb_code.str[-1].astype(int) == e.level).all()
+    w = de.build_weights()
+    assert 1250 <= len(w) <= 1320 and w.wage_monthly.gt(1500).all() and w.skill_level.between(1, 4).all()
+    assert (w.wage_source == "earnings_survey_median_monthly_5digit").mean() > 0.8
+    assert w.kldb_title.notna().all() and w.submajor_name.notna().all()
+    link = de.load_isco_link(set(w.kldb_code))
+    assert set(link.nat_code) == set(w.kldb_code) and (link.groupby("isco_code").weight.sum() - 1).abs().lt(1e-6).all()
+    pts = de.load_ai_points(); nat = pts[pts.group_type == "all"].sort_values("date")
+    assert list(nat.period) == ["2021", "2023", "2024", "2025"] and nat.pct.iloc[-1] > nat.pct.iloc[0]
+    assert {"C", "J", "M"} <= set(pts[pts.group_type == "industry"].industry)
+    mix = de.load_industry_mix()
+    assert abs(mix.employed.sum() - e.employees.sum()) < 1.0 and mix.group2.str.len().eq(2).all()
+    ch = de.employment_change()
+    assert ch.emp_change_pct.notna().sum() > 1200 and ch.wage_change_pct.notna().sum() > 1000
+    assert f"emp_{int(ch.year_from.iloc[0])}" in ch.columns and f"emp_{int(ch.year_to.iloc[0])}" in ch.columns
+
+
+def test_france_loaders_from_melodi():
+    """France: full-time-equivalent employees and net pay by detailed PCS from the private and public wage tables,
+    every code linked to ISCO through the two matrices, the one-digit mix from the labour force survey, and the
+    outcome table kept in shape with no change (one year on Melodi)."""
+    from onetx import fr_labour as fr
+    import pytest
+    if not (fr.INSEE / "melodi_dera_prive.json").exists():
+        pytest.skip("Melodi files not present")
+    w = fr.build_weights()
+    assert 380 <= len(w) <= 440 and w.pcs_code.str.fullmatch(r"\d{3}[A-Z]").all()
+    assert 20000 < w.employment_thousands.sum() < 26000 and w.wage_monthly.gt(1000).all() and w.pcs_title.notna().all()
+    assert w.skill_level.between(1, 4).all() and set(w.major_group) <= set("123456")
+    link = fr.load_isco_link(set(w.pcs_code))
+    assert set(link.nat_code) == set(w.pcs_code) and (link.groupby("isco_code").weight.sum() - 1).abs().lt(1e-6).all()
+    pi = fr.pcs_to_isco()
+    assert (pi.groupby("pcs_code").p.sum() - 1).abs().lt(1e-6).all()
+    mix = fr.load_industry_mix()
+    assert set(mix.major_group) == set("123456") and {"C", "M", "Q"} <= set(mix.industry) and mix.employed.sum() > 25000
+    pts = fr.load_ai_points(); nat = pts[pts.group_type == "all"]
+    assert len(nat) >= 4 and nat.pct.between(0, 100).all()
+    ch = fr.employment_change()
+    assert ch.emp_change_pct.isna().all() and ch.wage_change_pct.isna().all() and f"emp_{int(ch.year_to.iloc[0])}" in ch.columns
+    assert cn.SPECS["FRA"].survey_firms == "10plus" and cn.SPECS["DEU"].survey_firms == "10plus"
+
+
+def test_new_zealand_data_explorer_extracts_give_pay_and_a_mix():
+    """With the Stats NZ key: a Census median income per sub-major group becomes the pay weight of its unit groups,
+    and the occupation-by-industry extract gives a mix on the eight major groups and the ANZSIC divisions."""
+    from onetx import nz_labour as nz
+    import pytest
+    if not nz.has_ade():
+        pytest.skip("Data Explorer extracts not present")
+    meds = nz.census_income_medians()
+    assert len(meds["submajor"]) >= 40 and len(meds["major"]) == 8 and meds["major"].gt(10000).all()
+    w = nz.build_anzsco_weights()
+    assert (w.wage_source == "census_2023_submajor_group_median_income").all()
+    mix = nz.load_industry_mix()
+    assert set(mix.major_group) == set("12345678") and set(mix.industry) == set("ABCDEFGHIJKLMNOPQRS") and abs(mix.employed.sum() - 2622732) < 5000
+    assert cn.SPECS["NZL"].depth == "medium"
+
+
+def test_proxy_country_industry_shifts_are_carried_when_the_classification_matches(tmp_path, monkeypatch):
+    """New Zealand has no survey but shares ANZSIC with Australia, whose industry shifts stand in for the sector lens."""
+    assert cn.SPECS["NZL"].industry_names is cn.SPECS["AUS"].industry_names
+    assert cn.SPECS["NZL"].lead_proxy == "AUS" and cn.SPECS["DEU"].lead_proxy is None
