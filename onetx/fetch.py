@@ -66,6 +66,8 @@ SOURCES: dict[str, str] = {
     # US Bureau of Labor Statistics, Occupational Employment and Wage Statistics (May 2024 and May 2023):
     # employment and wages by detailed occupation (national) and by NAICS sector (the in4 bundle; only its
     # sector file is used). The second workforce the map can be weighted by.
+    "bls/oesm25nat.zip": "https://www.bls.gov/oes/special-requests/oesm25nat.zip",   # May 2025; the loaders use the latest edition on disk (BLS refuses downloads from cloud addresses: fetch these two in a browser if the fetch fails)
+    "bls/oesm25in4.zip": "https://www.bls.gov/oes/special-requests/oesm25in4.zip",
     "bls/oesm24nat.zip": "https://www.bls.gov/oes/special-requests/oesm24nat.zip",
     "bls/oesm23nat.zip": "https://www.bls.gov/oes/special-requests/oesm23nat.zip",
     "bls/oesm24in4.zip": "https://www.bls.gov/oes/special-requests/oesm24in4.zip",
@@ -100,6 +102,8 @@ SOURCES: dict[str, str] = {
     "abs/anzsco2022_index.xlsx": "https://www.abs.gov.au/statistics/classifications/anzsco-australian-and-new-zealand-standard-classification-occupations/2022/anzsco%202022%20index%20of%20principal%20titles%2C%20alternative%20titles%20and%20specialisations%20062023.xlsx",
     "abs/anzsco2022_correspondence.xlsx": "https://www.abs.gov.au/statistics/classifications/anzsco-australian-and-new-zealand-standard-classification-occupations/2022/anzsco%202022%20correspondence%20tables.xlsx",
     "ons/bics/bicswave165.xlsx": "https://www.ons.gov.uk/file?uri=/economy/economicoutputandproductivity/output/datasets/businessinsightsandimpactontheukeconomy/bicswave165/bicswave1652final.xlsx",
+    "ons/ashe/ashetable142026provisional.zip": "https://www.ons.gov.uk/file?uri=/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/occupation4digitsoc2010ashetable14/2026provisional/ashetable142026provisional.zip",
+    "ons/ashe/ashetable142025revised.zip": "https://www.ons.gov.uk/file?uri=/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/occupation4digitsoc2010ashetable14/2025revised/ashetable142025revised.zip",
     "ons/ashe/ashetable142025provisional.zip": "https://www.ons.gov.uk/file?uri=/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/occupation4digitsoc2010ashetable14/2025provisional/ashetable142025provisional.zip",
     "ons/ashe/ashetable142024revised.zip": "https://www.ons.gov.uk/file?uri=/employmentandlabourmarket/peopleinwork/earningsandworkinghours/datasets/occupation4digitsoc2010ashetable14/2024revised/ashetable142024revised.zip",
     "ons/soc2020_coding_index.xlsx": "https://www.ons.gov.uk/file?uri=/methodology/classificationsandstandards/standardoccupationalclassificationsoc/soc2020/soc2020volume2codingrulesandconventions/soc2020volume2thecodingindexexcel20260827v2.xlsx",
@@ -202,6 +206,10 @@ def fetch_all(force: bool = False) -> dict:
         manifest["statsnz_ade"] = fetch_statsnz_ade(force=force)   # only with STATSNZ_API_KEY set; otherwise records why it was skipped
     except Exception as e:
         manifest["statsnz_ade"] = f"failed: {e}"
+    try:
+        manifest["kosis"] = fetch_kosis(force)
+    except Exception as e:
+        manifest["kosis"] = f"failed: {e}"
     try:
         parse_microsoft_diffusion_pdf()
         manifest["microsoft_diffusion_countries_csv"] = "parsed"
@@ -436,6 +444,8 @@ ESTAT_FILES = {
     # e-Stat file ids (fileKind 4 = Excel for the wage survey tables, 1 = CSV for the communications survey)
     "estat/wage2024_t1_occupation_small.xlsx": ("000040247854", 4),
     "estat/wage2024_t20_occupation_major_industry.xlsx": ("000040247875", 4),
+    "estat/wage2025_t1_occupation_small.xlsx": ("000040421116", 4),          # 令和7年 (2025) edition, released 2026-03-24
+    "estat/wage2025_t20_occupation_major_industry.xlsx": ("000040421137", 4),
     "estat/mic_iot_ai_adoption_2018.csv": ("000031831159", 1), "estat/mic_iot_ai_adoption_2019.csv": ("000031951199", 1), "estat/mic_iot_ai_adoption_2020.csv": ("000032097896", 1),
     "estat/mic_iot_ai_adoption_2021.csv": ("000032203902", 1), "estat/mic_iot_ai_adoption_2022.csv": ("000040056827", 1), "estat/mic_iot_ai_adoption_2023.csv": ("000040185424", 1),
     "estat/mic_iot_ai_adoption_2024.csv": ("000040278570", 1), "estat/mic_iot_ai_adoption_2025.csv": ("000040458767", 1),
@@ -557,4 +567,117 @@ def fetch_statcan_api(force: bool = False) -> dict:
     out["income"] = pull(98100586, [f"1.1.1.1.{w}.1.{o}.{s}.0.0" for w in (1, fyft) for o in mem(98100586, 6) for s in (2, 3)], "income")
     out["vacancies"] = pull(14100444, [f"1.{o}.{s}.0.0.0.0.0.0.0" for o in mem(14100444, 1) for s in (1, 2)], "vacancies", latest=9)
     out["occ_industry"] = pull(98100594, [f"1.{i}.1.1.1.{o}.2.0.0.0" for i in mem(98100594, 1) for o in mem(98100594, 5)], "occ_industry")
+    return out
+
+
+# ----------------------------------------------------------------------------- South Korea: KOSIS tables without an API key
+# KOSIS membership (and so an API key) needs a Korean mobile phone, but any visitor can download a table from its page.
+# Each entry: table id -> (organisation id, classification levels to tick per tree, how many latest periods, note).
+# levels: {tree number: [levels]} ticks every node at those levels in that classification tree; None keeps the page's default.
+KOSIS_TABLES = {
+    "DT_1ES3B32J": ("101", {"1": [3]}, 5, "Local Area Labour Force Survey: employed by three-digit occupation, half-yearly"),
+    "DT_1ES3B33J": ("101", None, 1, "Local Area Labour Force Survey: employed by industry section and occupation major group"),
+    "DT_118N_PAYM41": ("118", {"1": [3], "2": [1]}, 2, "Survey on Labour Conditions by Employment Type: workers, wages and hours by three-digit occupation and sex, yearly"),
+    "DT_1EP1237_1": ("101", {"1": [1, 2]}, None, "Survey of Business Activities: fourth-industrial-revolution technologies by industry, 2017 to 2022"),
+    "DT_1EP1337_1": ("101", {"1": [1, 2]}, None, "Survey of Business Activities: the same, 2023 onward"),
+}
+
+
+async def _kosis_download(org: str, tbl: str, out_csv: Path, levels: dict | None, n_periods: int | None, log=print) -> dict:
+    """Open the table page in a headless browser, tick the classification levels and periods in its query settings
+    the way a visitor does, run the search, then save the page's own CSV download (with codes). The page's
+    classification tree (Korean and English titles per code) is saved beside the CSV."""
+    import json as _json
+    from playwright.async_api import async_playwright
+    async with async_playwright() as p:
+        b = await p.chromium.launch(headless=True, executable_path=CHROME_PATH if Path(CHROME_PATH).exists() else None, args=["--no-sandbox"])
+        ctx = await b.new_context(viewport={"width": 1500, "height": 1000}, accept_downloads=True); page = await ctx.new_page()
+        searches, tree = [], {}
+        async def on_resp(r):
+            if r.url.endswith("/statHtml/html.do"): searches.append(r.url)
+            if r.url.endswith("/statHtml/treeInfo.do") and "tree" not in tree: tree["tree"] = await r.text()
+        page.on("response", on_resp)
+        for attempt in range(4):
+            try:
+                await page.goto(f"https://kosis.kr/statHtml/statHtml.do?orgId={org}&tblId={tbl}", wait_until="load", timeout=120000); break
+            except Exception as e:
+                log(f"{tbl}: page load failed ({str(e)[:60]}), retry {attempt + 1}"); await page.wait_for_timeout(4000 * (attempt + 1))
+                if attempt == 3: raise
+        fr = None
+        for _ in range(90):
+            fr = next((f for f in page.frames if f.name == "iframe_centerMenu"), None)
+            if fr is not None and searches:
+                try:
+                    if await fr.evaluate("typeof fn_search==='function' && typeof $!=='undefined' && !!$.ui.fancytree.getTree('#fancytree_1')"): break
+                except Exception: pass
+            await page.wait_for_timeout(1000)
+        else:
+            raise RuntimeError(f"{tbl}: the table page did not finish loading")
+        await page.wait_for_timeout(2000)
+        if levels:
+            for i, keep in levels.items():
+                await fr.evaluate("([i,keep])=>{ const t=$.ui.fancytree.getTree('#fancytree_'+i); t.visit(x=>{ const l=x.data.lvl||x.getLevel(); x.setSelected(keep.includes(l)); }); }", [int(i), keep])
+        n0 = len(searches)
+        ttype = await fr.evaluate("(typeof timeTreeList!=='undefined' && timeTreeList.length) ? timeTreeList[0] : 'H'")
+        avail = await fr.evaluate("(tt)=>{ const t=$.ui.fancytree.getTree('#timePopList'+tt); const a=[]; t.visit(x=>a.push(x.data.prdDe||x.key)); return a; }", ttype)
+        want = avail if n_periods is None else avail[:n_periods]
+        await fr.evaluate("([want,tt])=>{ const t=$.ui.fancytree.getTree('#timePopList'+tt); t.visit(x=>x.setSelected(want.includes(x.data.prdDe||x.key))); }", [want, ttype])
+        await fr.evaluate("fn_searchPopPrd('prd')"); await page.wait_for_timeout(1500)   # the panel's own 'apply periods' action, which also runs the search
+        if len(searches) == n0:
+            await fr.evaluate("fn_search()")
+        for _ in range(240):
+            if len(searches) > n0: break
+            await page.wait_for_timeout(500)
+        await page.wait_for_timeout(3000)
+        await fr.evaluate("popupControl('pop_downgrid','show','modal')"); await page.wait_for_timeout(800)
+        await fr.evaluate("(()=>{ const c=document.getElementById('csvradio'); if(c){ c.checked=true; if(typeof fn_clickFileType==='function') fn_clickFileType(); } const k=document.getElementById('codeYn'); if(k) k.checked=true; const s=document.getElementById('csvType'); if(s){ for(const o of s.options){ if(/utf/i.test(o.textContent)) s.value=o.value; } } })()")
+        async with page.expect_download(timeout=240000) as dl:
+            await fr.evaluate("fn_downGridSubmit()")
+        d = await dl.value; out_csv.parent.mkdir(parents=True, exist_ok=True); await d.save_as(out_csv)
+        await b.close()
+    info = {"file": str(out_csv), "periods": want}
+    if tree.get("tree"):
+        i = tree["tree"].find('var source = [{"title":'); j = tree["tree"].find("];", i)
+        try:
+            src = _json.loads(tree["tree"][i + len("var source = "):j + 1])
+            flat = []
+            def walk(ns):
+                for n in ns:
+                    flat.append({"code": n["itmId"], "lvl": n.get("lvl"), "ko": n["title"], "en": n.get("scrEng", "")}); walk(n.get("children") or [])
+            walk(src)
+            if flat and flat[0].get("code") == "0":   # the first classification tree is the occupation (or industry) tree
+                (out_csv.parent / "classification_titles.json").write_text(_json.dumps(flat, ensure_ascii=False), encoding="utf-8")
+                info["classification_titles"] = len(flat)
+        except Exception as e:
+            info["classification_titles"] = f"not parsed: {e}"
+    return info
+
+
+CHROME_PATH = "/opt/pw-browsers/chromium-1243/chrome-linux64/chrome"
+
+
+def fetch_kosis_table(org: str, tbl: str, out_dir: Path | None = None, levels: dict | None = None, n_periods: int | None = None) -> dict:
+    """Download one KOSIS table through its page (see _kosis_download). Returns what was saved."""
+    import asyncio
+    out_dir = out_dir or (RAW / "kosis" / tbl)
+    return asyncio.run(_kosis_download(org, tbl, out_dir / f"{tbl}.csv", levels, n_periods))
+
+
+def fetch_kosis(force: bool = False) -> dict:
+    """South Korea's tables, one by one with a pause between them (the site flags bursts as abnormal use)."""
+    import time
+    out = {}
+    for tbl, (org, levels, n_periods, note) in KOSIS_TABLES.items():
+        f = RAW / "kosis" / tbl / f"{tbl}.csv"
+        if f.exists() and not force:
+            out[tbl] = "cached"; continue
+        try:
+            out[tbl] = fetch_kosis_table(org, tbl, levels=levels, n_periods=n_periods)
+            if tbl == "DT_1ES3B32J":   # the occupation tree with English titles feeds the KSCO titles
+                src = f.parent / "classification_titles.json"
+                if src.exists():
+                    src.replace(f.parent / "ksco7_titles.json")
+            time.sleep(5)
+        except Exception as e:
+            out[tbl] = f"failed: {e}"
     return out

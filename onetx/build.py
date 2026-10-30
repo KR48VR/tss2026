@@ -318,7 +318,7 @@ def build_us(tf, barriers, params, now, tiers, sector_levels, occ, occf, o2s, ss
     decomp = {w: ue.decomposition(econ_sg, econ_us, econ_x, econ_y, w) for w in ["wage_value", "employment"]}
     # rung five for the US: OEWS employment and wage change between the two Mays against exposure
     try:
-        change = ul.employment_change(2023, 2024); save(change, "us_outcomes_soc")
+        change = ul.employment_change(); save(change, "us_outcomes_soc")   # the latest OEWS edition on disk against the one before it
         us_out = ue.outcome_tests(change, us_w, occ_curve_us, occf)
     except FileNotFoundError as e:
         us_out = {"error": str(e)}

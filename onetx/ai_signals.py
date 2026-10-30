@@ -412,6 +412,7 @@ def load_btos_sector_adoption() -> pd.DataFrame:
 SIZE_BANDS = {"A": "1 to 4 employees", "B": "5 to 9 employees", "C": "10 to 19 employees", "D": "20 to 49 employees", "E": "50 to 99 employees", "F": "100 to 249 employees", "G": "250 or more employees"}
 COMPARATORS = {"all": {"bands": "ABCDEFG", "label": "all US firms"},
                "10plus": {"bands": "CDEFG", "label": "US firms with 10 or more employees"},
+               "50plus": {"bands": "EFG", "label": "US firms with 50 or more employees"},
                "100plus": {"bands": "FG", "label": "US firms with 100 or more employees"}}
 
 
@@ -449,12 +450,12 @@ def btos_comparators(fit: dict, size_series: pd.DataFrame) -> dict:
         return {**f, "comparator": key, "label": COMPARATORS[key]["label"], "bands": COMPARATORS[key]["bands"], "fallback": fallback, **extra}
     out = {"all": entry("all", fit, False)}
     if size_series is None or size_series.empty:
-        for key in ("10plus", "100plus"):
+        for key in [k for k in COMPARATORS if k != "all"]:
             out[key] = entry(key, fit, True)
         return out
     K, a, b, c = fit["saturation"], fit["intercept_old_wording"], fit["growth_per_year"], fit["wording_step"]
     firms = us_firms_by_size()
-    for key in ("10plus", "100plus"):
+    for key in [k for k in COMPARATORS if k != "all"]:
         bands = list(COMPARATORS[key]["bands"])
         d = size_series[size_series.empsize.isin(bands)].copy()
         if d.empty or d.empsize.nunique() < len(bands):

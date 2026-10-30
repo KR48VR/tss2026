@@ -132,27 +132,37 @@ def load_soc_to_isco() -> pd.DataFrame:
 
 
 # ----------------------------------------------------------------------------- jobs and pay
+def _ashe_years() -> list:
+    """The ASHE editions on disk (table 14.7a), oldest to newest."""
+    return sorted({int(m.group(1)) for p in (ONS / "ashe").rglob("*Table 14.7a*Annual pay - Gross *.xlsx") for m in [re.search(r"Gross (\d{4})\.xlsx$", p.name)] if m})
+
+
+ASHE_YEAR = (_ashe_years() or [2025])[-1]   # the latest edition on disk is the weights year; the one before it gives the outcome change
+
+
 def _ashe_file(year: int) -> Path:
-    hits = sorted((ONS / "ashe").rglob(f"*Table 14.7a*Annual pay - Gross {year}.xlsx"))
+    """The table 14.7a file for `year`; the revised edition is preferred over the provisional one when both
+    are on disk (the ONS reissues each April as revised with the next year's provisional)."""
+    hits = sorted((ONS / "ashe").rglob(f"*Table 14.7a*Annual pay - Gross {year}.xlsx"), key=lambda p: (0 if "revised" in str(p).lower() else 1, str(p)))
     if not hits:
         raise FileNotFoundError(f"ASHE table 14.7a for {year} under {ONS / 'ashe'}")
     return hits[0]
 
 
-def load_ashe_occupation(year: int = 2025) -> pd.DataFrame:
+def load_ashe_occupation(year: int = ASHE_YEAR) -> pd.DataFrame:
     """Employee jobs (thousands), median and mean gross annual pay (GBP) by SOC 2020 unit group, all
     employees. 'x' (suppressed) becomes missing."""
     rows = _rows(_ashe_file(year), "All", 6)
     out = []
     for r in rows:
-        code = str(r[1]).strip() if r[1] is not None else ""
+        code = str(r[1]).strip().lstrip("'’") if r[1] is not None else ""   # the 2026 tables prefix codes with an apostrophe
         if not re.fullmatch(r"\d{4}", code):
             continue
         out.append({"soc_code": code, "ashe_title": str(r[0]).strip(), "jobs_thousands": _num(r[2]), "median_annual": _num(r[3]), "mean_annual": _num(r[5]), "year": year})
     return pd.DataFrame(out)
 
 
-def build_soc_weights(year: int = 2025) -> pd.DataFrame:
+def build_soc_weights(year: int = ASHE_YEAR) -> pd.DataFrame:
     """Per SOC 2020 unit group: employee jobs (ASHE, April of the year), median gross annual pay (ASHE;
     the mean, then the minor, sub-major or major group median where suppressed), their product as the
     wage weight, skill level and group names."""
@@ -183,9 +193,9 @@ def build_soc_weights(year: int = 2025) -> pd.DataFrame:
     return df.drop(columns=["minor", "median_annual", "mean_annual"]).reset_index(drop=True)
 
 
-def employment_change(year_from: int = 2024, year_to: int = 2025) -> pd.DataFrame:
-    """Rung five for the UK: change in employee jobs and in median gross annual pay between the two ASHE
-    editions (April 2024 revised, April 2025 provisional), per unit group."""
+def employment_change(year_from: int = ASHE_YEAR - 1, year_to: int = ASHE_YEAR) -> pd.DataFrame:
+    """Rung five for the UK: change in employee jobs and in median gross annual pay between the two latest
+    ASHE editions (the earlier year's revised tables, the latest year's provisional ones), per unit group."""
     a0, a1 = load_ashe_occupation(year_from).set_index("soc_code"), load_ashe_occupation(year_to).set_index("soc_code")
     codes = sorted(set(a0.index) | set(a1.index))
     df = pd.DataFrame({"soc_code": codes})

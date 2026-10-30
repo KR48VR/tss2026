@@ -349,3 +349,25 @@ def test_size_matched_lead_is_smaller_when_the_comparator_sits_higher():
     pts = pd.DataFrame({"group_type": ["all"], "date": [2025.5], "pct": [30.0], "period": ["2025"]})
     a = cn.firm_lead(fit, pts)["lead_years"]; h = cn.firm_lead(higher, pts)["lead_years"]
     assert h < a and abs((a - h) - 0.5 / 0.5) < 1e-6
+
+
+def test_korea_loaders_from_kosis_downloads():
+    """South Korea: the KOSIS downloads parse, every three-digit code links to ISCO through the official tables,
+    pay reaches the 2024 classification through the 7th-to-8th link, and the firm survey gives a yearly series."""
+    from onetx import kr_labour as kr
+    w = kr.build_weights()
+    assert 150 <= len(w) <= 170 and (w.employment_thousands > 0).all() and w.wage_monthly.notna().all()
+    assert 26000 <= w.employment_thousands.sum() <= 31000          # about 29 million employed
+    assert w.ksco_code.str.len().eq(3).all() and w.ksco_title.notna().all()
+    link = kr.load_isco_link(set(w.ksco_code))
+    assert set(link.nat_code) == set(w.ksco_code)
+    assert abs(link.groupby("isco_code").weight.sum() - 1.0).max() < 1e-9
+    pts = kr.load_ai_points()
+    nat = pts[pts.group_type == "all"].sort_values("date")
+    assert len(nat) >= 8 and nat.pct.is_monotonic_increasing and 5 < nat.pct.iloc[-1] < 20
+    assert set(pts[pts.group_type == "industry"].industry) >= {"C", "J", "K"}
+    mix = kr.load_industry_mix()
+    assert set(mix.major_group) == set("123456789") and mix.employed.sum() > 25000
+    ch = kr.employment_change()
+    assert ch.emp_change_pct.notna().sum() > 100 and ch.wage_change_pct.notna().sum() > 100
+    assert cn.SPECS["KOR"].survey_firms == "50plus" and "50plus" in ai.COMPARATORS

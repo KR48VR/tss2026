@@ -20,6 +20,15 @@ from . import io
 
 BLS = RAW / "bls"
 WAGE_TOP_CODE = 239200.0
+
+
+def _oews_years() -> list:
+    """The OEWS May editions on disk (national files), oldest to newest."""
+    import re
+    return sorted({int(m.group(1)) for p in BLS.glob("oesm*nat/national_M*_dl.xlsx") for m in [re.search(r"national_M(\d{4})_dl", p.name)] if m})
+
+
+OEWS_YEAR = (_oews_years() or [2024])[-1]   # the latest edition on disk is the weights year; the one before it gives the outcome change
 # OEWS combined sectors -> the Census BTOS 2-digit sector codes used in ai_btos_sector_levels
 OEWS_SECTOR_TO_BTOS = {"31-33": "31", "44-45": "44", "48-49": "48"}
 SECTOR_LABELS = {
@@ -50,7 +59,7 @@ def _oews_rows(year: int) -> pd.DataFrame:
     return pd.DataFrame({"soc_2018": d.OCC_CODE.str.strip(), "soc_title": d.OCC_TITLE.str.strip(), "o_group": d.O_GROUP.str.strip(), "employment": _num(d.TOT_EMP), "wage_median_usd": _wage(d.A_MEDIAN), "wage_mean_usd": _wage(d.A_MEAN), "wage_top_coded": d.A_MEDIAN.astype(str) == "#", "year": year})
 
 
-def load_oews_national(year: int = 2024) -> pd.DataFrame:
+def load_oews_national(year: int = OEWS_YEAR) -> pd.DataFrame:
     """Detailed occupations (SOC 2018): employment and annual median / mean wages, May of `year`.
 
     OEWS publishes some SOC detailed codes only combined (a broad code such as 13-1020 carried as a
@@ -86,7 +95,7 @@ def load_oews_national(year: int = 2024) -> pd.DataFrame:
     return out.reset_index(drop=True)
 
 
-def load_oews_sector(year: int = 2024) -> pd.DataFrame:
+def load_oews_sector(year: int = OEWS_YEAR) -> pd.DataFrame:
     """Employment by detailed occupation and NAICS sector (BTOS 2-digit codes), May of `year`."""
     yy = str(year)[-2:]
     path = BLS / f"oesm{yy}in4" / f"natsector_M{year}_dl.xlsx"
@@ -100,7 +109,7 @@ def load_oews_sector(year: int = 2024) -> pd.DataFrame:
     return out.reset_index(drop=True)
 
 
-def build_onet_weights(year: int = 2024) -> pd.DataFrame:
+def build_onet_weights(year: int = OEWS_YEAR) -> pd.DataFrame:
     """One row per O*NET occupation: US employment (thousands), annual median wage, wage value, and the
     ISCO-08 major group it mostly maps to (so the two countries can be compared on the same groups)."""
     nat = load_oews_national(year)
@@ -136,7 +145,7 @@ def build_onet_weights(year: int = 2024) -> pd.DataFrame:
     return t[cols].reset_index(drop=True)
 
 
-def load_oews_minor_groups(year: int = 2024) -> pd.DataFrame:
+def load_oews_minor_groups(year: int = OEWS_YEAR) -> pd.DataFrame:
     """SOC minor groups (codes like 11-1000) with titles and employment, from the OEWS national file."""
     rows = _oews_rows(year)
     m = rows[rows.o_group == "minor"].drop_duplicates("soc_2018")
@@ -202,7 +211,7 @@ def load_competency_models() -> dict:
     return {"models": models, "tiers": tiers, "blocks": blocks, "key_behaviors": kb, "model_blocks": mb}
 
 
-def onet_sector_shifts(sector_levels: pd.DataFrame, year: int = 2024) -> tuple[pd.DataFrame, pd.DataFrame]:
+def onet_sector_shifts(sector_levels: pd.DataFrame, year: int = OEWS_YEAR) -> tuple[pd.DataFrame, pd.DataFrame]:
     """(onet_shift, mix): years each O*NET occupation's industries run ahead (negative) or behind the US
     national adoption curve, the employment-weighted mean of its OEWS sectors' Census shifts; sectors the
     Census does not survey (government) sit at the national level (0)."""
@@ -222,8 +231,9 @@ def onet_sector_shifts(sector_levels: pd.DataFrame, year: int = 2024) -> tuple[p
     return out[["onet_soc_code", "soc_2018", "adoption_shift_years"]], mix
 
 
-def employment_change(year_from: int = 2023, year_to: int = 2024) -> pd.DataFrame:
-    """Per SOC code: employment and median wage in both years and the percentage changes (OEWS May)."""
+def employment_change(year_from: int = OEWS_YEAR - 1, year_to: int = OEWS_YEAR) -> pd.DataFrame:
+    """Per SOC code: employment and median wage in both years and the percentage changes (OEWS May); by
+    default the latest edition on disk against the one before it."""
     a = load_oews_national(year_from)[["soc_2018", "employment", "wage_median_usd"]].rename(columns={"employment": f"emp_{year_from}", "wage_median_usd": f"wage_{year_from}"})
     b = load_oews_national(year_to)[["soc_2018", "soc_title", "employment", "wage_median_usd"]].rename(columns={"employment": f"emp_{year_to}", "wage_median_usd": f"wage_{year_to}"})
     d = b.merge(a, on="soc_2018", how="inner")

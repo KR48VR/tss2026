@@ -195,10 +195,19 @@ def _norm(s: str) -> str:
     return re.sub(r"\s", "", str(s).replace("\n", "")).replace("男女計", "").replace("男", "").replace("女", "")
 
 
-def load_wage_table() -> pd.DataFrame:
+def _wage_years() -> list:
+    """The editions of the wage survey's table 1 on disk, oldest to newest."""
+    return sorted({int(m.group(1)) for p in ESTAT.glob("wage*_t1_occupation_small.xlsx") for m in [re.search(r"wage(\d{4})_", p.name)] if m})
+
+
+WAGE_YEAR = (_wage_years() or [2024])[-1]   # the latest edition is the weights year; the one before it gives the outcome change
+
+
+def load_wage_table(year: int = WAGE_YEAR) -> pd.DataFrame:
     """Table 1 (both sexes block): jp_code (two-digit major letter + running number), class (Japanese), title,
-    major_group, workers (persons), monthly scheduled earnings (yen), monthly contractual cash earnings (yen)."""
-    x = pd.ExcelFile(ESTAT / "wage2024_t1_occupation_small.xlsx")
+    major_group, workers (persons), monthly scheduled earnings (yen), monthly contractual cash earnings (yen).
+    Rows are found by class name, so the one-row shift between the 2024 and 2025 layouts does not matter."""
+    x = pd.ExcelFile(ESTAT / f"wage{year}_t1_occupation_small.xlsx")
     df = x.parse(x.sheet_names[0], header=None)
     key = {_norm(j): (j, e, m, iscos) for j, e, m, iscos in JSOC_TO_ISCO}
     rows, seen = [], set()
@@ -224,18 +233,18 @@ def load_wage_table() -> pd.DataFrame:
     return out
 
 
-def build_weights() -> pd.DataFrame:
-    w = load_wage_table()
+def build_weights(year: int = WAGE_YEAR) -> pd.DataFrame:
+    w = load_wage_table(year)
     df = pd.DataFrame({"jp_code": w.jp_code, "jp_title": w.jp_title, "employment_thousands": w.workers / 1000.0, "wage_monthly": w.monthly_scheduled_yen, "major_group": w.major_group})
     df["submajor_label"] = df.major_group
     df["submajor_name"] = df.major_group.map(MAJOR_GROUP_NAMES)
     iscos = {j: iscos for j, e, m, iscos in JSOC_TO_ISCO}
     from .no_labour import _skill_level
     df["skill_level"] = [float(np.mean([_skill_level(c) for c in iscos[j]])) for j in w.jp_class]
-    df["wage_source"] = "wage_structure_survey_2024_scheduled_monthly"
+    df["wage_source"] = f"wage_structure_survey_{year}_scheduled_monthly"
     df["wage_value"] = df.employment_thousands * df.wage_monthly
-    df["employment_method"] = "wage_structure_survey_2024_workers"
-    df["edition"] = 2024
+    df["employment_method"] = f"wage_structure_survey_{year}_workers"
+    df["edition"] = year
     return df[(df.employment_thousands > 0) & df.wage_monthly.notna()].reset_index(drop=True)
 
 
@@ -276,9 +285,9 @@ def load_ai_points() -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["group_type", "industry", "date"]).reset_index(drop=True)
 
 
-def load_industry_mix() -> pd.DataFrame:
+def load_industry_mix(year: int = WAGE_YEAR) -> pd.DataFrame:
     """Workers by occupation major group and the survey's industry groupings (table 20, both sexes, all sizes)."""
-    x = pd.ExcelFile(ESTAT / "wage2024_t20_occupation_major_industry.xlsx")
+    x = pd.ExcelFile(ESTAT / f"wage{year}_t20_occupation_major_industry.xlsx")
     df = x.parse("男女計", header=None)
     majors = {_norm(k): v for k, v in {"管理的職業従事者": "A", "専門的・技術的職業従事者": "B", "専門的・技術的従事者": "B", "事務従事者": "C", "販売従事者": "D", "サービス職業従事者": "E", "保安職業従事者": "F", "農林漁業従事者": "G", "生産工程従事者": "H", "輸送・機械運転従事者": "I", "建設・採掘従事者": "J", "運搬・清掃・包装等従事者": "K"}.items()}
     rows, cur = [], None
@@ -300,10 +309,25 @@ def load_industry_mix() -> pd.DataFrame:
     return pd.DataFrame(rows).groupby(["major_group", "industry"]).employed.sum().reset_index()
 
 
-def employment_change() -> pd.DataFrame:
-    """No second year of the wage survey is loaded, so no outcome test yet: an empty table in the expected shape."""
-    w = build_weights()
-    return pd.DataFrame({"jp_code": w.jp_code, "emp_2023": np.nan, "emp_2024": np.nan, "emp_change_pct": np.nan, "wage_2023": np.nan, "wage_2024": np.nan, "wage_change_pct": np.nan, "year_from": 2023, "year_to": 2024, "wage_years": "none"})
+def employment_change(year_to: int = WAGE_YEAR) -> pd.DataFrame:
+    """Rung five for Japan: the change in workers represented and in monthly scheduled earnings per occupation
+    class between the two latest editions of the wage survey (June of each year). With one edition on disk the
+    table keeps its shape with missing values, so the page says the test is not available yet."""
+    years = _wage_years()
+    y1 = year_to; y0 = max([y for y in years if y < y1], default=None)
+    w1 = load_wage_table(y1)
+    if y0 is None:
+        return pd.DataFrame({"jp_code": w1.jp_code, f"emp_{y1 - 1}": np.nan, f"emp_{y1}": np.nan, "emp_change_pct": np.nan, f"wage_{y1 - 1}": np.nan, f"wage_{y1}": np.nan, "wage_change_pct": np.nan, "year_from": y1 - 1, "year_to": y1, "wage_years": "none"})
+    w0 = load_wage_table(y0).set_index("jp_class")
+    df = pd.DataFrame({"jp_code": w1.jp_code.values, "jp_class": w1.jp_class.values})
+    df[f"emp_{y0}"] = df.jp_class.map(w0.workers).values
+    df[f"emp_{y1}"] = w1.workers.values
+    df["emp_change_pct"] = 100.0 * (df[f"emp_{y1}"] / df[f"emp_{y0}"].where(df[f"emp_{y0}"] > 0) - 1.0)
+    df[f"wage_{y0}"] = df.jp_class.map(w0.monthly_scheduled_yen).values
+    df[f"wage_{y1}"] = w1.monthly_scheduled_yen.values
+    df["wage_change_pct"] = 100.0 * (df[f"wage_{y1}"] / df[f"wage_{y0}"].where(df[f"wage_{y0}"] > 0) - 1.0)
+    df["year_from"], df["year_to"], df["wage_years"] = y0, y1, f"{y0}-{y1}"
+    return df.drop(columns=["jp_class"])
 
 
 def outcome_units() -> pd.DataFrame:
