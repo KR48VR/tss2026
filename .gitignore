@@ -1,6 +1,6 @@
 # raw and processed data are rebuilt by the pipeline; never committed
 data/raw/
-data/processed/
+# data/processed/ is committed as a cache (82 MB) so a new session starts with the built tables instead of rebuilding for hours
 data/cache/
 *.duckdb
 *.duckdb.wal
