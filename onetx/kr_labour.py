@@ -103,17 +103,29 @@ def employment_periods() -> list[str]:
     return sorted(load_employment().period.unique())
 
 
-def load_pay_ksco7() -> pd.DataFrame:
-    """Workers and monthly total wages (won) per three-digit code of the 7th revision and year, all employees."""
+def _pay_rows(width: int) -> pd.DataFrame:
+    """Workers and monthly total wages (won) per 7th-revision code of the given width (1 = major group, 3 = minor
+    group) and year, all employees (both sexes)."""
     d = _tidy(PAY_TBL, 2)
     d = d[d.d1.str.contains("전체")]
-    d["ksco7_code"] = d.d0.str.extract(r"KSCO7_(\d{3})")[0]
+    d["ksco7_code"] = d.d0.str.extract(r"KSCO7_(\d+) ")[0]
     d = d.dropna(subset=["ksco7_code"])
+    d = d[d.ksco7_code.str.len() == width]
     piv = d.pivot_table(index=["ksco7_code", "period"], columns="item", values="value", aggfunc="first").reset_index()
     wage_col = next(c for c in piv.columns if "월임금총액" in str(c))
     work_col = next(c for c in piv.columns if "근로자수" in str(c))
     out = pd.DataFrame({"ksco7_code": piv.ksco7_code, "year": piv.period.astype(int), "workers": piv[work_col], "wage_monthly": piv[wage_col] * 1000.0})
     return out.dropna(subset=["wage_monthly"]).sort_values(["ksco7_code", "year"]).reset_index(drop=True)
+
+
+def load_pay_ksco7() -> pd.DataFrame:
+    """Three-digit codes of the 7th revision (the survey publishes none for managers, major group 1)."""
+    return _pay_rows(3)
+
+
+def load_pay_major() -> pd.DataFrame:
+    """The survey's own major-group figures (one digit; the major groups are the same in the 7th and 8th revisions)."""
+    return _pay_rows(1).rename(columns={"ksco7_code": "major_group"})
 
 
 def load_pay() -> pd.DataFrame:
@@ -139,18 +151,22 @@ def load_titles_json() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _fill_pay(df: pd.DataFrame, pay: pd.DataFrame) -> pd.DataFrame:
-    """Pay per code, else the two-digit group's employment-weighted mean of the codes that have one, else the major group's."""
+def _fill_pay(df: pd.DataFrame, pay: pd.DataFrame, major_pay: pd.DataFrame) -> pd.DataFrame:
+    """Pay per code (carried through the 7th-to-8th link), else the two-digit group's employment-weighted mean of
+    the codes that have one, else the survey's own major-group figure (managers have no three-digit lines)."""
     p = pay.set_index("ksco_code").wage_monthly
     df = df.copy()
     df["wage_monthly"] = df.ksco_code.map(p)
     df["wage_source"] = np.where(df.wage_monthly.notna(), "labour_conditions_survey_code_via_ksco7_link", "")
-    for width, label in ((2, "labour_conditions_survey_submajor_mean"), (1, "labour_conditions_survey_major_mean")):
-        have = df[df.wage_monthly.notna()]
-        grp = have.groupby(have.ksco_code.str[:width]).apply(lambda g: float(np.average(g.wage_monthly, weights=np.maximum(g.employment_thousands, 1e-6))), include_groups=False)
-        miss = df.wage_monthly.isna()
-        df.loc[miss, "wage_monthly"] = df.loc[miss, "ksco_code"].str[:width].map(grp)
-        df.loc[miss & df.wage_monthly.notna(), "wage_source"] = label
+    have = df[df.wage_monthly.notna()]
+    grp = have.groupby(have.ksco_code.str[:2]).apply(lambda g: float(np.average(g.wage_monthly, weights=np.maximum(g.employment_thousands, 1e-6))), include_groups=False)
+    miss = df.wage_monthly.isna()
+    df.loc[miss, "wage_monthly"] = df.loc[miss, "ksco_code"].str[:2].map(grp)
+    df.loc[miss & df.wage_monthly.notna(), "wage_source"] = "labour_conditions_survey_submajor_mean"
+    mp = major_pay.set_index("major_group").wage_monthly
+    miss = df.wage_monthly.isna()
+    df.loc[miss, "wage_monthly"] = df.loc[miss, "ksco_code"].str[0].map(mp)
+    df.loc[miss & df.wage_monthly.notna(), "wage_source"] = "labour_conditions_survey_major_group"
     return df
 
 
@@ -164,7 +180,8 @@ def build_weights(period: str | None = None, year: int | None = None) -> pd.Data
     df = pd.DataFrame({"ksco_code": e.ksco_code.values, "ksco_title": e.ksco_title_ko.values, "employment_thousands": e.employment_thousands.values})
     titles = load_titles_json().set_index("code").en
     df["ksco_title"] = df.ksco_code.map(titles).fillna(df.ksco_title)
-    df = _fill_pay(df, pay[pay.year == year])
+    mp = load_pay_major()
+    df = _fill_pay(df, pay[pay.year == year], mp[mp.year == year])
     df["major_group"] = df.ksco_code.str[0]
     df["submajor_label"] = df.major_group
     df["submajor_name"] = df.major_group.map(MAJOR_GROUP_NAMES)
@@ -246,12 +263,16 @@ def employment_change() -> pd.DataFrame:
     p1 = emp.period.max(); p0 = f"{int(p1[:4]) - 1}{p1[4:]}"
     pay = load_pay(); y1 = int(pay.year.max()); y0 = y1 - 1
     e = emp.pivot_table(index="ksco_code", columns="period", values="employment_thousands", aggfunc="first")
-    w = pay.pivot_table(index="ksco_code", columns="year", values="wage_monthly", aggfunc="first")
+    mp = load_pay_major(); base = emp[emp.period == p1][["ksco_code", "employment_thousands"]]
+    filled = pd.concat([_fill_pay(base, pay[pay.year == y], mp[mp.year == y]).assign(year=y) for y in (y0, y1) if y in set(pay.year)], ignore_index=True)
+    own = filled[filled.wage_source == "labour_conditions_survey_code_via_ksco7_link"]   # a group-level stand-in carries no change of its own
+    w = own.pivot_table(index="ksco_code", columns="year", values="wage_monthly", aggfunc="first")
     codes = sorted(emp.ksco_code.unique())
     df = pd.DataFrame({"ksco_code": codes})
-    df[f"emp_{y0}"] = df.ksco_code.map(e[p0]) if p0 in e.columns else np.nan
-    df[f"emp_{y1}"] = df.ksco_code.map(e[p1])
-    df["emp_change_pct"] = (df[f"emp_{y1}"] / df[f"emp_{y0}"] - 1.0) * 100.0
+    ey0, ey1 = p0[:4], p1[:4]
+    df[f"emp_{ey0}"] = df.ksco_code.map(e[p0]) if p0 in e.columns else np.nan
+    df[f"emp_{ey1}"] = df.ksco_code.map(e[p1])
+    df["emp_change_pct"] = (df[f"emp_{ey1}"] / df[f"emp_{ey0}"] - 1.0) * 100.0
     df[f"wage_{y0}"] = df.ksco_code.map(w[y0]) if y0 in w.columns else np.nan
     df[f"wage_{y1}"] = df.ksco_code.map(w[y1]) if y1 in w.columns else np.nan
     df["wage_change_pct"] = (df[f"wage_{y1}"] / df[f"wage_{y0}"] - 1.0) * 100.0

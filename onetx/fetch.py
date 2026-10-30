@@ -577,7 +577,7 @@ def fetch_statcan_api(force: bool = False) -> dict:
 KOSIS_TABLES = {
     "DT_1ES3B32J": ("101", {"1": [3]}, 5, "Local Area Labour Force Survey: employed by three-digit occupation, half-yearly"),
     "DT_1ES3B33J": ("101", None, 1, "Local Area Labour Force Survey: employed by industry section and occupation major group"),
-    "DT_118N_PAYM41": ("118", {"1": [3], "2": [1]}, 2, "Survey on Labour Conditions by Employment Type: workers, wages and hours by three-digit occupation and sex, yearly"),
+    "DT_118N_PAYM41": ("118", {"1": [1, 3], "2": [1]}, 2, "Survey on Labour Conditions by Employment Type: workers, wages and hours by occupation (major groups and three-digit) and sex, yearly"),
     "DT_1EP1237_1": ("101", {"1": [1, 2]}, None, "Survey of Business Activities: fourth-industrial-revolution technologies by industry, 2017 to 2022"),
     "DT_1EP1337_1": ("101", {"1": [1, 2]}, None, "Survey of Business Activities: the same, 2023 onward"),
 }

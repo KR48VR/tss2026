@@ -158,7 +158,7 @@ def test_btos_comparators_hold_growth_and_shift_level():
             rows.append({"empsize": band, "question": "current_use", "sample_period": r.sample_period, "ref_end": r.ref_end, "pct": min(85.0, r.pct * mult), "wording": r.wording})
     size = pd.DataFrame(rows)
     cmp = ai.btos_comparators(fit, size)
-    assert set(cmp) == {"all", "10plus", "100plus"}
+    assert set(cmp) == set(ai.COMPARATORS) >= {"all", "10plus", "50plus", "100plus"}
     assert cmp["all"]["intercept"] == fit["intercept"] and cmp["all"]["comparator"] == "all"
     for key in ("10plus", "100plus"):
         assert cmp[key]["growth_per_year"] == fit["growth_per_year"] and cmp[key]["wording_step"] == fit["wording_step"]

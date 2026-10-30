@@ -330,7 +330,7 @@ def test_lead_basis_marks_checklist_surveys_as_upper_bounds():
     """Every country record says which firms its survey covers and what it asks; only the production
     question (Canada's) gives a lead that is a measurement rather than an upper bound."""
     for code, spec in cn.SPECS.items():
-        assert spec.survey_firms in ("all", "10plus", "100plus"), code
+        assert spec.survey_firms in ("all", "10plus", "50plus", "100plus"), code
         assert spec.survey_question in ("production", "checklist", "iot_ai"), code
         assert spec.survey_note, code
     assert cn.SPECS["CAN"].survey_question == "production" and cn.SPECS["CAN"].survey_firms == "all"
@@ -355,6 +355,7 @@ def test_korea_loaders_from_kosis_downloads():
     """South Korea: the KOSIS downloads parse, every three-digit code links to ISCO through the official tables,
     pay reaches the 2024 classification through the 7th-to-8th link, and the firm survey gives a yearly series."""
     from onetx import kr_labour as kr
+    from onetx import ai_signals as ai
     w = kr.build_weights()
     assert 150 <= len(w) <= 170 and (w.employment_thousands > 0).all() and w.wage_monthly.notna().all()
     assert 26000 <= w.employment_thousands.sum() <= 31000          # about 29 million employed
