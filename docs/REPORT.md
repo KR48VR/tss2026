@@ -24,7 +24,7 @@ Built with 'today' = 2026-10-01. Every number below is a planning signal with a 
 | GPT-5 (Inspect)             | 2025-08-07     |             215 |            1147 |
 | Claude 4.1 Opus (Inspect)   | 2025-08-05     |             101 |             467 |
 
-Frontier doubling time since 2024 (our fit): about 106 days. Forecast parameters: {"anchor_date": "2024-01-01", "log2_h50_at_anchor": 1.914, "doubling_days_central": 106, "doubling_days_fast": 85.0, "doubling_days_slow": 212.0, "delegation_horizon_now_min": 208.18679031798874, "delegation_slope": -0.31269927775419337, "robot_tier_years": {"1": [2, 4, 8], "2": [4, 7, 12], "3": [8, 12, 20], "0": [NaN, NaN, NaN]}, "adoption_saturation": 0.9, "adoption_growth_per_year": 0.5059989406731061, "adoption_intercept": -2.418079992785001, "adoption_growth_mult": [1.5, 1.0, 0.6], "geo": "SGP", "geo_usage_ratio_vs_us": 1.714504172028714, "geo_lead_years_measured": 0.6366900641736493, "evidence_lag_years": {"mixed": [0.5, 1.01, 2.01], "unproven": [0.93, 1.86, 3.72], "newly_rated": [1.57, 3.14, 6.27]}, "ai_share_by_autonomy": {"A0": 0.4062170966617545, "A1": 0.4231450949986434, "A2": 0.5055789257976767, "A3": 0.5943329980434238}, "ai_share_fallback": 0.48819081626108546, "max_barrier_years": [2.0, 4.0, 6.0], "observed_credit_years": 1.0, "horizon_cap_year": 2045.0}
+Frontier doubling time since 2024 (our fit): about 106 days. Forecast parameters: {"anchor_date": "2024-01-01", "log2_h50_at_anchor": 1.914, "doubling_days_central": 106, "doubling_days_fast": 85.0, "doubling_days_slow": 212.0, "delegation_horizon_now_min": 208.18679031798874, "delegation_slope": -0.31269927775419337, "robot_tier_years": {"1": [2, 4, 8], "2": [4, 7, 12], "3": [8, 12, 20], "0": [NaN, NaN, NaN]}, "adoption_saturation": 0.9, "adoption_growth_per_year": 0.5059989406731061, "adoption_intercept": -2.418079992785001, "adoption_growth_mult": [1.5, 1.0, 0.6], "geo": "SGP", "geo_usage_ratio_vs_us": 1.5086206896551722, "geo_lead_years_measured": 0.6366900641736493, "evidence_lag_years": {"mixed": [0.5, 1.01, 2.01], "unproven": [0.93, 1.86, 3.72], "newly_rated": [1.57, 3.14, 6.27]}, "ai_share_by_autonomy": {"A0": 0.4062170966617545, "A1": 0.4231450949986434, "A2": 0.5055789257976767, "A3": 0.5943329980434238}, "ai_share_fallback": 0.48819081626108546, "max_barrier_years": [2.0, 4.0, 6.0], "observed_credit_years": 1.0, "horizon_cap_year": 2045.0}
 
 ## 3. Where AI usage is concentrated today
 
@@ -299,7 +299,7 @@ Resident employment by SSOC sub-major group (MOM Labour Force in Singapore 2025,
 
 ## 5. Timing (central estimate = year by which half of a job's task weight is 'disruptable')
 
-Adoption anchor (US firms' AI use, BTOS logistic fit, crossing 50%): fast 2027.5, central 2029.2, slow 2032.7. Singapore lead on that curve: 0.6 years (usage ratio vs US: {"microsoft_ratio": 1.9484848484848485, "anthropic_ratio": 1.5086206896551722, "geometric_mean": 1.714504172028714}).
+Adoption anchor (US firms' AI use, BTOS logistic fit, crossing 50%): fast 2027.5, central 2029.2, slow 2032.7. Singapore lead on that curve: 0.6 years (usage ratio vs US: {"anthropic_ratio": 1.5086206896551722, "geometric_mean": 1.5086206896551722}).
 
 Task timing buckets (central): {"2031_2033": 5626, "2034_2037": 4744, "2029_2030": 4634, "beyond_2045_or_unknown": 2417, "2038_2045": 1037, "by_2028": 338}
 
