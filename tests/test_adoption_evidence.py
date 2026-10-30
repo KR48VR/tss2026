@@ -143,3 +143,35 @@ def test_outcome_readings_and_rank_correlation():
     assert oc._reading(0.05, n, -1) == "no clear sign yet"
     assert oc._reading(None, 3, -1) == "too few groups to say"
     assert oc.GROUP_OF_MAJOR["2"] == "pmet" and oc.GROUP_OF_MAJOR["4"] == "clerical_sales_service" and oc.GROUP_OF_MAJOR["9"].startswith("production")
+
+
+def test_btos_comparators_hold_growth_and_shift_level():
+    """The size-band comparators keep the national growth rate and wording step and move only the level:
+    bands sitting above the national curve give a positive offset (an earlier half-way year), bands on the
+    curve give none, and a missing size file falls back to the national fit and says so."""
+    s = _logistic_series(0.9, -3.0, 0.5, 0.6, -0.3, 2.8, 70, 1.9)
+    fit = ai.fit_adoption_logistic(s, saturation=0.9)
+    new = s[s.wording == "si_2025"].copy()
+    rows = []
+    for r in new.itertuples():
+        for band, mult in zip("ABCDEFG", [0.9, 0.95, 1.0, 1.0, 1.0, 1.3, 1.6]):
+            rows.append({"empsize": band, "question": "current_use", "sample_period": r.sample_period, "ref_end": r.ref_end, "pct": min(85.0, r.pct * mult), "wording": r.wording})
+    size = pd.DataFrame(rows)
+    cmp = ai.btos_comparators(fit, size)
+    assert set(cmp) == {"all", "10plus", "100plus"}
+    assert cmp["all"]["intercept"] == fit["intercept"] and cmp["all"]["comparator"] == "all"
+    for key in ("10plus", "100plus"):
+        assert cmp[key]["growth_per_year"] == fit["growth_per_year"] and cmp[key]["wording_step"] == fit["wording_step"]
+        assert cmp[key]["fallback"] is False and cmp[key]["bands"] == ai.COMPARATORS[key]["bands"]
+    assert abs(cmp["10plus"]["level_offset"]) < 0.08          # C, D and E (most firms with 10 or more) sit on the curve
+    assert cmp["100plus"]["level_offset"] > 0.2                # F and G sit well above it
+    assert cmp["100plus"]["year_cross_50pct"] < cmp["10plus"]["year_cross_50pct"] <= fit["year_cross_50pct"] + 0.3
+    assert cmp["100plus"]["anchor_shift_years"] < 0
+    empty = ai.btos_comparators(fit, pd.DataFrame(columns=["empsize", "question", "sample_period", "ref_end", "pct", "wording"]))
+    assert empty["10plus"]["fallback"] is True and empty["10plus"]["intercept"] == fit["intercept"]
+
+
+def test_us_firm_counts_by_size_add_up_to_the_susb_total():
+    firms = ai.us_firms_by_size()
+    assert set(firms) == set("ABCDEFG")
+    assert abs(sum(firms.values()) - 6395635) < 1

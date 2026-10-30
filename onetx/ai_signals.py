@@ -357,6 +357,7 @@ def _btos_series(path: Path, wording: str) -> pd.DataFrame:
     qid = low.index("question id")
     ans = low.index("answer")
     by_sector = low[0] == "sector"
+    by_size = low[0] == "empsize"
     out = []
     for r in rows[1:]:
         if str(r[qid]).strip() in ("7", "24") and str(r[ans]).strip() == "Yes":
@@ -372,6 +373,8 @@ def _btos_series(path: Path, wording: str) -> pd.DataFrame:
                 row = {"question": q, "sample_period": hdr[i], "ref_end": dates[hdr[i]], "pct": pct, "wording": wording}
                 if by_sector:
                     row["sector"] = str(r[0]).strip()
+                if by_size:
+                    row["empsize"] = str(r[0]).strip()
                 out.append(row)
     return pd.DataFrame(out)
 
@@ -379,6 +382,8 @@ def _btos_series(path: Path, wording: str) -> pd.DataFrame:
 BTOS_AEI_COPY = AEI / "release_2025_09_15" / "data" / "input" / "BTOS_National.xlsx"
 BTOS_NATIONAL = RAW / "census" / "btos_national.xlsx"
 BTOS_SECTOR = RAW / "census" / "btos_sector.xlsx"
+BTOS_EMPSIZE = RAW / "census" / "btos_empsize.xlsx"
+US_FIRMS_BY_SIZE = REFERENCE / "us_firms_by_size_susb2022.csv"
 
 
 def load_btos_ai_adoption() -> pd.DataFrame:
@@ -402,6 +407,75 @@ def load_btos_sector_adoption() -> pd.DataFrame:
         return pd.DataFrame(columns=["sector", "question", "sample_period", "ref_end", "pct", "wording"])
     df = _btos_series(BTOS_SECTOR, "si_2025")
     return df[df.question == "current_use"].sort_values(["sector", "ref_end"]).reset_index(drop=True)
+
+
+SIZE_BANDS = {"A": "1 to 4 employees", "B": "5 to 9 employees", "C": "10 to 19 employees", "D": "20 to 49 employees", "E": "50 to 99 employees", "F": "100 to 249 employees", "G": "250 or more employees"}
+COMPARATORS = {"all": {"bands": "ABCDEFG", "label": "all US firms"},
+               "10plus": {"bands": "CDEFG", "label": "US firms with 10 or more employees"},
+               "100plus": {"bands": "FG", "label": "US firms with 100 or more employees"}}
+
+
+def load_btos_size_adoption() -> pd.DataFrame:
+    """The 'used AI in the last two weeks' share by employment-size class (A: 1-4 ... G: 250+), biweekly
+    since Sept 2023, from the Census download. The wording step is dated as in the national series: readings
+    after the AEI copy's last period (Aug 2025) carry the reworded question."""
+    cols = ["empsize", "question", "sample_period", "ref_end", "pct", "wording"]
+    if not BTOS_EMPSIZE.exists():
+        return pd.DataFrame(columns=cols)
+    df = _btos_series(BTOS_EMPSIZE, "si_2025")
+    df = df[df.question == "current_use"].dropna(subset=["ref_end"]).copy()
+    cut = _btos_series(BTOS_AEI_COPY, "ai_2023").ref_end.max() if BTOS_AEI_COPY.exists() else pd.Timestamp("2025-09-01")
+    df["wording"] = np.where(df.ref_end <= cut, "ai_2023", "si_2025")
+    return df[cols].sort_values(["empsize", "ref_end"]).reset_index(drop=True)
+
+
+def us_firms_by_size() -> dict:
+    """Employer firms per BTOS size band (Statistics of U.S. Businesses 2022; see the reference file for how
+    SUSB's classes were grouped), used to weight the bands into a firm-share comparator."""
+    d = pd.read_csv(US_FIRMS_BY_SIZE)
+    return {str(r.band): float(r.firms) for r in d.itertuples()}
+
+
+def btos_comparators(fit: dict, size_series: pd.DataFrame) -> dict:
+    """US adoption curves for the firm populations other countries' surveys cover. 'all' is the national
+    fit itself. '10plus' and '100plus' hold the national growth rate and wording step (fitted on the full
+    series since 2023) and measure the level offset of the firm-weighted mean of size bands C-G and F-G
+    (the size file only starts with the reworded question in Nov 2025, too short to fit a growth rate of
+    its own; the free fit's growth is kept as `own_growth_per_year` for sensitivity). A European survey of
+    enterprises with 10 or more persons employed, or Japan's of enterprises with 100 or more, is then read
+    against US firms of the same sizes. Each entry carries the shifted fit plus a label, the bands and the
+    latest reading per band; a comparator whose bands are missing falls back to the national fit and says so."""
+    def entry(key, f, fallback, **extra):
+        return {**f, "comparator": key, "label": COMPARATORS[key]["label"], "bands": COMPARATORS[key]["bands"], "fallback": fallback, **extra}
+    out = {"all": entry("all", fit, False)}
+    if size_series is None or size_series.empty:
+        for key in ("10plus", "100plus"):
+            out[key] = entry(key, fit, True)
+        return out
+    K, a, b, c = fit["saturation"], fit["intercept_old_wording"], fit["growth_per_year"], fit["wording_step"]
+    firms = us_firms_by_size()
+    for key in ("10plus", "100plus"):
+        bands = list(COMPARATORS[key]["bands"])
+        d = size_series[size_series.empsize.isin(bands)].copy()
+        if d.empty or d.empsize.nunique() < len(bands):
+            out[key] = entry(key, fit, True)
+            continue
+        d["w"] = d.empsize.map(firms)
+        g = d.groupby(["question", "sample_period", "ref_end", "wording"]).apply(lambda x: pd.Series({"pct": float(np.average(x.pct, weights=x.w)), "n_bands": int(len(x))}), include_groups=False).reset_index()
+        g = g[g.n_bands == len(bands)].drop(columns="n_bands").sort_values("ref_end").reset_index(drop=True)
+        t = (g.ref_end - pd.Timestamp("2024-01-01")).dt.days / 365.25
+        new = (g.wording != "ai_2023").values.astype(float)
+        resid = _logit(np.clip(g.pct.values / 100.0, 0.002, K - 0.002), K) - (a + b * t.values + c * new)
+        off = float(np.mean(resid))
+        level = a + c + off
+        cross = lambda lvl: 2024.0 + (float(_logit(np.array(lvl), K)) - level) / b
+        own = fit_adoption_logistic(g, K)
+        out[key] = entry(key, {**fit, "intercept": level, "intercept_old_wording": a + off, "level_offset": off, "anchor_shift_years": -off / b, "n_points": int(len(g)), "n_points_new_wording": int(new.sum()),
+                               "first_ref_end": str(g.ref_end.min().date()), "last_ref_end": str(g.ref_end.max().date()), "last_pct": float(g.pct.iloc[-1]),
+                               "year_cross_25pct": cross(0.25), "year_cross_50pct": cross(0.50), "year_cross_75pct": cross(0.75), "year_cross_50pct_old_wording": 2024.0 + (float(_logit(np.array(0.5), K)) - (a + off)) / b,
+                               "own_growth_per_year": own["growth_per_year"]}, False,
+                         latest_by_band={bd: float(d[d.empsize == bd].sort_values("ref_end").pct.iloc[-1]) for bd in bands})
+    return out
 
 
 def _logit(p: np.ndarray, K: float) -> np.ndarray:

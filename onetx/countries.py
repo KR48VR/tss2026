@@ -85,6 +85,9 @@ class CountrySpec:
     lvl_kind: str = "isco"                                   # anzsco | teer | soc | isco: which skill-level scale the national level uses
     rating_bands: tuple = ()           # ((band, name, lo, hi), ...) on the national rating scale
     framework_name: str = ""           # what stands in for the Skills Framework
+    survey_firms: str = "all"          # all | 10plus | 100plus: the firm sizes the national AI survey covers, which picks the US comparator curve the lead is read against
+    survey_question: str = "production"   # production (used AI in producing goods or services, the Census question) | checklist (uses at least one AI technology from a list) | iot_ai (has introduced IoT or AI systems)
+    survey_note: str = ""              # one sentence for the page on the survey's population and question, and how to read the lead
 
 
 def _au_mix():
@@ -115,7 +118,7 @@ def _ca_mix():
 
 
 SPECS: dict[str, CountrySpec] = {
-    "CAN": CountrySpec(code="CAN", name="Canada", adjective="Canadian", prefix="ca_", code_col="noc_code", title_col="noc_title", classification="NOC 2021 unit group", level_descending=True, lvl_kind="teer", what_exists="Statistics Canada's Census employment and income by NOC unit group, its quarterly vacancy survey, its business conditions survey with AI since 2024, the Census occupation-by-industry table, and OaSIS with duties, titles and skill ratings per unit group.",
+    "CAN": CountrySpec(code="CAN", survey_firms="all", survey_question="production", survey_note="Statistics Canada asks businesses of every size whether they used AI in producing goods or delivering services in the last 12 months: the same question as the US survey, over a longer window, so the lead is a fair measurement.", name="Canada", adjective="Canadian", prefix="ca_", code_col="noc_code", title_col="noc_title", classification="NOC 2021 unit group", level_descending=True, lvl_kind="teer", what_exists="Statistics Canada's Census employment and income by NOC unit group, its quarterly vacancy survey, its business conditions survey with AI since 2024, the Census occupation-by-industry table, and OaSIS with duties, titles and skill ratings per unit group.",
                        major_names=ca.BROAD_NAMES, skill_level_names={k: v for k, v in ca.TEER_NAMES.items()}, industry_names=ca.NAICS_SECTORS, industry_label="NAICS sector", currency="C$",
                        wage_label="median employment income of full-year full-time workers, 2020 (Census 2021)", emp_label="employed persons, May 2021 (Census 2021)", wage_period="2020",
                        adoption_source="Canadian Survey on Business Conditions (Statistics Canada)", group_col="minor", group_len=4,
@@ -123,26 +126,26 @@ SPECS: dict[str, CountrySpec] = {
                        industry_mix=_ca_mix, ai_points=ca.load_csbc_ai_use, tasks=ca.load_oasis_duties, descriptions=ca.load_oasis_descriptions, titles=ca.load_oasis_titles, ratings=ca.load_oasis_ratings,
                        rating_bands=(("L", "not needed or basic (level 0 to 1)", 0.0, 1.5), ("M", "working level (2 to 3)", 1.5, 3.5), ("H", "advanced (4 to 5)", 3.5, 9.0)), framework_name="OaSIS, the Occupational and Skills Information System",
                        outcome_labels={"emp": "job vacancies change, four quarters to mid-2026 against the four before (Statistics Canada Job Vacancy and Wage Survey)", "wage": "Job Bank median wage change, 2024 to 2025 releases"}),
-    "AUS": CountrySpec(code="AUS", name="Australia", adjective="Australian", prefix="au_", code_col="anzsco_code", title_col="anzsco_title", classification="ANZSCO unit group", level_descending=True, lvl_kind="anzsco",
+    "AUS": CountrySpec(code="AUS", survey_firms="all", survey_question="checklist", survey_note="The ABS asks businesses of every size which technologies they used in the year, with AI on the list: a looser question than the US survey's, so the lead is an upper bound.", name="Australia", adjective="Australian", prefix="au_", code_col="anzsco_code", title_col="anzsco_title", classification="ANZSCO unit group", level_descending=True, lvl_kind="anzsco",
                        major_names=au.MAJOR_GROUP_NAMES, skill_level_names=au.SKILL_LEVEL_NAMES, industry_names=au.DIVISIONS, industry_label="ANZSIC industry division", currency="A$",
                        wage_label="average weekly total cash earnings, May 2025 (ABS Employee Earnings and Hours)", emp_label="employed persons, 2025 average (ABS Labour Force)", wage_period="May 2025",
                        adoption_source="ABS Characteristics of Australian Business", group_col="major_group", group_len=1,
                        weights=au.build_anzsco_weights, outcomes=au.employment_change, isco_link=_au_isco, industry_mix=_au_mix, ai_points=au.load_cab_ai_use, tasks=au.load_anzsco_tasks,
                        outcome_labels={"emp": "employment change, 2024 to 2025 (ABS Labour Force, yearly averages)", "wage": "average weekly earnings change, May 2023 to May 2025 (ABS)"}),
-    "NZL": CountrySpec(code="NZL", name="New Zealand", adjective="New Zealand", prefix="nz_", code_col="anzsco_code", title_col="anzsco_title", classification="ANZSCO unit group", level_descending=True, lvl_kind="anzsco", depth="limited", depth_note="Pay is the major group's median (eight figures), Australia's AI survey stands in for a New Zealand one, and there is no industry lens; the detailed Census pay and industry tables sit behind a Stats NZ API key.",
+    "NZL": CountrySpec(code="NZL", survey_firms="all", survey_question="checklist", survey_note="No New Zealand firm survey has asked about AI yet; Australia's reading stands in, with Australia's basis.", name="New Zealand", adjective="New Zealand", prefix="nz_", code_col="anzsco_code", title_col="anzsco_title", classification="ANZSCO unit group", level_descending=True, lvl_kind="anzsco", depth="limited", depth_note="Pay is the major group's median (eight figures), Australia's AI survey stands in for a New Zealand one, and there is no industry lens; the detailed Census pay and industry tables sit behind a Stats NZ API key.",
                        major_names=au.MAJOR_GROUP_NAMES, skill_level_names=au.SKILL_LEVEL_NAMES, industry_names=au.DIVISIONS, industry_label="ANZSIC industry division", currency="NZ$",
                        wage_label="median weekly earnings of the major occupation group, year to June 2026 (Stats NZ Household Labour Force Survey; Stats NZ publishes no finer breakdown openly)", emp_label="employed people, March 2023 (2023 Census)", wage_period="June 2026",
                        adoption_source="no New Zealand firm survey has asked about AI use yet; the Australian ABS readings stand in", group_col="major_group", group_len=1, lead_proxy="AUS",
                        weights=nz.build_anzsco_weights, outcomes=nz.employment_change, outcome_units=nz.outcome_units, isco_link=_au_isco, industry_mix=nz.load_industry_mix, ai_points=nz.load_ai_points, tasks=au.load_anzsco_tasks,
                        descriptions=nz.load_descriptions, titles=nz.load_titles,
                        outcome_labels={"emp": "employment change, 2018 to 2023 Censuses (Stats NZ; the 2023 Census changed its occupation coding, so small changes mean little)", "wage": "median weekly earnings change of the major group, June 2025 to June 2026 (Stats NZ HLFS)"}),
-    "NOR": CountrySpec(code="NOR", name="Norway", adjective="Norwegian", prefix="no_", code_col="styrk_code", title_col="styrk_title", classification="STYRK-08 occupation (ISCO-08 unit group)", depth_note="No official task list per occupation: job pages carry O*NET's tasks through the ISCO code.",
+    "NOR": CountrySpec(code="NOR", survey_firms="10plus", survey_question="checklist", survey_note="The survey covers enterprises with 10 or more employees and asks which AI technologies they use, from a list: a looser question than the US survey's, so the lead is an upper bound; it is measured against US firms of the same sizes.", name="Norway", adjective="Norwegian", prefix="no_", code_col="styrk_code", title_col="styrk_title", classification="STYRK-08 occupation (ISCO-08 unit group)", depth_note="No official task list per occupation: job pages carry O*NET's tasks through the ISCO code.",
                        major_names=no.MAJOR_GROUP_NAMES, skill_level_names=no.SKILL_LEVEL_NAMES, industry_names=no.INDUSTRIES, industry_label="industry group", currency="NOK ",
                        wage_label="median monthly earnings, second quarter of 2026 (Statistics Norway register-based earnings)", emp_label="employees, second quarter of 2026 (Statistics Norway)", wage_period="2026 Q2",
                        adoption_source="Statistics Norway's survey of ICT usage in enterprises", group_col="major_group", group_len=1,
                        weights=no.build_styrk_weights, outcomes=no.employment_change, outcome_units=no.outcome_units, isco_link=no.load_isco_link, industry_mix=no.load_industry_mix, ai_points=no.load_ai_use, tasks=no.no_tasks, titles=no.load_titles,
                        outcome_labels={"emp": "employees change, second quarter of 2025 to second quarter of 2026 (Statistics Norway)", "wage": "median monthly earnings change, second quarter of 2025 to 2026 (Statistics Norway)"}),
-    "SWE": CountrySpec(code="SWE", name="Sweden", adjective="Swedish", prefix="se_", code_col="ssyk_code", title_col="ssyk_title", classification="SSYK 2012 occupation",
+    "SWE": CountrySpec(code="SWE", survey_firms="10plus", survey_question="checklist", survey_note="The survey covers enterprises with 10 or more employees and asks which AI technologies they use, from a list: a looser question than the US survey's, so the lead is an upper bound; it is measured against US firms of the same sizes.", name="Sweden", adjective="Swedish", prefix="se_", code_col="ssyk_code", title_col="ssyk_title", classification="SSYK 2012 occupation",
                        major_names=no.MAJOR_GROUP_NAMES, skill_level_names=no.SKILL_LEVEL_NAMES, industry_names=el.eu.NACE_SECTIONS, industry_label="NACE section", currency="SEK ",
                        wage_label="median monthly salary, 2025 (Statistics Sweden salary structure statistics)", emp_label="employees, 2024 (Statistics Sweden occupational register)", wage_period="2025",
                        adoption_source="Statistics Sweden's survey of ICT usage in enterprises", group_col="major_group", group_len=1,
@@ -150,7 +153,7 @@ SPECS: dict[str, CountrySpec] = {
                        depth="full", depth_note="The link to O*NET runs through Statistics Sweden's own key, which pairs each ISCO minor group (three digits) with the SSYK classes it maps to; no official task list.",
                        what_exists="Statistics Sweden's occupational register (employees by four-digit SSYK 2012 occupation, yearly), its salary structure statistics at the same detail, its ICT-use survey with AI since 2021 by industry, and the EU Labour Force Survey's occupation-by-industry table.",
                        outcome_labels={"emp": "employees change, 2023 to 2024 (Statistics Sweden occupational register)", "wage": "median monthly salary change, 2024 to 2025 (Statistics Sweden)"}),
-    "FIN": CountrySpec(code="FIN", name="Finland", adjective="Finnish", prefix="fi_", code_col="tk_code", title_col="tk_title", classification="Classification of Occupations 2010 (ISCO-08 unit group)",
+    "FIN": CountrySpec(code="FIN", survey_firms="10plus", survey_question="checklist", survey_note="The survey covers enterprises with 10 or more employees and asks which AI technologies they use, from a list: a looser question than the US survey's, so the lead is an upper bound; it is measured against US firms of the same sizes.", name="Finland", adjective="Finnish", prefix="fi_", code_col="tk_code", title_col="tk_title", classification="Classification of Occupations 2010 (ISCO-08 unit group)",
                        major_names=no.MAJOR_GROUP_NAMES, skill_level_names=no.SKILL_LEVEL_NAMES, industry_names=el.eu.NACE_SECTIONS, industry_label="NACE section", currency="€",
                        wage_label="median hourly earnings, 2024 (Statistics Finland structure of earnings)", emp_label="employed persons, 2024 (Statistics Finland employment statistics)", wage_period="2024",
                        adoption_source="Statistics Finland's survey of ICT use in enterprises", group_col="major_group", group_len=1,
@@ -158,7 +161,7 @@ SPECS: dict[str, CountrySpec] = {
                        depth="full", depth_note="Finland's classification carries ISCO-08's own four-digit codes, so O*NET links directly; the earnings structure is published for one year so far, so there is no pay-change test; no official task list.",
                        what_exists="Statistics Finland's register-based employment statistics (employed by occupation to five digits, yearly), its structure of earnings by four-digit occupation, its ICT-use survey with AI since 2021 by industry, and the EU Labour Force Survey's occupation-by-industry table.",
                        outcome_labels={"emp": "employed persons change, 2023 to 2024 (Statistics Finland employment statistics)", "wage": "pay change not testable yet (one year of the earnings structure)"}),
-    "DNK": CountrySpec(code="DNK", name="Denmark", adjective="Danish", prefix="dk_", code_col="disco_code", title_col="disco_title", classification="DISCO-08 occupation (ISCO-08 unit group)",
+    "DNK": CountrySpec(code="DNK", survey_firms="10plus", survey_question="checklist", survey_note="The survey covers enterprises with 10 or more employees and asks which AI technologies they use, from a list: a looser question than the US survey's, so the lead is an upper bound; it is measured against US firms of the same sizes.", name="Denmark", adjective="Danish", prefix="dk_", code_col="disco_code", title_col="disco_title", classification="DISCO-08 occupation (ISCO-08 unit group)",
                        major_names=no.MAJOR_GROUP_NAMES, skill_level_names=no.SKILL_LEVEL_NAMES, industry_names=el.eu.NACE_SECTIONS, industry_label="NACE section", currency="DKK ",
                        wage_label="earnings per hour worked, 2025 (Statistics Denmark earnings statistics)", emp_label="employed, 2025 (EU Labour Force Survey two-digit groups, split across four-digit occupations in Norway's register proportions)", wage_period="2025",
                        adoption_source="Statistics Denmark's survey of ICT usage in enterprises", group_col="major_group", group_len=1,
@@ -166,7 +169,7 @@ SPECS: dict[str, CountrySpec] = {
                        depth="medium", depth_note="Pay is at four digits but employment by detailed occupation is not in the open API: each two-digit group's EU-LFS employment is split across its four-digit occupations in the proportions of Norway's register, the nearest country with those codes; no employment-change test; no official task list.",
                        what_exists="Statistics Denmark's earnings statistics by four-digit DISCO-08 occupation (yearly) and its ICT-use survey with AI since 2023 by industry; register employment is published by industry rather than occupation in the open API.",
                        outcome_labels={"emp": "employment change not testable (no employment by detailed occupation in the open API)", "wage": "hourly earnings change, 2024 to 2025 (Statistics Denmark)"}),
-    "NLD": CountrySpec(code="NLD", name="Netherlands", adjective="Dutch", prefix="nl_", code_col="brc_code", title_col="brc_title", classification="BRC 2014 occupation group",
+    "NLD": CountrySpec(code="NLD", survey_firms="10plus", survey_question="checklist", survey_note="The survey covers enterprises with 10 or more employees and asks which AI technologies they use, from a list: a looser question than the US survey's, so the lead is an upper bound; it is measured against US firms of the same sizes.", name="Netherlands", adjective="Dutch", prefix="nl_", code_col="brc_code", title_col="brc_title", classification="BRC 2014 occupation group",
                        major_names=no.MAJOR_GROUP_NAMES, skill_level_names=no.SKILL_LEVEL_NAMES, industry_names=el.eu.NACE_SECTIONS, industry_label="NACE section", currency="€",
                        wage_label="median hourly wage of employees, 2025 (Statistics Netherlands)", emp_label="employed persons, 2025 (Statistics Netherlands labour force survey)", wage_period="2025",
                        adoption_source="Statistics Netherlands' survey of ICT use by businesses", group_col="major_group", group_len=1,
@@ -174,7 +177,7 @@ SPECS: dict[str, CountrySpec] = {
                        depth="medium", depth_note="The 114 BRC 2014 groups sit between two and three ISCO digits (a group often holds several ISCO occupations), titles are Dutch, and a few small groups take their segment's median wage; the ISCO composition of every group gives the link to O*NET; no official task list.",
                        what_exists="Statistics Netherlands' labour force survey employment and median hourly wages for the 114 BRC 2014 occupation groups, its ICT-use survey with AI since 2023 by industry, and the ROA-CBS publication of the ISCO 2008 composition of every group.",
                        outcome_labels={"emp": "employed persons change, 2024 to 2025 (Statistics Netherlands)", "wage": "median hourly wage change, 2024 to 2025 (Statistics Netherlands)"}),
-    "IRL": CountrySpec(code="IRL", name="Ireland", adjective="Irish", prefix="ie_", code_col="soc10_code", title_col="soc10_title", classification="SOC 2010 unit group (Census of Ireland)",
+    "IRL": CountrySpec(code="IRL", survey_firms="10plus", survey_question="checklist", survey_note="The CSO's survey covers enterprises with 10 or more employees and asks which AI technologies they use, from a list: a looser question than the US survey's, so the lead is an upper bound; it is measured against US firms of the same sizes.", name="Ireland", adjective="Irish", prefix="ie_", code_col="soc10_code", title_col="soc10_title", classification="SOC 2010 unit group (Census of Ireland)",
                        major_names={"1": "Managers, directors and senior officials", "2": "Professional occupations", "3": "Associate professional and technical", "4": "Administrative and secretarial", "5": "Skilled trades", "6": "Caring, leisure and other service", "7": "Sales and customer service", "8": "Process, plant and machine operatives", "9": "Elementary occupations"},
                        skill_level_names=no.SKILL_LEVEL_NAMES, industry_names=el.eu.NACE_SECTIONS, industry_label="NACE section", currency="€",
                        wage_label="mean hourly earnings of the major group, 2022 (Eurostat Structure of Earnings Survey; Ireland publishes no pay by occupation)", emp_label="persons in the labour force, April 2022 (Census 2022)", wage_period="2022",
@@ -183,7 +186,7 @@ SPECS: dict[str, CountrySpec] = {
                        depth="medium", depth_note="Employment is the Census 2022 labour force by 329 detailed occupations (people at work or looking for work), pay is the major group's mean from Eurostat (nine figures), and the AI survey is published nationally only, so there are no industry shifts; the link to O*NET runs through the ONS SOC 2010 mapping; no official task list.",
                        what_exists="The CSO's Census 2022 labour force by detailed occupational group (UK SOC 2010 codes) and its enterprise AI-use survey since 2023; pay by occupation is not published, and the AI survey has no industry breakdown.",
                        outcome_labels={"emp": "labour force change by occupation, Census 2016 to Census 2022 (CSO)", "wage": "pay change not testable (no pay by occupation)"}),
-    "JPN": CountrySpec(code="JPN", name="Japan", adjective="Japanese", prefix="jp_", code_col="jp_code", title_col="jp_title", classification="wage survey occupation class",
+    "JPN": CountrySpec(code="JPN", survey_firms="100plus", survey_question="iot_ai", survey_note="The MIC survey covers enterprises with 100 or more employees and asks whether they have introduced IoT or AI systems: a looser question than the US survey's, so the lead is an upper bound; it is measured against US firms of the same sizes.", name="Japan", adjective="Japanese", prefix="jp_", code_col="jp_code", title_col="jp_title", classification="wage survey occupation class",
                        major_names=jp.MAJOR_GROUP_NAMES, skill_level_names=jp.SKILL_LEVEL_NAMES, industry_names=jp.INDUSTRIES, industry_label="industry group", currency="¥",
                        wage_label="monthly scheduled earnings, June 2024 (Basic Survey on Wage Structure, regular workers in enterprises with 10 or more employees)", emp_label="regular workers covered by the Basic Survey on Wage Structure, June 2024", wage_period="June 2024",
                        adoption_source="MIC Communications Usage Trend Survey, enterprises with 100 or more employees that have introduced IoT or AI systems", group_col="major_group", group_len=1,
@@ -191,7 +194,7 @@ SPECS: dict[str, CountrySpec] = {
                        depth="medium", depth_note="The 144 occupation classes are the wage survey's (regular employees in enterprises with 10 or more employees, not all workers), the firm survey asks about IoT and AI together, and the link to ISCO-08 is a table written by hand for this map, since Japan publishes no official correspondence; no outcome test yet and no official task list.",
                        what_exists="The Basic Survey on Wage Structure's workers and monthly earnings by 144 occupation classes and by occupation group and industry, and the Communications Usage Trend Survey's yearly question on IoT or AI systems by industry since 2018; the Census publishes occupation by small group only in sample tabulations by prefecture.",
                        outcome_labels={"emp": "employment change not testable yet (one year of the wage survey loaded)", "wage": "pay change not testable yet"}),
-    "GBR": CountrySpec(code="GBR", name="United Kingdom", adjective="UK", prefix="uk_", code_col="soc_code", title_col="soc_title", classification="SOC 2020 unit group", lvl_kind="soc",
+    "GBR": CountrySpec(code="GBR", survey_firms="10plus", survey_question="checklist", survey_note="The ONS asks businesses with 10 or more employees which AI technologies they currently use, from a list: a looser question than the US survey's, so the lead is an upper bound; it is measured against US firms of the same sizes.", name="United Kingdom", adjective="UK", prefix="uk_", code_col="soc_code", title_col="soc_title", classification="SOC 2020 unit group", lvl_kind="soc",
                        major_names=uk.MAJOR_GROUP_NAMES, skill_level_names=uk.SKILL_LEVEL_NAMES, industry_names=uk.SECTIONS, industry_label="SIC industry section", currency="£",
                        wage_label="median gross annual pay, April 2025 (ONS ASHE, provisional)", emp_label="employee jobs, April 2025 (ONS ASHE)", wage_period="April 2025",
                        adoption_source="ONS Business Insights and Conditions Survey", group_col="minor", group_len=3,
@@ -300,6 +303,17 @@ def firm_lead(fit: dict, points: pd.DataFrame, min_year: float = 2024.0) -> dict
         bs, as_ = np.polyfit(t, yy, 1)
         own = {"own_growth_per_year": float(bs), "own_year_cross_50pct": float(2024.0 + (float(_logit(np.array(0.5), K)) - as_) / bs) if bs > 0 else None, "own_n_points": int(len(pts))}
     return {"points": rows, "lead_years": lead, "n_points_used": len(use), "latest_pct": float(pts.pct.iloc[-1]) if len(pts) else None, "latest_date": float(pts.date.iloc[-1]) if len(pts) else None, **own}
+
+
+def lead_basis(spec: CountrySpec, cmp: dict, lead_all) -> dict:
+    """What the lead was measured against and how to read it: the US comparator curve (all firms, or the
+    firm sizes the national survey covers), the kind of question the survey asks, whether the lead is an
+    upper bound (a checklist or an IoT-and-AI question counts more firms as users than the Census question
+    on AI in producing goods or services, so it can only overstate a country's position), and the lead
+    against all US firms for reference."""
+    q = spec.survey_question
+    return {"comparator": cmp.get("comparator", "all"), "comparator_label": cmp.get("label", "all US firms"), "comparator_fallback": bool(cmp.get("fallback", False)),
+            "question": q, "upper_bound": q != "production", "lead_years_all_firms": lead_all, "survey_firms": spec.survey_firms, "survey_note": spec.survey_note}
 
 
 def industry_offsets(points: pd.DataFrame, fit: dict, min_national_pct: float = 3.0) -> pd.DataFrame:
@@ -539,17 +553,22 @@ def build_base(spec: CountrySpec) -> dict:
     return stats
 
 
-def build_country(spec: CountrySpec, tf, barriers, params, now, tiers, occ, occf, btos_fit, o2s, ssoc_w, frontier_ssoc, econ_sg, fc_sg, us_w, econ_us, fc_us, others: dict | None = None) -> tuple[dict, dict]:
-    """The timing run and every view for one country. Returns (stats block, context for cross runs)."""
+def build_country(spec: CountrySpec, tf, barriers, params, now, tiers, occ, occf, btos_fit, o2s, ssoc_w, frontier_ssoc, econ_sg, fc_sg, us_w, econ_us, fc_us, others: dict | None = None, comparators: dict | None = None) -> tuple[dict, dict]:
+    """The timing run and every view for one country. Returns (stats block, context for cross runs).
+    `comparators` (ai_signals.btos_comparators) holds the US curves by firm size; the lead is read against
+    the one matching the national survey's coverage (spec.survey_firms)."""
     p = spec.prefix
     now_y = fcm._frac_year(pd.Timestamp(now))
     natw = io.load(f"{p}weights"); xw = io.load(f"{p}onet_crosswalk"); mix = io.load(f"{p}industry_mix"); points = io.load(f"{p}ai_adoption"); onet_w = io.load(f"{p}onet_weights")
     # 3. lead and sector shifts from the country's own survey
-    lead = firm_lead(btos_fit, points, spec.min_lead_year)
+    cmp = (comparators or {}).get(spec.survey_firms) or btos_fit
+    lead = firm_lead(cmp, points, spec.min_lead_year)
+    lead_all = lead["lead_years"] if cmp is btos_fit else firm_lead(btos_fit, points, spec.min_lead_year)["lead_years"]
+    lead.update(lead_basis(spec, cmp, lead_all))
     if lead["lead_years"] is None and spec.lead_proxy and others and spec.lead_proxy in others:
-        # no national survey: the proxy country's measured lead stands in, and the page says so
+        # no national survey: the proxy country's measured lead stands in, with its basis, and the page says so
         lead = {**others[spec.lead_proxy]["lead"], "proxy": spec.lead_proxy, "own_points": int(len(points))}
-    ind = industry_offsets(points, btos_fit); io.save(ind, f"{p}adoption_shift_industry")
+    ind = industry_offsets(points, cmp); io.save(ind, f"{p}adoption_shift_industry")
     grp_shift, nat_shift, onet_shift = occupation_shifts(mix, ind, natw, xw, spec)
     io.save(nat_shift, f"{p}adoption_shift_national"); io.save(onet_shift, f"{p}adoption_shift_onet")
     # 4. the timing model on this country's lead and shifts

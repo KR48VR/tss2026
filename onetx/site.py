@@ -284,7 +284,9 @@ def build_data(companion_url: str | None = None) -> dict:
         "usage_ratio": stats.get("singapore_usage_ratio", {}),
         "companion_url": companion_url,
         "data_as_of": stats.get("data_as_of", {}),
-        "adoption": {"us_half": {k: _r(v, 1) for k, v in stats.get("adoption_anchor_years", {}).items()}, "sg_half": {k: _r(v - (stats.get("geo_lead_years_central") or 0), 1) for k, v in stats.get("adoption_anchor_years", {}).items()}, "lead": _r(stats.get("geo_lead_years_central"), 1), "lead_years_used": (stats.get("singapore_firm_lead") or {}).get("years_used"), "btos_last_pct": (stats.get("btos_adoption_fit") or {}).get("last_pct"), "btos_last_date": (stats.get("btos_adoption_fit") or {}).get("last_ref_end"), "half_old_wording": _r((stats.get("btos_adoption_fit") or {}).get("year_cross_50pct_old_wording"), 1), "sg_own_half": _r((stats.get("singapore_firm_lead") or {}).get("sg_year_cross_50pct"), 1)},
+        "adoption": {"us_fit": _us_fit_payload(stats), "us_points": _us_points_payload(), "sg_points": [[_r(x.get("sg_date"), 2), _r(x.get("sg_pct"), 1), str(x.get("year")), bool(x.get("derived"))] for x in ((stats.get("singapore_firm_lead") or {}).get("points") or [])],
+                     "comparators": {k: {"a": _r(v.get("intercept"), 4), "label": v.get("label"), "bands": v.get("bands"), "last_pct": _r(v.get("last_pct"), 1), "last_date": v.get("last_ref_end"), "shift": _r(v.get("anchor_shift_years"), 2) if v.get("anchor_shift_years") is not None else 0.0, "half": _r(v.get("year_cross_50pct"), 1), "fallback": bool(v.get("fallback")), "n": v.get("n_points"), "bands_latest": {b: _r(x, 1) for b, x in (v.get("latest_by_band") or {}).items()}} for k, v in (stats.get("btos_comparators") or {}).items()},
+                     "us_half": {k: _r(v, 1) for k, v in stats.get("adoption_anchor_years", {}).items()}, "sg_half": {k: _r(v - (stats.get("geo_lead_years_central") or 0), 1) for k, v in stats.get("adoption_anchor_years", {}).items()}, "lead": _r(stats.get("geo_lead_years_central"), 1), "lead_years_used": (stats.get("singapore_firm_lead") or {}).get("years_used"), "btos_last_pct": (stats.get("btos_adoption_fit") or {}).get("last_pct"), "btos_last_date": (stats.get("btos_adoption_fit") or {}).get("last_ref_end"), "half_old_wording": _r((stats.get("btos_adoption_fit") or {}).get("year_cross_50pct_old_wording"), 1), "sg_own_half": _r((stats.get("singapore_firm_lead") or {}).get("sg_year_cross_50pct"), 1)},
         "evidence": {"tiers": (stats.get("evidence") or {}).get("tiers", {}), "lag_unproven": _r(((stats.get("evidence") or {}).get("evidence_lag_years", {}).get("unproven") or [None, None, None])[1], 1), "lag_mixed": _r(((stats.get("evidence") or {}).get("evidence_lag_years", {}).get("mixed") or [None, None, None])[1], 1), "lag_newly": _r(((stats.get("evidence") or {}).get("evidence_lag_years", {}).get("newly_rated") or [None, None, None])[1], 1), "ratings_2026_used": (stats.get("evidence") or {}).get("ratings_2026_used", False)},
         "sector_shift": (stats.get("sector_adoption") or {}).get("industry_shift_years", {}),
         "scenario": {"adoption_mult": list(fp.get("adoption_growth_mult", (1.5, 1.0, 0.6))), "barrier_years": list(fp.get("max_barrier_years", (2.0, 4.0, 6.0))), "lag_mult": [0.5, 1.0, 2.0]},
@@ -307,8 +309,8 @@ def build_data(companion_url: str | None = None) -> dict:
         bt = stats.get("btos_adoption_fit") or {}
         compare = {
             "countries": {
-                "SGP": {"name": "Singapore", "econ": [e for e in economy if e["level"] in ("economy", "major_group")], "adoption_now": lad.get("adoption_now"), "adoption_now_label": lad.get("adoption_now_year"), "half_firms": _r(lad.get("adoption_half_year"), 1), "lead": _r(stats.get("geo_lead_years_central"), 1), "emp_label": "employed residents, June 2025 (MOM)", "wage_label": "median gross monthly wage, June 2025 (MOM)", "shift_range": [_r(v, 1) for v in ((stats.get("sector_adoption") or {}).get("ssoc_shift_range") or [None, None])]},
-                "USA": {"name": "United States", "econ": [_econ_row(r) for _, r in us_econ.iterrows() if r.level in ("economy", "major_group")], "adoption_now": (bt.get("last_pct") / 100.0) if bt.get("last_pct") is not None else None, "adoption_now_label": f"Census BTOS, {bt.get('last_ref_end', '')}", "half_firms": _r((stats.get("adoption_anchor_years") or {}).get("central"), 1), "lead": 0.0, "emp_label": "employed, May 2024 (BLS OEWS)", "wage_label": "median annual wage, May 2024 (BLS OEWS)", "shift_range": [_r(v, 1) for v in (usa.get("shift_range") or [None, None])], "oews_year": (usa.get("weights") or {}).get("oews_year")},
+                "SGP": {"name": "Singapore", "econ": [e for e in economy if e["level"] in ("economy", "major_group")], "adoption_now": lad.get("adoption_now"), "adoption_now_label": lad.get("adoption_now_year"), "half_firms": _r(lad.get("adoption_half_year"), 1), "lead": _r(stats.get("geo_lead_years_central"), 1), "lead_basis": {"comparator": "all", "comparator_label": "all US firms", "question": "any_use", "upper_bound": True, "lead_all": _r(stats.get("geo_lead_years_central"), 1), "firms": "all", "note": "IMDA asks whether the enterprise used AI during the year, across enterprises of all sizes: a looser question than the US survey's, so the lead is an upper bound."}, "emp_label": "employed residents, June 2025 (MOM)", "wage_label": "median gross monthly wage, June 2025 (MOM)", "shift_range": [_r(v, 1) for v in ((stats.get("sector_adoption") or {}).get("ssoc_shift_range") or [None, None])]},
+                "USA": {"name": "United States", "econ": [_econ_row(r) for _, r in us_econ.iterrows() if r.level in ("economy", "major_group")], "adoption_now": (bt.get("last_pct") / 100.0) if bt.get("last_pct") is not None else None, "adoption_now_label": f"Census BTOS, {bt.get('last_ref_end', '')}", "half_firms": _r((stats.get("adoption_anchor_years") or {}).get("central"), 1), "lead": 0.0, "lead_basis": {"comparator": "all", "comparator_label": "all US firms", "question": "production", "upper_bound": False, "lead_all": 0.0, "firms": "all", "note": "The Census asks whether the business used AI in producing goods or services in the last two weeks; the US sits on its own curve."}, "emp_label": "employed, May 2024 (BLS OEWS)", "wage_label": "median annual wage, May 2024 (BLS OEWS)", "shift_range": [_r(v, 1) for v in (usa.get("shift_range") or [None, None])], "oews_year": (usa.get("weights") or {}).get("oews_year")},
             },
             "decomp": _rnd(cs["decomposition"]),
             "us_outcomes": _rnd(usa.get("outcomes") or {}),
@@ -316,7 +318,7 @@ def build_data(companion_url: str | None = None) -> dict:
         }
     if compare is not None and country_payloads:
         for code, cp in country_payloads.items():
-            compare["countries"][code] = {"name": cp["name"], "econ": [e for e in cp["economy"] if e["level"] in ("economy", "major_group")], "adoption_now": (cp["adoption_now"] / 100.0) if cp.get("adoption_now") is not None else None, "adoption_now_label": f"{cp['adoption_source']}, {cp.get('adoption_now_text') or _date_label(cp.get('adoption_now_date'))}", "half_firms": None, "lead": cp.get("lead"), "emp_label": cp["emp_label"], "wage_label": cp["wage_label"], "shift_range": [_r(v, 1) for v in (cp.get("shift_range") or [None, None])], "outcomes": cp.get("outcomes") or {}, "major_names": cp.get("major_names")}
+            compare["countries"][code] = {"name": cp["name"], "econ": [e for e in cp["economy"] if e["level"] in ("economy", "major_group")], "adoption_now": (cp["adoption_now"] / 100.0) if cp.get("adoption_now") is not None else None, "adoption_now_label": f"{cp['adoption_source']}, {cp.get('adoption_now_text') or _date_label(cp.get('adoption_now_date'))}", "half_firms": None, "lead": cp.get("lead"), "emp_label": cp["emp_label"], "wage_label": cp["wage_label"], "shift_range": [_r(v, 1) for v in (cp.get("shift_range") or [None, None])], "outcomes": cp.get("outcomes") or {}, "major_names": cp.get("major_names"), "lead_basis": cp.get("lead_basis")}
         cs = stats.get("countries") or {}
         pairs = {}
         for code in country_payloads:
@@ -571,9 +573,44 @@ def build_europe_payload(stats: dict) -> dict | None:
                             "shift": _r(r.anchor_shift_years, 1) if pd.notna(r.anchor_shift_years) else None, "sv": bool(pd.notna(r.anchor_shift_years)), "db35": _pct(r.get("done_by_2035")), "hq": [_r(r.get("quarter_done_year_fast_from_curve"), 1), _r(r.get("quarter_done_year_central_from_curve"), 1), _r(r.get("quarter_done_year_slow_from_curve"), 1)]})
         lead = st.get("lead") or {}
         pts = [[x.get("label"), _r(x.get("pct"), 1)] for x in (lead.get("points") or [])]
-        out.append({"geo": geo, "name": st.get("name", geo), "lead": _r(lead.get("lead_years"), 1) if lead.get("lead_years") is not None else None, "n": lead.get("n_points_used"), "pts": pts,
+        out.append({"geo": geo, "name": st.get("name", geo), "lead": _r(lead.get("lead_years"), 1) if lead.get("lead_years") is not None else None, "lead_all": _r(lead.get("lead_years_all_firms"), 1) if lead.get("lead_years_all_firms") is not None else None, "n": lead.get("n_points_used"), "pts": pts,
                     "emp_total": _r(st.get("employment_thousands_total"), 0), "codes": st.get("codes"), "wage_src": st.get("wage_source"), "emp_year": st.get("employment_year"), "econ": rows, "groups": grp, "ind": ind})
-    return {"countries": out, "survey": "Eurostat survey of ICT usage in enterprises (10 or more persons employed), share using at least one AI technology, 2021, 2023, 2024 and 2025", "employment": "EU Labour Force Survey, employed persons by ISCO-08 two-digit group, 15 to 64, 2025", "pay": "Structure of Earnings Survey, mean hourly earnings by ISCO-08 major group, 2022 (2018 where 2022 is not published by occupation)"}
+    basis = next((st.get("lead") for st in es.values() if isinstance(st, dict) and st.get("lead")), {}) or {}
+    return {"countries": out, "lead_basis": {"comparator": basis.get("comparator", "all"), "comparator_label": basis.get("comparator_label", "all US firms"), "question": basis.get("question", "checklist"), "upper_bound": bool(basis.get("upper_bound", True)), "note": basis.get("survey_note", "")},
+            "survey": "Eurostat survey of ICT usage in enterprises (10 or more persons employed), share using at least one AI technology, 2021, 2023, 2024 and 2025", "employment": "EU Labour Force Survey, employed persons by ISCO-08 two-digit group, 15 to 64, 2025", "pay": "Structure of Earnings Survey, mean hourly earnings by ISCO-08 major group, 2022 (2018 where 2022 is not published by occupation)"}
+
+
+def _us_fit_payload(stats: dict) -> dict | None:
+    """The fitted US curve at the current question's level, for the page's adoption chart."""
+    bt = stats.get("btos_adoption_fit") or {}
+    if not bt:
+        return None
+    return {"K": _r(bt.get("saturation"), 3), "a": _r(bt.get("intercept"), 4), "b": _r(bt.get("growth_per_year"), 4), "a_old": _r(bt.get("intercept_old_wording"), 4), "last": bt.get("last_ref_end")}
+
+
+def _us_points_payload() -> list:
+    """The Census readings themselves (share of firms using AI, by reference-period end), as [year, pct, wording]."""
+    try:
+        from . import ai_signals as ai
+        d = ai.load_btos_ai_adoption()
+        d = d[d.question == "current_use"]
+        return [[_r(y.year + (y.dayofyear - 0.5) / 366.0, 3), _r(p, 1), w] for y, p, w in zip(d.ref_end, d.pct, d.wording)]
+    except Exception:
+        return []
+
+
+def _lead_basis_payload(lead: dict, spec) -> dict:
+    """How the country's lead was measured, for the page: the US comparator, the survey's question, whether
+    the lead is an upper bound, and the all-firm lead beside it. A record saved before the comparators
+    existed (its lead carries no basis) falls back to the spec: the all-firm comparator it was read against,
+    and the survey description from the country record."""
+    from .ai_signals import COMPARATORS
+    firms = lead.get("survey_firms", spec.survey_firms)
+    comp = lead.get("comparator", "all" if "comparator" not in lead else firms)
+    lead_all = lead.get("lead_years_all_firms", lead.get("lead_years") if comp == "all" else None)
+    q = lead.get("question", spec.survey_question)
+    return {"comparator": comp, "comparator_label": lead.get("comparator_label", COMPARATORS.get(comp, COMPARATORS["all"])["label"]), "question": q, "upper_bound": bool(lead.get("upper_bound", q != "production")),
+            "lead_all": _r(lead_all, 1) if lead_all is not None else None, "firms": firms, "note": lead.get("survey_note", spec.survey_note)}
 
 
 def _adoption_now_text(code: str, label) -> str | None:
@@ -754,7 +791,8 @@ def build_country_payload(spec, onet_list, ssoc_list, stats, us_payload):
                "depth": spec.depth, "depth_note": spec.depth_note, "what_exists": spec.what_exists, "lvl_kind": spec.lvl_kind, "has_tasks": bool(tasks is not None and len(tasks)),
                "office_short": {"AUS": "ABS", "GBR": "ONS", "CAN": "StatCan", "NZL": "Stats NZ", "NOR": "SSB", "SWE": "SCB", "FIN": "Statistics Finland", "DNK": "DST", "NLD": "CBS", "IRL": "CSO", "JPN": "Japan"}.get(spec.code, spec.name),
                "wb": {"AUS": "week", "NZL": "week", "NOR": "month", "SWE": "month", "FIN": "hour", "DNK": "hour", "NLD": "hour", "IRL": "hour", "CAN": "year", "GBR": "year", "JPN": "month"}.get(spec.code, "year"), "cls": spec.classification, "cur": spec.currency, "emp_label": spec.emp_label, "wage_label": spec.wage_label, "wage_period": spec.wage_period, "adoption_source": spec.adoption_source, "industry_label": spec.industry_label, "major_names": spec.major_names,
-               "occ": occ_rows, "economy": economy, "industries": industries, "levels_national": levels_national, "levels": _levels_payload(levels, lcorr), "outcomes": cs.get("outcomes") or {}, "weights": cs.get("weights") or {}, "shift_range": cs.get("shift_range"), "lead": _r(lead.get("lead_years"), 1) if lead.get("lead_years") is not None else None, "lead_points_used": lead.get("n_points_used"), "adoption": adoption, "adoption_now": _r(lead.get("latest_pct"), 1) if (lead.get("latest_pct") is not None and not lead.get("proxy")) else None, "adoption_now_date": _r(lead.get("latest_date"), 2) if (lead.get("latest_date") is not None and not lead.get("proxy")) else None,
+               "occ": occ_rows, "economy": economy, "industries": industries, "levels_national": levels_national, "levels": _levels_payload(levels, lcorr), "outcomes": cs.get("outcomes") or {}, "weights": cs.get("weights") or {}, "shift_range": cs.get("shift_range"), "lead": _r(lead.get("lead_years"), 1) if lead.get("lead_years") is not None else None, "lead_points_used": lead.get("n_points_used"),
+               "lead_basis": _lead_basis_payload(lead, spec), "adoption": adoption, "adoption_now": _r(lead.get("latest_pct"), 1) if (lead.get("latest_pct") is not None and not lead.get("proxy")) else None, "adoption_now_date": _r(lead.get("latest_date"), 2) if (lead.get("latest_date") is not None and not lead.get("proxy")) else None,
                "standards": standards, "routes": routes, "industry_shifts": cs.get("industry_shifts") or {}, "o2n": o2n}
     # on-demand file: the official task list per code, matched to O*NET tasks, on this country's timing
     files = {"occ": {}, "std": {}}

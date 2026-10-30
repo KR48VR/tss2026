@@ -60,6 +60,9 @@ SOURCES: dict[str, str] = {
     # (biweekly; refreshed on every fetch once the local copy is two weeks old, see FRESH_DAYS)
     "census/btos_national.xlsx": "https://www.census.gov/hfp/btos/downloads/National.xlsx",
     "census/btos_sector.xlsx": "https://www.census.gov/hfp/btos/downloads/Sector.xlsx",
+    # the same question by employment-size class (A 1-4 ... G 250+), for a US comparator matched to the firm
+    # sizes other countries' surveys cover (10+ in Europe and the UK, 100+ in Japan)
+    "census/btos_empsize.xlsx": "https://www.census.gov/hfp/btos/downloads/Employment%20Size%20Class.xlsx",
     # US Bureau of Labor Statistics, Occupational Employment and Wage Statistics (May 2024 and May 2023):
     # employment and wages by detailed occupation (national) and by NAICS sector (the in4 bundle; only its
     # sector file is used). The second workforce the map can be weighted by.
@@ -149,7 +152,7 @@ def _sha256(p: Path) -> str:
 
 
 # sources that are time series: re-download when the local copy is older than this many days
-FRESH_DAYS = {"census/btos_national.xlsx": 14, "census/btos_sector.xlsx": 14}
+FRESH_DAYS = {"census/btos_national.xlsx": 14, "census/btos_sector.xlsx": 14, "census/btos_empsize.xlsx": 14}
 
 
 def fetch_one(rel: str, url: str, force: bool = False, max_age_days: int | None = None) -> Path:

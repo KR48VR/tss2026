@@ -180,6 +180,11 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
     sg_lead = ai.singapore_firm_lead(btos_fit, ai.load_singapore_firm_adoption())
     params = fcm.calibrate_adoption(params, btos_fit, ratio.get("geometric_mean"), sg_lead.get("lead_years"))
     sector_levels = ai.fit_sector_levels(ai.load_btos_sector_adoption(), btos_fit); save(sector_levels, "ai_btos_sector_levels")
+    # US curves by firm size, so a country's survey of firms with 10 or more (or 100 or more) employees is read against US firms of the same sizes
+    btos_size = ai.load_btos_size_adoption()
+    if len(btos_size):
+        save(btos_size, "ai_btos_size_adoption")
+    comparators = ai.btos_comparators(btos_fit, btos_size)
     # capability evidence tiers: 2023 task ratings (human + GPT-4) and the 2026 Claude ratings when the run is at least 90% complete
     from . import rate as rt
     labels = load("ai_openai_task_labels") if (PROCESSED / "ai_openai_task_labels.parquet").exists() else None
@@ -236,6 +241,7 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
     e = econ[(econ.scope == "economy")].set_index("weighting")
     stats["singapore_economy"] = {w: {"observed_automation": float(e.loc[w, "observed_automation"]), "share_weight_observed": float(e.loc[w, "share_weight_observed"]), "share_by_2030": float(e.loc[w, "share_by_2030"]), "share_by_2035": float(e.loc[w, "share_by_2035"]), "half_year_central": float(e.loc[w, "half_year_central_from_curve"])} for w in ["employment", "wage_value"]}
     # ---- a second workforce: the United States (BLS OEWS weights, US sector mix, no adoption lead)
+    stats["btos_comparators"] = comparators
     try:
         stats["countries"], us_ctx = build_us(tf, barriers, params, now, tiers, sector_levels, occ, occf, o2s, ssoc_w, econ, fc, ssoc_curve, shifts)
     except FileNotFoundError as e:
@@ -263,7 +269,7 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
             if only and code not in only:
                 continue
             try:
-                cstats, cctx = cn.build_country(spec, tf, barriers, params, now, tiers, occ, occf, btos_fit, o2s, ssoc_w, load("frontier_ssoc2024"), econ, fc, us_ctx["us_w"], us_ctx["econ_us"], us_ctx["fc_us"], others)
+                cstats, cctx = cn.build_country(spec, tf, barriers, params, now, tiers, occ, occf, btos_fit, o2s, ssoc_w, load("frontier_ssoc2024"), econ, fc, us_ctx["us_w"], us_ctx["econ_us"], us_ctx["fc_us"], others, comparators=comparators)
                 stats["countries"][code] = cstats
                 others[code] = cctx
                 write_json({**(prev_stats or {}), **stats}, PROCESSED / "build_stats.partial.json")   # a checkpoint, so a later country's failure does not lose the earlier ones
@@ -281,7 +287,7 @@ def build_forecasts(now: str = "2026-10-01", forecast_params: fcm.ForecastParams
             return stats
         try:
             from . import europe
-            stats["europe"] = europe.build_europe(tf, barriers, params, now, tiers, occ, occf, btos_fit)
+            stats["europe"] = europe.build_europe(tf, barriers, params, now, tiers, occ, occf, btos_fit, comparators=comparators)
         except Exception as e:  # the country records above are already saved; record the failure rather than lose the run
             stats["europe"] = {"error": f"Europe at a glance not built: {type(e).__name__}: {e}"}
     register_duckdb()

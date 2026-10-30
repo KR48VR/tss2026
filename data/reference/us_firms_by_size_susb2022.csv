@@ -1,0 +1,8 @@
+band,label,firms,note,source
+A,1 to 4 employees,4029041,"SUSB '<5 employees'","US Census Bureau, Statistics of U.S. Businesses 2022, U.S. & states detailed enterprise sizes (us_state_naics_detailedsizes_2022.xlsx, released 2025-04-10), United States total, all industries"
+B,5 to 9 employees,1034135,"SUSB '5-9 employees'","same"
+C,10 to 19 employees,656917,"SUSB '10-14' (428,589) + '15-19' (228,328)","same"
+D,20 to 49 employees,427772,"SUSB '20-24' + '25-29' + '30-34' + '35-39' + '40-49'","same"
+E,50 to 99 employees,133388,"SUSB '50-74' (89,207) + '75-99' (44,181)","same"
+F,100 to 249 employees,69587,"SUSB '100-149' (40,744) + '150-199' (19,444) + half of '200-299' (18,798 / 2), since SUSB has no 250 boundary","same"
+G,250 or more employees,44795,"half of SUSB '200-299' + '300-399' + '400-499' + every class from 500 up","same"

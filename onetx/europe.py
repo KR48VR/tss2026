@@ -153,14 +153,16 @@ def eu_spec(geo: str, name: str) -> cn.CountrySpec:
                           major_names=MAJOR_GROUP_NAMES, skill_level_names=SKILL_LEVEL_NAMES, industry_names=NACE_SECTIONS, industry_label="NACE section", currency="€",
                           wage_label="mean hourly earnings of the major group, 2022 (Eurostat SES)", emp_label="employed persons (EU-LFS)", wage_period="2022",
                           adoption_source="Eurostat survey of ICT usage in enterprises", group_col="major_group", group_len=1,
+                          survey_firms="10plus", survey_question="checklist", survey_note="Eurostat's survey covers enterprises with 10 or more persons employed and asks which AI technologies they use, from a list: a looser question than the US survey's, so the lead is an upper bound; it is measured against US firms of the same sizes.",
                           weights=lambda: weights(geo), outcomes=lambda: pd.DataFrame(), isco_link=_isco_to_2d, industry_mix=lambda: load_mix().query("geo == @geo").drop(columns="geo"),
                           ai_points=lambda: ai_points(geo), tasks=lambda: pd.DataFrame(columns=["isco2_code", "task_seq", "task"]))
 
 
-def build_europe(tf, barriers, params, now, tiers, occ, occf, btos_fit, geos: list | None = None, log=print) -> dict:
+def build_europe(tf, barriers, params, now, tiers, occ, occf, btos_fit, geos: list | None = None, log=print, comparators: dict | None = None) -> dict:
     """Run the model for every Eurostat country with AI-use readings and two-digit employment. Saves
     eu_economy, eu_groups (one row per country and sub-major group), eu_industry_view and returns the stats
-    (per country: name, lead, readings, economy figures, counts)."""
+    (per country: name, lead, readings, economy figures, counts). The lead is read against the US curve for
+    firms with 10 or more employees (`comparators["10plus"]`), the population Eurostat's survey covers."""
     names = country_names()
     emp = load_employment_2d(); earn = load_earnings_1d(); mix_all = load_mix(); ai = load_ai_use()
     have = sorted(set(ai.geo) & set(emp.geo))
@@ -174,8 +176,11 @@ def build_europe(tf, barriers, params, now, tiers, occ, occf, btos_fit, geos: li
             continue
         xw = cn.national_crosswalk(spec, set(natw.isco2_code))
         points = ai_points(geo)
-        lead = cn.firm_lead(btos_fit, points, spec.min_lead_year)
-        ind = cn.industry_offsets(points, btos_fit)
+        cmp = (comparators or {}).get("10plus") or btos_fit
+        lead = cn.firm_lead(cmp, points, spec.min_lead_year)
+        lead_all = lead["lead_years"] if cmp is btos_fit else cn.firm_lead(btos_fit, points, spec.min_lead_year)["lead_years"]
+        lead.update(cn.lead_basis(spec, cmp, lead_all))
+        ind = cn.industry_offsets(points, cmp)
         mix = mix_all[mix_all.geo == geo].drop(columns="geo")
         grp_shift, nat_shift, onet_shift = cn.occupation_shifts(mix, ind, natw, xw, spec)
         params_c = fcm.ForecastParams(**{**fcm.asdict(params), "geo": geo, "geo_lead_years_measured": lead["lead_years"] if lead["lead_years"] is not None else 0.0})

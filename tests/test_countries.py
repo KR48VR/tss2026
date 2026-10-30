@@ -324,3 +324,28 @@ def test_occupation_shifts_stay_numeric_without_industry_readings():
     xw = pd.DataFrame({"onet_soc_code": ["11-1011.00", "19-1021.00"], "nat_code": ["1115", "2111"], "weight_rev": [1.0, 1.0]})
     grp, nat, onet = cn.occupation_shifts(mix, ind, natw, xw, spec)
     assert nat.adoption_shift_years.dtype == float and onet.adoption_shift_years.dtype == float and (nat.adoption_shift_years == 0).all()
+
+
+def test_lead_basis_marks_checklist_surveys_as_upper_bounds():
+    """Every country record says which firms its survey covers and what it asks; only the production
+    question (Canada's) gives a lead that is a measurement rather than an upper bound."""
+    for code, spec in cn.SPECS.items():
+        assert spec.survey_firms in ("all", "10plus", "100plus"), code
+        assert spec.survey_question in ("production", "checklist", "iot_ai"), code
+        assert spec.survey_note, code
+    assert cn.SPECS["CAN"].survey_question == "production" and cn.SPECS["CAN"].survey_firms == "all"
+    assert cn.SPECS["GBR"].survey_firms == "10plus" and cn.SPECS["NOR"].survey_firms == "10plus" and cn.SPECS["JPN"].survey_firms == "100plus"
+    cmp = {"comparator": "10plus", "label": "US firms with 10 or more employees", "fallback": False, "saturation": 0.9, "intercept": -2.3, "growth_per_year": 0.5}
+    b = cn.lead_basis(cn.SPECS["GBR"], cmp, 1.0)
+    assert b["upper_bound"] is True and b["comparator"] == "10plus" and b["lead_years_all_firms"] == 1.0
+    assert cn.lead_basis(cn.SPECS["CAN"], {"comparator": "all", "label": "all US firms"}, -0.5)["upper_bound"] is False
+
+
+def test_size_matched_lead_is_smaller_when_the_comparator_sits_higher():
+    """Reading the same national points against a US curve that sits higher (larger firms adopt sooner)
+    gives a smaller lead; the all-firm lead is kept beside it for reference."""
+    fit = {"saturation": 0.9, "intercept": -2.0, "growth_per_year": 0.5}
+    higher = {**fit, "intercept": -1.5, "comparator": "100plus", "label": "US firms with 100 or more employees", "fallback": False}
+    pts = pd.DataFrame({"group_type": ["all"], "date": [2025.5], "pct": [30.0], "period": ["2025"]})
+    a = cn.firm_lead(fit, pts)["lead_years"]; h = cn.firm_lead(higher, pts)["lead_years"]
+    assert h < a and abs((a - h) - 0.5 / 0.5) < 1e-6
