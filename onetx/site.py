@@ -731,7 +731,7 @@ def build_country_payload(spec, onet_list, ssoc_list, stats, us_payload):
             rv = load("uk_ifate_route_view")
             routes = [{"route": r.route, "n": _r(r.n_standards), "nsoc": _r(r.n_soc_codes), "emp": _r(r.employment_thousands, 1), "levels": r.levels, "oa": _pct(r.observed_automation), "so": _pct(r.share_weight_observed), "sp": _pct(r.share_weight_physical), "db30": _pct(r.done_by_2030), "db35": _pct(r.done_by_2035), "db35f": _pct(r.done_by_2035_p10), "db35s": _pct(r.done_by_2035_p90), "sb35": _pct(r.share_by_2035), "cap": _pct(r.ceiling_ai_share), "hq": [_r(r.quarter_done_year_p10, 1), _r(r.quarter_done_year_p50, 1), _r(r.quarter_done_year_p90, 1)]} for r in rv.itertuples()]
     yf, yt = (cs.get("outcomes") or {}).get("years") or [None, None]
-    units = spec.outcome_units().set_index(spec.code_col) if spec.outcome_units is not None else None
+    units = (load(f"{p}outcome_units") if _exists(f"{p}outcome_units") else spec.outcome_units()).set_index(spec.code_col) if spec.outcome_units is not None else None   # the units saved by the base build, so the page can be rebuilt without every office's raw files
     occ_rows = []
     for _, r in t.iterrows():
         o = outc.loc[r.nat_code] if (outc is not None and r.nat_code in outc.index) else None

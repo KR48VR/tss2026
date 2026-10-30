@@ -21,7 +21,7 @@ Eurostat's enterprise AI survey for France (`eurostat/isoc_eb_ai.json`, `isoc_eb
 What is coarse: the weights count salaried employees in full-time equivalents (private sector 2024 and public sector
 2023; the self-employed, about a tenth of employment, are not in the wage tables); pay is the mean net monthly salary
 per FTE, not a median; the link to O*NET runs through two probabilistic matrices (PCS 2003 to PCS 2020, PCS 2020 to
-ISCO-08); the mix is at the one-digit group; Melodi carries one year of each wage table, so there is no outcome
+ISCO-08, with links under 2% of an ISCO group dropped); the mix is at the one-digit group; Melodi carries one year of each wage table, so there is no outcome
 test yet; no official task list.
 """
 from __future__ import annotations
@@ -147,9 +147,9 @@ def pcs_to_isco() -> pd.DataFrame:
     return out.reset_index(drop=True)
 
 
-def load_isco_link(unit_codes: set[str] | None = None) -> pd.DataFrame:
+def load_isco_link(unit_codes: set[str] | None = None, min_share: float = 0.02) -> pd.DataFrame:
     """ISCO-08 unit group -> PCS-ESE codes: each code's ISCO probabilities times its full-time-equivalent employees,
-    normalised per ISCO code."""
+    normalised per ISCO code, with links under `min_share` of an ISCO group dropped (see below)."""
     pi = pcs_to_isco()
     pr = private_wages(); pu = public_wages()
     fte = pd.concat([pr[pr.year == pr.year.max()], pu[pu.year == pu.year.max()]]).groupby("pcs_code").fte.sum()
@@ -169,6 +169,12 @@ def load_isco_link(unit_codes: set[str] | None = None) -> pd.DataFrame:
             rows.append({"isco_code": r.isco_code, "nat_code": c, "w": float(r.p) * float(max(fte.get(c, 1.0), 1.0))})
     k = pd.DataFrame(rows)
     k["weight"] = k.w / k.groupby("isco_code").w.transform("sum")
+    # the two probabilistic matrices leave a long tail of links carrying a percent or two of an ISCO group (49,000
+    # O*NET-to-PCS pairs, seven in ten below one percent): links under `min_share` of an ISCO group are dropped and
+    # the rest renormalised, which keeps 98% of the weight and makes the record's cross runs tractable
+    top = k.sort_values("weight", ascending=False).drop_duplicates("nat_code").index   # every category keeps its strongest link
+    k = k[(k.weight >= min_share) | k.index.isin(top)].copy()
+    k["weight"] = k.weight / k.groupby("isco_code").weight.transform("sum")
     return k[["isco_code", "nat_code", "weight"]].reset_index(drop=True)
 
 
