@@ -372,3 +372,14 @@ def test_korea_loaders_from_kosis_downloads():
     ch = kr.employment_change()
     assert ch.emp_change_pct.notna().sum() > 100 and ch.wage_change_pct.notna().sum() > 100
     assert cn.SPECS["KOR"].survey_firms == "50plus" and "50plus" in ai.COMPARATORS
+
+
+def test_change_tables_name_their_employment_years():
+    """The outcome test reads emp_<year_from> and emp_<year_to> from a country's change table, so the year
+    labels must match the employment columns even when the pay years differ (Korea's do)."""
+    from onetx import kr_labour as kr, jp_labour as jp
+    for mod in (kr, jp):
+        d = mod.employment_change()
+        yf, yt = int(d.year_from.iloc[0]), int(d.year_to.iloc[0])
+        assert f"emp_{yf}" in d.columns and f"emp_{yt}" in d.columns, mod.__name__
+        assert "emp_change_pct" in d.columns and "wage_change_pct" in d.columns

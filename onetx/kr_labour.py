@@ -276,7 +276,8 @@ def employment_change() -> pd.DataFrame:
     df[f"wage_{y0}"] = df.ksco_code.map(w[y0]) if y0 in w.columns else np.nan
     df[f"wage_{y1}"] = df.ksco_code.map(w[y1]) if y1 in w.columns else np.nan
     df["wage_change_pct"] = (df[f"wage_{y1}"] / df[f"wage_{y0}"] - 1.0) * 100.0
-    df["year_from"] = y0; df["year_to"] = y1; df["wage_years"] = f"{y0}-{y1}"
+    # year_from / year_to name the employment columns (the outcome test reads emp_<year_from> and emp_<year_to>); the pay years are kept apart
+    df["year_from"] = int(ey0); df["year_to"] = int(ey1); df["wage_years"] = f"{y0}-{y1}"
     return df
 
 
