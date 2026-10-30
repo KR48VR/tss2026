@@ -28,11 +28,14 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;line-height:1.15;text-w
 h1{font-size:1.25rem}h2{font-size:1.45rem}h3{font-size:1.15rem}h3.sub{font-size:1rem;font-family:var(--font-body);font-weight:600;margin-top:14px}
 .hero{font-size:2rem}
 .wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 48px}
-header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);border-bottom:1px solid var(--line);border-top:5px solid var(--scn);transition:border-color .2s}
-header.top .wrap{padding-block:12px 0;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 20px}
+header.top{position:static;background:var(--bg);border-top:5px solid var(--scn);transition:border-color .2s}
+header.top .wrap{padding-block:12px 6px;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 20px}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);border-bottom:1px solid var(--line);border-top:3px solid var(--scn);transition:border-color .2s}
+.topbar .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px;padding-block:4px 0} .topbar nav.tabs{flex:1 1 auto;min-width:min(100%,880px)} .topbar .ctl{display:flex;align-items:center;gap:8px;flex:0 0 auto;padding:4px 0}
+.topbar .scn.mini button{font-size:.78rem;padding:3px 9px;border-width:1.5px} #bar-cty{font:inherit;font-size:.85rem;font-weight:600;padding:3px 8px;border-radius:999px;border:1.5px solid var(--fg);background:var(--panel);color:var(--fg);max-width:12rem}
 header.top .brand{font-family:var(--font-display);font-size:1.25rem;font-weight:600;margin:0}
-nav.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
-nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:inherit;font-weight:500;padding:8px 10px;cursor:pointer}
+nav.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:inherit;font-size:.88rem;font-weight:500;padding:6px 7px;cursor:pointer}
 nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
 nav.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .lede{max-width:68ch;font-size:1.05rem;color:var(--fg)}
@@ -61,7 +64,7 @@ section.view[hidden]{display:none}
 .cmcblock{border-left:4px solid var(--rated);padding:4px 0 4px 10px;margin:8px 0}
 .lvtable td:first-child{font-weight:600} .evlegend .sw{width:24px;height:12px;margin-right:5px;vertical-align:-1px;flex:0 0 24px} .evlegend span{display:inline-flex;align-items:center} .chart-note{margin:0 0 10px;max-width:80ch} .cmp input{accent-color:var(--accent);width:16px;height:16px;margin:0}
 @media (max-width:720px){nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-left:0;width:100%;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,#000 92%,transparent)} nav.tabs::-webkit-scrollbar{display:none} nav.tabs button{white-space:nowrap;flex:0 0 auto} header.top{position:static}}
-.scn-more summary{cursor:pointer;color:var(--accent);font-weight:600;margin:2px 0 6px} @media (min-width:721px){.scn-more summary{display:none}}
+.scn-more summary{cursor:pointer;color:var(--accent);font-weight:600;margin:2px 0 6px}
 input[type="search"],select{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:9px 12px;width:100%}
 input[type="search"]:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .results{list-style:none;margin:10px 0 0;padding:0;max-height:62vh;overflow:auto;border-top:1px solid var(--line)}
@@ -136,7 +139,10 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
   <h1 class="brand">Work and AI Map</h1>
   <div class="flexrow small" style="margin:4px 0 4px;gap:8px 28px"><span class="flexrow" style="gap:8px"><span id="cty-label" class="scn-hint">Choose a country</span><div class="cty" role="group" aria-labelledby="cty-label"><button type="button" data-cty="SGP" aria-pressed="true">Singapore</button><button type="button" data-cty="USA" aria-pressed="false">United States</button><button type="button" data-cty="AUS" aria-pressed="false">Australia</button><button type="button" data-cty="GBR" aria-pressed="false">United Kingdom</button><button type="button" data-cty="CAN" aria-pressed="false">Canada</button><button type="button" data-cty="NZL" aria-pressed="false">New Zealand</button><button type="button" data-cty="NOR" aria-pressed="false">Norway</button><button type="button" data-cty="SWE" aria-pressed="false">Sweden</button><button type="button" data-cty="FIN" aria-pressed="false">Finland</button><button type="button" data-cty="DNK" aria-pressed="false">Denmark</button><button type="button" data-cty="NLD" aria-pressed="false">Netherlands</button><button type="button" data-cty="IRL" aria-pressed="false">Ireland</button><button type="button" data-cty="JPN" aria-pressed="false">Japan</button></div></span><span class="flexrow" style="gap:8px"><span id="scn-label" class="scn-hint">Choose a scenario</span><div class="scn" role="group" aria-labelledby="scn-label"><button type="button" data-scn="0" aria-pressed="false">Fast <span class="pace" id="pace-0"></span></button><button type="button" data-scn="1" aria-pressed="true">Central <span class="pace" id="pace-1"></span></button><button type="button" data-scn="2" aria-pressed="false">Slow <span class="pace" id="pace-2"></span></button></div></span></div>
   <p class="small muted" id="eu-hint" style="margin:0 0 4px" hidden>Seven countries are under the switch; thirty-two European countries at once are on the <a href="#europe" data-view-link="europe">Europe: 32 countries</a> tab.</p>
-  <details class="scn-more" id="scn-more"><summary class="small">What the switches do</summary><div class="small muted" id="scn-explain" style="margin:0 0 6px;max-width:72rem"></div></details>
+  <details class="scn-more" id="scn-more"><summary class="small">What the switches do (Central to plan, Fast to stress-test, Slow to budget)</summary><div class="small muted" id="scn-explain" style="margin:0 0 6px;max-width:72rem"></div></details>
+</div></header>
+<div class="topbar" id="bar" role="region" aria-label="Country, scenario and views"><div class="wrap">
+  <div class="ctl"><label class="sr-only" for="bar-cty">Country</label><select id="bar-cty"></select><div class="scn mini" role="group" aria-label="Scenario"><button type="button" data-scn="0" aria-pressed="false">Fast</button><button type="button" data-scn="1" aria-pressed="true">Central</button><button type="button" data-scn="2" aria-pressed="false">Slow</button></div></div>
   <nav class="tabs" role="tablist" aria-label="Views">
     <button role="tab" data-view="leaders" aria-selected="true" aria-controls="view-leaders" id="tab-leaders">Executive summary</button>
     <button role="tab" data-view="overview" aria-selected="false" aria-controls="view-overview" id="tab-overview">Overview</button>
@@ -148,7 +154,7 @@ ul.kt li .why{grid-column:1/-1;font-size:.8rem;color:var(--muted)}
     <button role="tab" data-view="news" aria-selected="false" aria-controls="view-news" id="tab-news">Reading the news</button>
     <button role="tab" data-view="method" aria-selected="false" aria-controls="view-method" id="tab-method">How to read this</button>
   </nav>
-</div></header>
+</div></div>
 
 <main class="wrap">
 <section class="view" id="view-overview" role="tabpanel" aria-labelledby="tab-overview">
@@ -527,7 +533,8 @@ function loadKT(){ if(ktCache) return Promise.resolve(ktCache); if(!ktLoading){ 
 const views = ["leaders","overview","compare","europe","jobs","sectors","skills","news","method"];
 function show(v){ views.forEach(x=>{ document.getElementById('view-'+x).hidden = (x!==v); }); if(v==='compare' && typeof compareRender==='function' && document.getElementById('cmp-chart')) compareRender(); if(v==='europe' && typeof europeRender==='function') europeRender(); document.querySelectorAll('nav.tabs button').forEach(b=>{ const on=b.dataset.view===v; b.setAttribute('aria-selected', on?'true':'false'); b.tabIndex = on?0:-1; }); try{localStorage.setItem('view',v);}catch(e){} }
 const tabButtons = Array.from(document.querySelectorAll('nav.tabs button'));
-tabButtons.forEach((b,i)=>{ b.addEventListener('click',()=>show(b.dataset.view)); b.addEventListener('keydown',e=>{ if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault(); const j=(i+(e.key==='ArrowRight'?1:-1)+tabButtons.length)%tabButtons.length; tabButtons[j].focus(); show(tabButtons[j].dataset.view); } }); });
+const underBar=()=>{ const h=document.querySelector('header.top'); const top=h?h.offsetTop+h.offsetHeight:0; if(window.scrollY>top) window.scrollTo({top}); };
+tabButtons.forEach((b,i)=>{ b.addEventListener('click',()=>{ show(b.dataset.view); underBar(); }); b.addEventListener('keydown',e=>{ if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault(); const j=(i+(e.key==='ArrowRight'?1:-1)+tabButtons.length)%tabButtons.length; tabButtons[j].focus(); show(tabButtons[j].dataset.view); } }); });
 let start = (location.hash||"").replace('#',''); if(!views.includes(start)){ try{ start = localStorage.getItem('view')||'leaders'; }catch(e){ start='leaders'; } if(!views.includes(start)) start='leaders'; }
 show(start);
 const scnButtons = Array.from(document.querySelectorAll('.scn button'));
@@ -541,8 +548,10 @@ scnButtons.forEach(b=>b.addEventListener('click',()=>setScn(+b.dataset.scn)));
 paintScn();
 let CTY='SGP'; try{ const v=localStorage.getItem('cty'); if((v==='USA'&&D.us)||(D.c&&D.c[v])) CTY=v; }catch(e){}
 const ctyButtons = Array.from(document.querySelectorAll('.cty button'));
-function paintCty(){ ctyButtons.forEach(b=>{ b.setAttribute('aria-pressed', b.dataset.cty===CTY?'true':'false'); b.hidden = !(b.dataset.cty==='SGP' || (b.dataset.cty==='USA'&&D.us) || (D.c&&D.c[b.dataset.cty])); }); document.documentElement.dataset.cty=CTY; document.querySelectorAll('[data-cty]').forEach(el=>{ if(el.closest('.cty')) return; el.hidden = el.dataset.cty!==CTY; }); }
-if(!D.us){ const row=document.querySelector('.cty'); if(row) row.closest('.flexrow').hidden=true; }
+function syncBarCty(){ const sel=document.getElementById('bar-cty'); if(!sel) return; const vis=ctyButtons.filter(b=>!b.hidden); if(sel.options.length!==vis.length){ sel.innerHTML=''; vis.forEach(b=>{ const o=document.createElement('option'); o.value=b.dataset.cty; o.textContent=b.textContent; sel.appendChild(o); }); } sel.value=CTY; }
+function paintCty(){ ctyButtons.forEach(b=>{ b.setAttribute('aria-pressed', b.dataset.cty===CTY?'true':'false'); b.hidden = !(b.dataset.cty==='SGP' || (b.dataset.cty==='USA'&&D.us) || (D.c&&D.c[b.dataset.cty])); }); document.documentElement.dataset.cty=CTY; syncBarCty(); document.querySelectorAll('[data-cty]').forEach(el=>{ if(el.closest('.cty')) return; el.hidden = el.dataset.cty!==CTY; }); }
+if(!D.us){ const row=document.querySelector('.cty'); if(row) row.closest('.flexrow').hidden=true; const bs=document.getElementById('bar-cty'); if(bs) bs.hidden=true; }
+(function(){ const sel=document.getElementById('bar-cty'); if(sel) sel.addEventListener('change', ()=>{ const b=ctyButtons.find(x=>x.dataset.cty===sel.value); if(b) b.click(); }); })();
 paintCty();
 
 // ---------- overview
@@ -603,7 +612,7 @@ function tilesRender(){
   document.getElementById('econ-tiles').innerHTML = tiles.map(t=>`<div class="panel tile"><div class="lbl">${esc(t[0])}</div><div class="num">${esc(t[1])}</div><div class="small muted">${esc(t[2])}</div></div>`).join('');
 }
 tilesRender();
-(function(){ const sm=document.getElementById('scn-more'); if(!sm) return; const fit=()=>{ sm.open = window.innerWidth>720; }; fit(); window.addEventListener('resize', fit); })();
+(function(){ const sm=document.getElementById('scn-more'); if(sm) sm.open=false; })();   // folded by default on every width; the summary line carries the guidance
 function ladderSvg(compact){
   const L=m.ladder||{}, oc=m.outcomes||{}; const steps=[["Rated doable","most headlines"],["Seen in use","usage data"],["AI doing most of it","automation share"],["Employers adopted","firm surveys"],["Job changed",(typeof isUS==='function'&&isUS())?"BLS outcomes":(typeof isNat==='function'&&isNat())?((CC()&&CC().office_short?CC().office_short:'national')+" outcomes"):"MOM outcomes"]];
   const usA=(D.compare&&D.compare.countries.USA)||{}; const nc=(typeof isNat==='function'&&isNat())?CC():null; const adoptNow = (typeof isUS==='function'&&isUS()&&usA.adoption_now!=null) ? usA.adoption_now : nc&&nc.adoption_now!=null ? nc.adoption_now/100 : L.adoption_now; const outc = (typeof isUS==='function'&&isUS()) ? ((U&&U.outcomes&&U.outcomes.headline)?'not yet':'') : nc ? ((nc.outcomes&&nc.outcomes.headline)?'not yet':'') : (oc.headline?'not yet':'');
